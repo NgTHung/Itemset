@@ -12,8 +12,10 @@ benchmark performance, or completed application result is claimed by the setup t
 
 ## Install and verify
 
-Use **Julia 1.13.2**, pinned in `.julia-version`, `Project.toml`, `Manifest.toml`,
-CI, and the Colab bootstrap. Install from [official Julia downloads](https://julialang.org/downloads/)
+Use **Julia 1.13.2** locally, selected by `.julia-version`; the committed Manifest
+was generated with that version. The package supports **Julia 1.12+ within 1.x**
+so Colab's native Julia kernel can use its provided runtime. CI covers 1.12.6 and
+1.13.2. Install from [official Julia downloads](https://julialang.org/downloads/)
 or select it with `juliaup add 1.13.2`. Core setup has no third-party dependencies.
 
 From the repository root:
@@ -88,7 +90,7 @@ freezes the validated baseline; optimization does not gate application work.
 - `applications/market_basket/`, `applications/image_patterns/`: owner handoffs.
 - `experiments/`: shared measurement protocol and result fields.
 - `data/benchmark/`, `data/raw/`: local downloaded data, excluded from Git.
-- `notebooks/demo.ipynb`: Python-kernel Colab bootstrap and Julia shell commands.
+- `notebooks/demo.ipynb`: native Julia-kernel Colab setup and direct Julia cells.
 - `docs/report/`: Vietnamese IEEE report starter; final export is `docs/Report.pdf`.
 - `tools/spmf/`: independent Java reference instructions; no SPMF source copied.
 - `results/`: raw runs and generated figures, excluded from Git.
@@ -106,9 +108,14 @@ the environment and commit the regenerated Manifest. Never import a FIM library.
 No public repository or Colab URL exists yet: this setup is local only.
 Run `git archive --format=zip --output=../Itemset-colab.zip HEAD` after a commit,
 upload `notebooks/demo.ipynb` to [Google Colab](https://colab.research.google.com/),
-then upload that ZIP when its first cell requests the repository. Use a Python
-kernel with Julia invoked through subprocesses, as required by the assignment.
-The notebook also accepts a future public GitHub URL and explicit commit.
+and select **Runtime → Change runtime type → Julia**. Upload the ZIP using the
+Files sidebar so it is available at `/content/Itemset-colab.zip`, then run all cells.
+The notebook also accepts a future public GitHub URL and explicit commit. It uses
+the provided Julia kernel directly and records its version and thread count.
+If the selected runtime is older than 1.12, select runtime version **2026.07**
+(Julia 1.12.6) or a newer compatible runtime; see [Colab's runtime versions](https://research.google.com/colaboratory/runtime-version-faq.html).
+This follows your native-kernel preference; the preserved assignment's Python-only
+Colab note predates [native Julia support](https://juliahub.com/blog/julia-now-available-on-google-colab).
 
 Before submission, create the public GitHub repository, publish/clean-run the
 notebook and add its public link here, add accessible Hugging Face/Kaggle data links

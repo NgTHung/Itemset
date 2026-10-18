@@ -9,13 +9,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        julia: ['1.12.6', '1.13.2']
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
-          version: '1.13.2'
-      - name: Instantiate pinned environment
+          version: ${{ matrix.julia }}
+      - name: Instantiate environment
         run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
       - name: Verify setup
         run: julia --startup-file=no --project=. scripts/check_setup.jl

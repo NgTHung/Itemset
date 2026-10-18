@@ -1,6 +1,6 @@
 using ItemsetMining
 
-VERSION == v"1.13.2" || error("Expected Julia 1.13.2, got $VERSION")
+v"1.12" <= VERSION < v"2" || error("Expected Julia 1.12 or later in the 1.x series, got $VERSION")
 root = dirname(@__DIR__)
 transactions = read_transactions(joinpath(root, "data", "toy", "baskets.txt"))
 @assert length(transactions) == 4
