@@ -1,0 +1,57 @@
+using Test
+using ItemsetMining
+
+include("fixtures.jl")
+
+@testset "Itemset setup" begin
+    @testset "Transaction and support contract" begin
+        @test canonical_transaction([2, 1, 2, 0]) == [0, 1, 2]
+        @test_throws ArgumentError canonical_transaction([-1])
+        @test_throws ArgumentError canonical_transaction([true])
+        @test support_threshold(2, 3) == 2
+        @test support_threshold(1, 3) == 1
+        @test support_threshold(1.0, 3) == 3
+        @test support_threshold(0.5, 3) == 2
+        @test support_threshold(0.07, 100) == 7
+        @test support_threshold(0.1, 0) == 1
+        @test support_threshold(5, 3) == 5
+        for bad in (0, -1, 0.0, -0.1, 1.1, NaN, Inf, true)
+            @test_throws ArgumentError support_threshold(bad, 3)
+        end
+        @test_throws ArgumentError support_threshold(1, -1)
+    end
+    @testset "SPMF input and fixture integrity" begin
+        @test read_transactions(IOBuffer("@ITEM=0=zero\n% comment\n# comment\n\n2 0 2\n2 0\n")) == [[0,2], [0,2]]
+        @test_throws ArgumentError read_transactions(IOBuffer("1 -1\n"))
+        @test_throws ArgumentError read_transactions(IOBuffer("1 x\n"))
+        @test length(MINING_CASES) == 5
+        for case in MINING_CASES
+            transactions = read_transactions(joinpath(TOY_DIR, case.name * ".txt"))
+            for (items, support) in case.expected
+                @test support == count(t -> all(in(t), items), transactions)
+                @test support >= support_threshold(case.minsup, length(transactions))
+            end
+            io = IOBuffer()
+            write_itemsets(io, case.expected)
+            actual = String(take!(io))
+            expected_path = joinpath(TOY_DIR, case.name * ".expected.txt")
+            @test actual == (isfile(expected_path) ? replace(read(expected_path, String), "\r\n"=>"\n") : "")
+        end
+    end
+    @testset "Invalid output and unfinished miner" begin
+        @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((2,1)=>2))
+        @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((1,)=>0))
+        @test_throws ArgumentError write_itemsets(IOBuffer(), Dict(()=>1))
+        @test_throws ArgumentError mine([[1]]; minsup=1, variant=:unknown)
+        @test_throws ErrorException mine([[1]]; minsup=1)
+        @test_throws ErrorException mine([[1]]; minsup=1, variant=:optimized)
+    end
+    @testset "CLI" begin
+        include(joinpath(dirname(@__DIR__), "demo.jl"))
+        @test main(["--help"]) == 0
+        @test main(["--check-input", joinpath(TOY_DIR, "baskets.txt")]) == 0
+        @test_throws ArgumentError main(["--unknown"])
+        @test_throws ArgumentError main(["--minsup"])
+        @test_throws ArgumentError main(["--check-input"])
+    end
+end

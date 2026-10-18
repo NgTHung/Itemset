@@ -1,0 +1,1 @@
+dataset,dataset_version,input_sha256,transactions,items,mean_width,minsup_relative,minsup_count,code_revision,variant,reference_version,julia_version,java_version,os,cpu,threads,seed,repeat,warmup_policy,timing_scope,elapsed_seconds,peak_rss_bytes,output_count,status,error,command

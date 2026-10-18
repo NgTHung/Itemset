@@ -1,0 +1,1 @@
+# Empty database: comments and blank lines contain no transactions.

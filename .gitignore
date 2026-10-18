@@ -1,0 +1,27 @@
+# Local runtimes, downloads and generated experiment output
+.tools/
+.julia/
+.venv/
+.ipynb_checkpoints/
+__pycache__/
+*.jl.cov
+*.jl.mem
+data/benchmark/*
+!data/benchmark/README.md
+data/raw/*
+!data/raw/README.md
+results/raw/*
+!results/raw/README.md
+results/figures/*
+!results/figures/README.md
+tools/spmf/*.jar
+docs/report/*.aux
+docs/report/*.log
+docs/report/*.out
+docs/report/*.bbl
+docs/report/*.blg
+docs/report/*.pdf
+docs/report/*.fls
+docs/report/*.fdb_latexmk
+.DS_Store
+Thumbs.db

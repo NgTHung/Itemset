@@ -1,0 +1,13 @@
+name = "ItemsetMining"
+uuid = "c8f664d2-f6d4-4a68-a3ad-9c032d98c80e"
+authors = ["Hung", "Thien", "Phat"]
+version = "0.1.0"
+
+[compat]
+julia = "=1.13.2"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

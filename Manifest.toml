@@ -1,0 +1,10 @@
+# This file is machine-generated - editing it directly is not advised
+
+julia_version = "1.13.2"
+manifest_format = "2.1"
+project_hash = "3ca844625fae085626442d4f8b39b6930f318622"
+
+[[deps.ItemsetMining]]
+path = "."
+uuid = "c8f664d2-f6d4-4a68-a3ad-9c032d98c80e"
+version = "0.1.0"
