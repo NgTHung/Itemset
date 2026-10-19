@@ -5,15 +5,23 @@ Map label rows, such as the product names on each receipt, to integer-ID
 transactions. `labels` holds the distinct labels in sorted order, and
 `labels[id]` is the label of ID `id`, so the mapping depends only on the label
 set, never on row order. Repeated labels in a row collapse and empty rows stay
-as `Int[]`.
+as `Int[]`. `rows` may be a single-pass iterator.
 
-Throws `ArgumentError` naming the row for a `missing` or `nothing` label, so an
+Throws `ArgumentError` naming the row for a row that is not a collection, such
+as a bare string, and for a `missing`, `nothing`, or blank label, so an
 uncleaned value never becomes an item.
 """
 function encode_transactions(rows)
-    for (index, row) in enumerate(rows), label in row
-        (label === missing || label === nothing) &&
-            throw(ArgumentError("row $index: label $(repr(label)) is not an item; clean it before encoding"))
+    # Collect once so a single-pass iterator, such as eachline, is not consumed by validation.
+    rows = collect(rows)
+    for (index, row) in enumerate(rows)
+        is_item_collection(row) ||
+            throw(ArgumentError("row $index must be a collection of labels, got $(repr(row))"))
+        for label in row
+            (label === missing || label === nothing ||
+             label isa AbstractString && isempty(strip(label))) &&
+                throw(ArgumentError("row $index: label $(repr(label)) is not an item; clean it before encoding"))
+        end
     end
     labels = sort!(unique(eltype(eltype(rows))[label for row in rows for label in row]))
     ids = Dict(label => id for (id, label) in enumerate(labels))

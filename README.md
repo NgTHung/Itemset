@@ -20,7 +20,7 @@ Latest local test run, 2026-10-19, Windows x86_64, Julia 1.13.2. [docs/setup-val
 
 ```text
 Test Summary: | Pass  Total
-Itemset setup |  135    135
+Itemset setup |  148    148
 Testing ItemsetMining tests passed
 ```
 

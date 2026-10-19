@@ -30,6 +30,10 @@ include("oracle.jl")
             @test_throws ArgumentError mine(bad; minsup=1, variant)
         end
         @test_throws "transaction 2" mine([[1], [-1]]; minsup=1)
+        for bad in ([1, 2, 3], [[1], nothing], [[1], missing], ["12"])
+            @test_throws ArgumentError mine(bad; minsup=1)
+        end
+        @test_throws "transaction 2" mine([[1], nothing]; minsup=1)
     end
     @testset "Item labels" begin
         rows = [["milk", "bread"], ["bread", "bread"], String[], ["beer"]]
@@ -43,6 +47,11 @@ include("oracle.jl")
         @test_throws "4" decode_itemset(labels, (4,))
         @test_throws "row 2" encode_transactions([["a"], ["b", missing]])
         @test_throws ArgumentError encode_transactions([[nothing]])
+        @test_throws "row 1" encode_transactions(["bread", "milk"])
+        @test_throws "row 2" encode_transactions([["a"], missing])
+        @test_throws "row 2" encode_transactions([["a"], ["b", " "]])
+        single_pass_rows = (split(l, ",") for l in eachline(IOBuffer("bread,milk\nbeer\n")))
+        @test encode_transactions(single_pass_rows) == ([[2, 3], [1]], ["beer", "bread", "milk"])
     end
     @testset "Brute-force oracle" begin
         @test brute_force_supports([[1, 2], [2]], 1) == SupportMap((1,)=>1, (2,)=>2, (1,2)=>1)
@@ -116,6 +125,14 @@ include("oracle.jl")
         @test_throws ArgumentError write_transactions(IOBuffer(), [[3]]; labels=["a"])
         @test_throws ArgumentError write_transactions(IOBuffer(), [[0]]; labels=["a"])
         @test_throws ArgumentError write_transactions(IOBuffer(), [[1]]; labels=["a\nb"])
+    end
+    @testset "Writers keep files on invalid input" begin
+        path = tempname()
+        write(path, "keep\n")
+        @test_throws ArgumentError write_transactions(path, [[1], Int[]])
+        @test read(path, String) == "keep\n"
+        @test_throws ArgumentError write_itemsets(path, Dict((2, 1)=>2))
+        @test read(path, String) == "keep\n"
     end
     @testset "Invalid output and unfinished miner" begin
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((2,1)=>2))

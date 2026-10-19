@@ -16,7 +16,8 @@ Applications start from labels, such as product names or visual words, and the m
 
 - `encode_transactions(rows)` returns `(transactions, labels)`. IDs start at 1 and follow sorted label order, so the mapping depends only on the set of labels, never on row order, and `labels[id]` is the label of `id`.
 - `decode_itemset(labels, itemset)` returns the labels of an itemset. An ID without a label throws `ArgumentError`, because it means the itemset and labels come from different encodings.
-- A `missing` or `nothing` label throws `ArgumentError` naming its row. Preprocessing removes such values or replaces them with an explicit label, so a gap in the raw data never becomes a product.
+- A `missing`, `nothing`, or blank label throws `ArgumentError` naming its row. Preprocessing removes such values or replaces them with an explicit label, so a gap in the raw data never becomes a product.
+- Each row must be a collection of labels. A bare string row throws `ArgumentError`, because Julia would otherwise split it into characters.
 
 ## Read SPMF input
 
@@ -37,7 +38,7 @@ Applications start from labels, such as product names or visual words, and the m
 1 2
 ```
 
-An empty transaction throws `ArgumentError`, because its blank line would read back as no transaction and change N. To compare a database that keeps empty transactions with SPMF, run both with the same absolute count (`--min-count`) instead of a fraction. The writer validates every transaction and label before writing any line.
+An empty transaction throws `ArgumentError`, because its blank line would read back as no transaction and change N. To compare a database that keeps empty transactions with SPMF, run both with the same absolute count (`--min-count`) instead of a fraction. The writer validates every transaction and label before it opens the output, so invalid input never truncates an existing file.
 
 ## Support thresholds
 
@@ -57,7 +58,7 @@ Every stochastic step, such as fitting a k-means codebook or sampling a benchmar
 
 `mine(transactions; minsup, variant=:baseline)` returns a `SupportMap`, a `Dict{Tuple{Vararg{Int}},Int}` that holds all frequent nonempty itemsets and their exact support counts.
 
-- `mine` validates and canonicalizes every transaction before a variant runs, so both variants reject the same input. An invalid transaction throws `ArgumentError` naming its 1-based index.
+- `mine` validates and canonicalizes every transaction before a variant runs, so both variants reject the same input. An invalid transaction throws `ArgumentError` naming its 1-based index. A transaction must be a collection, so a flat vector such as `[1, 2, 3]` is rejected instead of read as three one-item transactions.
 - Keys are canonical: ascending, unique IDs.
 - Keys are tuples whatever a variant uses internally, so caller code such as `patterns[(2, 3)]` works with both variants.
 - Every nonempty subset of a key is also a key, because a subset occurs in at least as many transactions. Rule code can look up any antecedent or consequent without a missing-key check.
@@ -72,13 +73,14 @@ Callers depend only on this function and its output, never on tidsets or other i
 `write_itemsets(path, patterns)` writes one itemset per line in SPMF format. Lines are in numeric lexicographic key order: IDs compare as numbers, and a key precedes its extensions.
 
 ```text
+1 #SUP: 2
 1 2 #SUP: 1
 1 10 #SUP: 1
 2 #SUP: 1
 10 #SUP: 1
 ```
 
-The fixed order makes output files byte-comparable across variants and runs. SPMF writes its output in mining order, so a comparator parses both files into maps instead of comparing bytes. It validates every key and support before writing any line, so an invalid map never produces partial output. An empty map writes an empty file.
+The fixed order makes output files byte-comparable across variants and runs. SPMF writes its output in mining order, so a comparator parses both files into maps instead of comparing bytes. It validates every key and support before it opens the output, so an invalid map never produces partial output or truncates an existing file. An empty map writes an empty file.
 
 ## Association rules
 

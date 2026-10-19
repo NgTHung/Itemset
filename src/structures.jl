@@ -12,10 +12,19 @@ function canonical_transaction(items)
     return sort!(unique(Int[item for item in items]))
 end
 
+"""
+Julia iterates a number or string as a one-element or per-character collection,
+so a flat vector or a bare label would otherwise pass as several transactions.
+"""
+is_item_collection(value) =
+    !(value isa Union{Number,AbstractChar,AbstractString}) && applicable(iterate, value)
+
 """Canonicalize every transaction. Empty transactions stay, because they count in N."""
 function canonical_database(transactions)
     database = Vector{Vector{Int}}()
     for (index, transaction) in enumerate(transactions)
+        is_item_collection(transaction) ||
+            throw(ArgumentError("transaction $index must be a collection of item IDs, got $(repr(transaction))"))
         try
             push!(database, canonical_transaction(transaction))
         catch error
