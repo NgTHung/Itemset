@@ -5,9 +5,26 @@ const DEFAULT_SEED = 42
 
 """Sort and deduplicate one transaction without changing the caller's data."""
 function canonical_transaction(items)
-    all(x -> x isa Integer && !(x isa Bool) && x >= 0, items) ||
-        throw(ArgumentError("item IDs must be nonnegative integers (not Bool)"))
-    return sort!(unique(Int[x for x in items]))
+    for item in items
+        item isa Integer && !(item isa Bool) && 0 <= item <= typemax(Int) ||
+            throw(ArgumentError("item IDs must be nonnegative Int values (not Bool), got $(repr(item))"))
+    end
+    return sort!(unique(Int[item for item in items]))
+end
+
+"""Canonicalize every transaction. Empty transactions stay, because they count in N."""
+function canonical_database(transactions)
+    database = Vector{Vector{Int}}()
+    for (index, transaction) in enumerate(transactions)
+        try
+            push!(database, canonical_transaction(transaction))
+        catch error
+            # Add the index so the caller can find the bad record in a large database.
+            error isa ArgumentError || rethrow()
+            throw(ArgumentError("transaction $index: $(error.msg)"))
+        end
+    end
+    return database
 end
 
 """

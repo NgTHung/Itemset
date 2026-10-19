@@ -21,6 +21,16 @@ include("oracle.jl")
         end
         @test_throws ArgumentError support_threshold(1, -1)
     end
+    @testset "Mining input validation" begin
+        @test ItemsetMining.canonical_database([[2, 1, 2], Int[], (3,)]) == [[1, 2], Int[], [3]]
+        @test ItemsetMining.canonical_database([[2, 1]]) isa Vector{Vector{Int}}
+        @test_throws "-1" canonical_transaction([-1])
+        @test_throws ArgumentError canonical_transaction([typemax(UInt)])
+        for variant in (:baseline, :optimized), bad in ([[-1]], [[true]], [[1.5]], [[1], [typemax(UInt)]])
+            @test_throws ArgumentError mine(bad; minsup=1, variant)
+        end
+        @test_throws "transaction 2" mine([[1], [-1]]; minsup=1)
+    end
     @testset "Brute-force oracle" begin
         @test brute_force_supports([[1, 2], [2]], 1) == SupportMap((1,)=>1, (2,)=>2, (1,2)=>1)
         @test brute_force_supports([[1, 2], [2]], 2) == SupportMap((2,)=>2)

@@ -32,6 +32,7 @@ The CLI exposes the two forms as the mutually exclusive `--minsup FRACTION` and 
 
 `mine(transactions; minsup, variant=:baseline)` returns a `SupportMap`, a `Dict{Tuple{Vararg{Int}},Int}` that holds all frequent nonempty itemsets and their exact support counts.
 
+- `mine` validates and canonicalizes every transaction before a variant runs, so both variants reject the same input. An invalid transaction throws `ArgumentError` naming its 1-based index.
 - Keys are canonical: ascending, unique IDs.
 - An empty database, or an absolute threshold above N, returns an empty map.
 - The output has no length cap and never substitutes closed or maximal itemsets, because the SPMF comparison and both applications need the complete set.
