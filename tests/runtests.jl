@@ -2,6 +2,7 @@ using Test
 using ItemsetMining
 
 include("fixtures.jl")
+include("oracle.jl")
 
 @testset "Itemset setup" begin
     @testset "Transaction and support contract" begin
@@ -20,6 +21,13 @@ include("fixtures.jl")
         end
         @test_throws ArgumentError support_threshold(1, -1)
     end
+    @testset "Brute-force oracle" begin
+        @test brute_force_supports([[1, 2], [2]], 1) == SupportMap((1,)=>1, (2,)=>2, (1,2)=>1)
+        @test brute_force_supports([[1, 2], [2]], 2) == SupportMap((2,)=>2)
+        @test brute_force_supports(Vector{Int}[], 1) == SupportMap()
+        @test brute_force_supports([[0], Int[]], 1) == SupportMap((0,)=>1)
+        @test_throws ArgumentError brute_force_supports([collect(1:17)], 1)
+    end
     @testset "SPMF input and fixture integrity" begin
         @test read_transactions(IOBuffer("@ITEM=0=zero\n% comment\n# comment\n\n2 0 2\n2 0\n")) == [[0,2], [0,2]]
         @test_throws ArgumentError read_transactions(IOBuffer("1 -1\n"))
@@ -27,10 +35,8 @@ include("fixtures.jl")
         @test length(MINING_CASES) == 5
         for case in MINING_CASES
             transactions = read_transactions(joinpath(TOY_DIR, case.name * ".txt"))
-            for (items, support) in case.expected
-                @test support == count(t -> all(in(t), items), transactions)
-                @test support >= support_threshold(case.minsup, length(transactions))
-            end
+            min_count = support_threshold(case.minsup, length(transactions))
+            @test brute_force_supports(transactions, min_count) == case.expected
             io = IOBuffer()
             write_itemsets(io, case.expected)
             actual = String(take!(io))
