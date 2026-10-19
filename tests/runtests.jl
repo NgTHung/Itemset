@@ -31,6 +31,19 @@ include("oracle.jl")
         end
         @test_throws "transaction 2" mine([[1], [-1]]; minsup=1)
     end
+    @testset "Item labels" begin
+        rows = [["milk", "bread"], ["bread", "bread"], String[], ["beer"]]
+        transactions, labels = encode_transactions(rows)
+        @test labels == ["beer", "bread", "milk"]
+        @test transactions == [[2, 3], [2], Int[], [1]]
+        @test encode_transactions(reverse(rows)) == (reverse(transactions), labels)
+        @test decode_itemset(labels, (2, 3)) == ["bread", "milk"]
+        @test [decode_itemset(labels, t) for t in transactions] == [sort(unique(r)) for r in rows]
+        @test_throws ArgumentError decode_itemset(labels, (0,))
+        @test_throws "4" decode_itemset(labels, (4,))
+        @test_throws "row 2" encode_transactions([["a"], ["b", missing]])
+        @test_throws ArgumentError encode_transactions([[nothing]])
+    end
     @testset "Brute-force oracle" begin
         @test brute_force_supports([[1, 2], [2]], 1) == SupportMap((1,)=>1, (2,)=>2, (1,2)=>1)
         @test brute_force_supports([[1, 2], [2]], 2) == SupportMap((2,)=>2)

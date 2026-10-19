@@ -10,7 +10,13 @@ A database is a vector of transactions, and each transaction is a collection of 
 
 An empty transaction, such as an image with no visual words, is a valid record and counts in N. Dropping it raises every relative support, so an application keeps empty transactions unless its preprocessing notes justify the removal.
 
-Applications keep their own reversible mapping between labels, such as product names or visual words, and IDs. The miner never sees labels.
+## Item labels
+
+Applications start from labels, such as product names or visual words, and the miner sees only IDs. Both applications use the same encoding, so a mapping recorded by one is read the same way by the other.
+
+- `encode_transactions(rows)` returns `(transactions, labels)`. IDs start at 1 and follow sorted label order, so the mapping depends only on the set of labels, never on row order, and `labels[id]` is the label of `id`.
+- `decode_itemset(labels, itemset)` returns the labels of an itemset. An ID without a label throws `ArgumentError`, because it means the itemset and labels come from different encodings.
+- A `missing` or `nothing` label throws `ArgumentError` naming its row. Preprocessing removes such values or replaces them with an explicit label, so a gap in the raw data never becomes a product.
 
 ## Read SPMF input
 
