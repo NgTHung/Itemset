@@ -1,8 +1,139 @@
 \section{Cài đặt}
-Hung phụ trách. Trình bày Eclat theo bài báo gốc~\cite{zaki2000}, biểu diễn dọc,
-tidset, phép giao, DFS theo prefix, tỉa nhánh và độ phức tạp.
-\subsection{Hợp đồng và cài đặt cơ bản}
-Bổ sung ví dụ truy vết, cấu trúc dữ liệu, định dạng SPMF và tham số CLI.
+Nhóm cài đặt lại Eclat từ bài báo gốc của Zaki~\cite{zaki2000} bằng Julia, không dùng
+thư viện khai thác tập phổ biến (frequent itemset mining, FIM) nào. Chương này trình bày
+biểu diễn dữ liệu, thủ tục tìm kiếm, lý do thuật toán cho kết quả đúng, độ phức tạp và
+cách nhóm kiểm thử bản cài đặt cơ bản (baseline).
+
+\subsection{Biểu diễn dọc và tidset}
+Cơ sở dữ liệu (CSDL) gồm $N$ giao dịch (transaction). Mỗi giao dịch được gán một mã
+giao dịch (transaction identifier, tid) là chỉ số $1, 2, \dots, N$ theo thứ tự đọc.
+Apriori lưu CSDL theo chiều ngang (horizontal layout): mỗi giao dịch kèm danh sách item.
+Eclat dùng biểu diễn dọc (vertical layout): mỗi item $x$ kèm tidset $t(x)$, tức tập mã
+các giao dịch chứa $x$. Với itemset $X$, ta có
+\begin{equation}
+  t(X) = \{\, i \in \{1,\dots,N\} : X \subseteq T_i \,\}, \qquad
+  \sigma(X) = |t(X)|,
+  \label{eq:support}
+\end{equation}
+trong đó $T_i$ là giao dịch thứ $i$ và $\sigma(X)$ là độ hỗ trợ (support) của $X$, tức
+số giao dịch chứa $X$. Itemset $X$ là phổ biến (frequent) khi
+$\sigma(X) \ge \mathit{minsup}$, với $\mathit{minsup}$ là ngưỡng hỗ trợ tối thiểu tính
+bằng số giao dịch. Giao dịch rỗng vẫn có tid và vẫn được tính vào $N$, nhưng không xuất
+hiện trong tidset nào.
+
+Bản cơ bản lưu mỗi tidset dưới dạng \texttt{Vector\{Int\}} tăng dần, gọi là tid-list.
+Hàm \texttt{to\_class} đọc CSDL một lần và thêm tid theo thứ tự tăng dần, nên mọi
+tid-list đều đã sắp xếp mà không cần sắp lại.
+
+Ưu điểm chính của biểu diễn dọc là phép giao. Một giao dịch chứa $P \cup \{a, b\}$ khi
+và chỉ khi nó chứa cả $P \cup \{a\}$ lẫn $P \cup \{b\}$, nên
+\begin{equation}
+  t(P \cup \{a, b\}) = t(P \cup \{a\}) \cap t(P \cup \{b\}),
+  \label{eq:intersect}
+\end{equation}
+trong đó $P$ là một itemset và $a, b$ là hai item không thuộc $P$. Độ hỗ trợ của itemset
+mới vì vậy được tính từ hai tidset sẵn có, không cần quét lại CSDL.
+
+\subsection{Lớp tương đương theo tiền tố và tìm kiếm Bottom-Up}
+Zaki chia không gian tìm kiếm thành các lớp tương đương theo tiền tố (prefix-based
+equivalence class)~\cite{zaki2000}. Lớp có tiền tố (prefix) $P$ gồm các phần tử
+$(b, t(P \cup \{b\}))$, với mỗi $b$ lớn hơn mọi item của $P$. Hai itemset trong cùng
+một lớp chỉ khác nhau ở item cuối, nên phép giao~\eqref{eq:intersect} chỉ hợp lệ giữa
+các phần tử cùng lớp.
+
+Hàm \texttt{bottom\_up!} cài đặt thủ tục Bottom-Up của bài báo theo chiều sâu
+(depth-first search, DFS). Với mỗi phần tử $a$ của lớp tiền tố $P$, hàm ghi
+$P \cup \{a\}$ cùng độ hỗ trợ, giao $t(P \cup \{a\})$ với tidset của mọi phần tử $b$
+đứng sau $a$, giữ lại các kết quả phổ biến làm lớp con có tiền tố $P \cup \{a\}$, rồi
+duyệt lớp con đó trước khi xét phần tử kế tiếp. Lớp gốc có tiền tố rỗng và gồm các item
+phổ biến. Bài báo đếm trước các 2-itemset phổ biến bằng một mảng tam giác trên CSDL
+ngang; bản cơ bản bắt đầu phép giao từ các item đơn để một thủ tục xử lý mọi mức.
+
+Bảng~\ref{tab:trace} truy vết thuật toán trên CSDL \texttt{baskets.txt} gồm bốn giao
+dịch $T_1 = \{1,2,3\}$, $T_2 = \{1,2\}$, $T_3 = \{1,3\}$, $T_4 = \{2,3\}$ với
+$\mathit{minsup} = 2$. Các tidset ban đầu là $t(1) = \{1,2,3\}$, $t(2) = \{1,2,4\}$ và
+$t(3) = \{1,3,4\}$. Thuật toán ghi đúng sáu itemset phổ biến, và tập $\{1,2,3\}$ bị tỉa
+vì chỉ xuất hiện trong $T_1$.
+
+\begin{table}[t]
+\centering
+\caption{Truy vết Bottom-Up trên \texttt{baskets.txt} với $\mathit{minsup} = 2$}
+\label{tab:trace}
+\begin{tabular}{llll}
+\hline
+Tiền tố & Phép giao & Tidset & Kết quả \\
+\hline
+$\emptyset$ & -- & $t(1) = \{1,2,3\}$ & ghi $\{1\}$, $\sigma = 3$ \\
+$\{1\}$ & $t(1) \cap t(2)$ & $\{1,2\}$ & giữ $2$ \\
+$\{1\}$ & $t(1) \cap t(3)$ & $\{1,3\}$ & giữ $3$ \\
+$\{1\}$ & -- & $t(12) = \{1,2\}$ & ghi $\{1,2\}$, $\sigma = 2$ \\
+$\{1,2\}$ & $t(12) \cap t(13)$ & $\{1\}$ & tỉa, $1 < 2$ \\
+$\{1\}$ & -- & $t(13) = \{1,3\}$ & ghi $\{1,3\}$, $\sigma = 2$ \\
+$\emptyset$ & -- & $t(2) = \{1,2,4\}$ & ghi $\{2\}$, $\sigma = 3$ \\
+$\{2\}$ & $t(2) \cap t(3)$ & $\{1,4\}$ & giữ $3$ \\
+$\{2\}$ & -- & $t(23) = \{1,4\}$ & ghi $\{2,3\}$, $\sigma = 2$ \\
+$\emptyset$ & -- & $t(3) = \{1,3,4\}$ & ghi $\{3\}$, $\sigma = 3$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Tính đúng đắn}
+Mọi lớp mà \texttt{bottom\_up!} nhận đều thỏa bốn bất biến (invariant): (i) mỗi tid-list
+tăng dần và không lặp; (ii) các phần tử xếp tăng dần theo item và lớn hơn mọi item của
+tiền tố; (iii) mỗi phần tử là phổ biến; (iv) tid-list của phần tử $b$ đúng bằng
+$t(P \cup \{b\})$. Lớp gốc thỏa cả bốn khi được tạo. Lớp con lấy các phần tử đứng sau
+$a$ nên giữ (i) và (ii); phép kiểm tra kích thước trước khi thêm cho (iii); đẳng
+thức~\eqref{eq:intersect} cho (iv).
+
+Từ đó suy ra ba tính chất. Thứ nhất, độ hỗ trợ được ghi là chính xác theo (iv)
+và~\eqref{eq:support}. Thứ hai, không itemset nào bị ghi hai lần: theo (ii) mọi khóa
+$(x_1, \dots, x_k)$ tăng ngặt, và nó chỉ được ghi khi lớp tiền tố
+$(x_1, \dots, x_{k-1})$ duyệt tới $x_k$; mỗi lớp chỉ được tạo một lần. Thứ ba, kết quả
+đầy đủ nhờ tính đơn điệu giảm (anti-monotone) của độ hỗ trợ: nếu $X \subseteq Y$ thì
+$\sigma(X) \ge \sigma(Y)$, nên việc tỉa một itemset không phổ biến không làm mất tập cha
+phổ biến nào. Quy nạp theo độ dài cho thấy lớp tiền tố $(x_1, \dots, x_{j-1})$ chứa
+mọi item $y > x_{j-1}$ sao cho $(x_1, \dots, x_{j-1}, y)$ phổ biến, nên mọi itemset phổ
+biến đều được ghi. Tài liệu \texttt{docs/eclat.md} trong repository trình bày chứng minh
+đầy đủ.
+
+\subsection{Độ phức tạp}
+Gọi $L$ là tổng số item trên mọi giao dịch, $m$ là số item phân biệt và $C$ là số phép
+giao. Dựng biểu diễn dọc tốn $O(L)$ thời gian kỳ vọng cho từ điển, $O(m \log m)$ để sắp
+xếp và $O(L)$ bộ nhớ. Một phép giao tốn $O(|t(P \cup \{a\})| + |t(P \cup \{b\})|)$, tối
+đa $O(N)$. Một lớp có $k$ phần tử thực hiện $k(k-1)/2$ phép giao, nên tổng thời gian là
+\begin{equation}
+  O(L + m \log m + C \cdot N),
+  \label{eq:cost}
+\end{equation}
+với $C$ là tổng số phép giao trên mọi lớp được duyệt. Vì tìm kiếm theo chiều sâu, bộ nhớ
+chỉ giữ các lớp trên đường đi hiện tại, mỗi mức một lớp gồm tối đa $m$ phần tử, mỗi
+phần tử tối đa $N$ tid. Số kết quả có thể tăng theo hàm mũ: một $k$-itemset phổ biến có
+$2^k - 1$ tập con khác rỗng, và mọi tập con đó đều phổ biến.
+
+\subsection{Giao diện và định dạng SPMF}
+Hai ứng dụng và phần thực nghiệm chỉ gọi bốn hàm công khai: \texttt{read\_transactions}
+đọc file SPMF (mỗi dòng một giao dịch, các item cách nhau bởi dấu cách),
+\texttt{support\_threshold} đổi $\mathit{minsup}$ thành số giao dịch, \texttt{mine} trả
+về từ điển \texttt{SupportMap} từ itemset sang độ hỗ trợ, và \texttt{write\_itemsets}
+ghi mỗi itemset một dòng theo dạng \texttt{1 2 \#SUP: 2}. Một $\mathit{minsup}$ thực
+trong $(0, 1]$ là tỉ lệ và được làm tròn lên thành $\lceil \mathit{minsup} \cdot N \rceil$
+giao dịch; một $\mathit{minsup}$ nguyên là số giao dịch tuyệt đối. Tham số
+\texttt{variant} chọn \texttt{:baseline} hoặc \texttt{:optimized}, nên hai phiên bản được
+chọn riêng và so sánh trên cùng đầu vào.
+
+Chương trình dòng lệnh \texttt{demo.jl} nhận đường dẫn đầu vào, \texttt{--output},
+đúng một trong hai ngưỡng \texttt{--minsup} (tỉ lệ) hoặc \texttt{--min-count} (số giao
+dịch) và \texttt{--variant}, ví dụ
+\texttt{julia --project=. demo.jl --minsup 0.5 --output out.txt data/toy/baskets.txt}.
+
 \subsection{Kiểm thử và tối ưu hóa}
-Bổ sung kiểm thử trên ít nhất năm CSDL, so khớp chính xác với SPMF, và kỹ thuật
-tối ưu đã cài đặt kèm bằng chứng đo so với bản cơ bản. Chưa có số liệu ở bản khung.
+Bộ kiểm thử tự động (\texttt{julia --project=. test/runtests.jl}) gồm 490 phép kiểm
+tra. Với bản cơ bản, bộ kiểm thử so sánh toàn bộ \texttt{SupportMap} trên sáu CSDL nhỏ
+có kết quả tính tay (gồm CSDL rỗng, CSDL không có tập phổ biến và giao dịch lặp) và một
+CSDL ảnh có giao dịch rỗng. Bộ kiểm thử còn đối chiếu với một bộ đếm vét cạn
+(brute force) liệt kê mọi tập con trên 300 CSDL ngẫu nhiên sinh với hạt giống 42, kiểm
+tra các ngưỡng biên, một phản ví dụ cho phép giao giữa hai lớp khác tiền tố, thứ tự
+khóa và tính ổn định kiểu (type stability). Bộ đếm vét cạn chỉ là công cụ kiểm thử;
+phép so sánh với SPMF được trình bày trong chương thực nghiệm.
+
+Bổ sung kỹ thuật tối ưu đã cài đặt kèm bằng chứng đo so với bản cơ bản.
