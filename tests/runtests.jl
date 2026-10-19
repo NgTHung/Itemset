@@ -153,5 +153,24 @@ include("oracle.jl")
         @test_throws ArgumentError main(["--unknown"])
         @test_throws ArgumentError main(["--minsup"])
         @test_throws ArgumentError main(["--check-input"])
+        mktempdir() do dir
+            output = joinpath(dir, "patterns.txt")
+            for case in MINING_CASES
+                input = joinpath(TOY_DIR, case.name * ".txt")
+                threshold = case.minsup isa Integer ? "--min-count" : "--minsup"
+                @test main([threshold, string(case.minsup), "--variant", "baseline", "--output", output, input]) == 0
+                @test read(output, String) == sprint(write_itemsets, case.expected)
+            end
+            baskets = joinpath(TOY_DIR, "baskets.txt")
+            @test main(["--minsup", "0.5", "--output", output, baskets]) == 0
+            @test read(output, String) == replace(read(joinpath(TOY_DIR, "baskets.expected.txt"), String), "\r\n"=>"\n")
+            @test_throws "exactly one support threshold" main(["--minsup", "0.5", "--min-count", "2", "--output", output, baskets])
+            @test_throws "are required" main(["--minsup", "0.5", baskets])
+            @test_throws "must differ" main(["--min-count", "2", "--output", baskets, baskets])
+            @test_throws "only one input" main(["--min-count", "2", "--output", output, baskets, baskets])
+            @test_throws "variant must be" main(["--min-count", "2", "--variant", "fast", "--output", output, baskets])
+            @test_throws ArgumentError main(["--minsup", "2", "--output", output, baskets])
+            @test_throws ArgumentError main(["--min-count", "0.5", "--output", output, baskets])
+        end
     end
 end
