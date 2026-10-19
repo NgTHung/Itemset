@@ -26,6 +26,19 @@ Applications start from labels, such as product names or visual words, and the m
 - A malformed token or a negative ID throws `ArgumentError` with the line number. This rejects SPMF sequence files, whose `-1` and `-2` delimiters would otherwise be read as items.
 - A blank line never encodes an empty transaction. To count empty transactions in N, build the database in memory, and record the removal or retention of empty transactions in the application's preprocessing notes.
 
+## Write SPMF input
+
+`write_transactions(path, transactions; labels)` writes a database as SPMF transaction text, so applications and benchmark subsets can feed the CLI, Colab, and SPMF reference runs. With `labels`, the file starts with SPMF's own metadata lines, which `read_transactions` skips:
+
+```text
+@CONVERTED_FROM_TEXT
+@ITEM=1=beer
+@ITEM=2=bread
+1 2
+```
+
+An empty transaction throws `ArgumentError`, because its blank line would read back as no transaction and change N. To compare a database that keeps empty transactions with SPMF, run both with the same absolute count (`--min-count`) instead of a fraction. The writer validates every transaction and label before writing any line.
+
 ## Support thresholds
 
 `support_threshold(minsup, N)` converts `minsup` into the minimum transaction count.

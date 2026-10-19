@@ -70,6 +70,22 @@ include("oracle.jl")
             @test actual == (isfile(expected_path) ? replace(read(expected_path, String), "\r\n"=>"\n") : "")
         end
     end
+    @testset "SPMF transaction output" begin
+        io = IOBuffer()
+        write_transactions(io, [[3, 1], [2]])
+        @test String(take!(io)) == "1 3\n2\n"
+        io = IOBuffer()
+        write_transactions(io, [[2, 1]]; labels=["beer", "bread"])
+        text = String(take!(io))
+        @test text == "@CONVERTED_FROM_TEXT\n@ITEM=1=beer\n@ITEM=2=bread\n1 2\n"
+        @test read_transactions(IOBuffer(text)) == [[1, 2]]
+        io = IOBuffer()
+        @test_throws "transaction 2" write_transactions(io, [[1], Int[]])
+        @test position(io) == 0
+        @test_throws ArgumentError write_transactions(IOBuffer(), [[3]]; labels=["a"])
+        @test_throws ArgumentError write_transactions(IOBuffer(), [[0]]; labels=["a"])
+        @test_throws ArgumentError write_transactions(IOBuffer(), [[1]]; labels=["a\nb"])
+    end
     @testset "Invalid output and unfinished miner" begin
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((2,1)=>2))
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((1,)=>0))
