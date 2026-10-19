@@ -19,4 +19,4 @@ The comparator canonicalizes both outputs and then reports:
 - itemsets that appear more than once,
 - support mismatches.
 
-Test the comparator on deliberately corrupted outputs, one per failure kind, so a silent comparator cannot pass a broken miner. Keep the complete reference maps for the five toy databases and the four benchmarks in [results/raw](../../results/raw/README.md).
+Test the comparator on deliberately corrupted outputs, one per failure kind, so a silent comparator cannot pass a broken miner. Keep the complete reference maps for the toy databases and the four benchmarks in [results/raw](../../results/raw/README.md).

@@ -89,3 +89,19 @@ The market basket application derives rules from the `SupportMap` with these def
 - lift(X ⇒ Y) = confidence(X ⇒ Y) / (support(Y) / N)
 
 The hand-derived fixtures in [data/toy](../data/toy/README.md) let you test rule logic and result rendering against known maps.
+
+## Example
+
+The grocery fixture runs through the whole contract, so you can check each value by hand against [data/toy/groceries.expected.txt](../data/toy/groceries.expected.txt).
+
+```julia
+using ItemsetMining
+rows = [["bread", "milk"], ["bread", "butter"], ["bread", "butter", "milk"],
+        ["beer", "milk"], ["bread", "butter"]]
+transactions, labels = encode_transactions(rows)  # labels == ["beer", "bread", "butter", "milk"]
+write_transactions("results/groceries.txt", transactions; labels)
+patterns = mine(transactions; minsup=0.4)         # 2 of 5 receipts
+decode_itemset(labels, (2, 3))                    # ["bread", "butter"]
+patterns[(2, 3)] / patterns[(2,)]                 # confidence(bread ⇒ butter) == 0.75
+write_itemsets("results/groceries-patterns.txt", patterns)
+```

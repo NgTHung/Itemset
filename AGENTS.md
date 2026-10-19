@@ -48,7 +48,7 @@ This is a TDD project. Write the test first, watch it fail, then implement. Read
 
 - Put tests under `tests/`, never inline in `src/`. Group them with nested `@testset` blocks as `tests/runtests.jl` does.
 - Add a new toy database only with its hand-derived `*.expected.txt` file and an entry in `tests/fixtures.jl`.
-- Hand-derived fixtures are development aids, not proof of correctness. Miner correctness needs complete-map comparison across all five toy databases and against SPMF output (see `tools/spmf/README.md`).
+- Hand-derived fixtures are development aids, not proof of correctness. Miner correctness needs complete-map comparison across all toy databases and against SPMF output (see `tools/spmf/README.md`).
 - Both variants, `:baseline` and `:optimized`, must return equal maps before you compare their performance.
 
 ### Change size
