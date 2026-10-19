@@ -1,22 +1,10 @@
-# Itemset — Eclat mining project
+# Itemset
 
-Local Julia repository for the DataMining team's frequent-itemset assignment.
-Scope: **Eclat**, **Market Basket Analysis**, and **image-pattern mining**.
-[Linear project](https://linear.app/nguyen-tuan-hung/project/itemset-a5556236132d).
-The original assignment is preserved in [docs/assignment.md](docs/assignment.md).
-
-This is the project setup, not a completed miner. Package loading, SPMF transaction
-I/O, support thresholds, fixture output, and input inspection run now. `mine` and
-mining CLI commands deliberately fail until DAT-8 is implemented. No SPMF agreement,
-benchmark performance, or completed application result is claimed by the setup tests.
+`ItemsetMining` is a Julia package that finds every frequent itemset in a transaction database with Eclat (Zaki, 2000). It serves the HCMUS Data Mining course project, where two applications, market basket analysis and image-pattern mining, call one shared `mine` function. Both applications therefore mine with the same validated code, and the benchmark results describe the code they use.
 
 ## Install and verify
 
-Use **Julia 1.13.2** locally, selected by `.julia-version`; the committed Manifest
-was generated with that version. The package supports **Julia 1.12+ within 1.x**
-so Colab's native Julia kernel can use its provided runtime. CI covers 1.12.6 and
-1.13.2. Install from [official Julia downloads](https://julialang.org/downloads/)
-or select it with `juliaup add 1.13.2`. Core setup has no third-party dependencies.
+Install [Julia](https://julialang.org/downloads/) 1.13.2, the version pinned in `.julia-version` and used to generate `Manifest.toml`, for example with `juliaup add 1.13.2`. The package accepts any Julia 1.x from 1.12 so that it runs on Colab's native Julia runtime. CI tests 1.12.6 and 1.13.2 on Ubuntu and Windows.
 
 From the repository root:
 
@@ -24,111 +12,71 @@ From the repository root:
 julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --startup-file=no --project=. scripts/check_setup.jl
 julia --startup-file=no --project=. test/runtests.jl
-julia --startup-file=no --project=. demo.jl --check-input data/toy/baskets.txt
 ```
 
-`test/runtests.jl` delegates to `tests/runtests.jl` so the assignment command,
-`julia --project test/runtests.jl`, works. `Pkg.test()` also uses that entry point.
+`test/runtests.jl` includes `tests/runtests.jl`, so the brief's command `julia --project test/runtests.jl` and `Pkg.test()` run the same suite.
 
-On this Windows machine Julia is installed outside PATH. Use this PowerShell form
-for each command above until Julia is on PATH:
-
-```powershell
-& "$env:LOCALAPPDATA\Programs\Julia-1.13.2\bin\julia.exe" --project=. scripts/check_setup.jl
-```
-
-Latest local setup-test evidence: [docs/setup-validation.md](docs/setup-validation.md).
-Replace/add the final full miner/SPMF test output here before submission (DAT-28).
+Latest local test run, 2026-10-18, Windows x86_64, Julia 1.13.2 ([details](docs/setup-validation.md)):
 
 ```text
-2026-10-18 | Windows x86_64 | Julia 1.13.2
 Test Summary: | Pass  Total
 Itemset setup |   71     71
 Testing ItemsetMining tests passed
 ```
 
-This is setup-only evidence, not a completed algorithm-validation run.
-
-## Shared API
+## Use the API
 
 ```julia
 using ItemsetMining
 transactions = read_transactions("data/toy/baskets.txt")
-count = support_threshold(0.5, length(transactions)) # 2
-# Available after DAT-8:
-# patterns = mine(transactions; minsup=0.5, variant=:baseline)
-# write_itemsets("results/patterns.txt", patterns)
+support_threshold(0.5, length(transactions))  # 2 of 4 transactions
+patterns = mine(transactions; minsup=0.5, variant=:baseline)
+write_itemsets("results/patterns.txt", patterns)
 ```
 
-Integer `minsup=1` means count 1; floating `minsup=1.0` means 100%.
-Output keys are sorted unique integer tuples, values are exact support counts.
-See [docs/interface.md](docs/interface.md) before building either application.
+An integer `minsup` is an absolute count and a floating-point `minsup` is a fraction, so `minsup=1` means one transaction and `minsup=1.0` means all of them. [docs/interface.md](docs/interface.md) defines the full input, threshold, and output contract that both applications rely on.
 
-Planned mining invocation, intentionally unavailable until the miner exists:
+Both variants of `mine` raise `ErrorException`; the Linear project tracks the implementation.
+
+## Use the CLI
 
 ```sh
-julia --project=. demo.jl --minsup 0.5 --variant baseline --output results/patterns.txt data/toy/baskets.txt
+julia --project=. demo.jl --check-input data/toy/baskets.txt
+julia --project=. demo.jl --minsup 0.5 --output results/patterns.txt data/toy/baskets.txt
+julia --project=. demo.jl --min-count 2 --variant optimized --output results/patterns.txt data/toy/baskets.txt
 ```
 
-## Team handoffs
+`--check-input` prints the transaction and distinct-item counts. `--minsup` and `--min-count` are mutually exclusive. Run `demo.jl --help` for every option.
 
-- **Hung:** Chapter 1, API/I/O/CLI, baseline and optimization, tests, scalability,
-  output-size plots; review Thien's application; final repository integration.
-- **Thien:** market baskets/rules, benchmark runner and protocol, runtime/width,
-  future optimization proposals; review Phat; report assembly.
-- **Phat:** image encoding/mining, independent SPMF comparison and memory,
-  notebook assembly; review Hung.
+## Run on Colab
 
-Each author supplies their report sections and runnable notebook module. DAT-13
-freezes the validated baseline; optimization does not gate application work.
-[docs/project-plan.md](docs/project-plan.md) maps folders and next tasks.
+`notebooks/demo.ipynb` runs on Colab's native Julia kernel, so it calls the package directly without a Python wrapper.
 
-## Layout and reproducibility
+1. Export the committed tree with `git archive --format=zip --output=../Itemset-colab.zip HEAD`.
+2. Open the notebook in [Google Colab](https://colab.research.google.com/) and select Runtime, Change runtime type, Julia.
+3. Upload the ZIP through the Files sidebar to `/content/Itemset-colab.zip` and run all cells.
 
-- `src/algorithm/`: paper-based Eclat implementations; shared types/I/O in `src/`.
-- `tests/`, `test/`, `data/toy/`: setup tests, assignment entry point, five fixtures.
-- `applications/market_basket/`, `applications/image_patterns/`: owner handoffs.
-- `experiments/`: shared measurement protocol and result fields.
-- `data/benchmark/`, `data/raw/`: local downloaded data, excluded from Git.
-- `notebooks/demo.ipynb`: native Julia-kernel Colab setup and direct Julia cells.
-- `docs/report/`: Vietnamese IEEE report starter; final export is `docs/Report.pdf`.
-- `tools/spmf/`: independent Java reference instructions; no SPMF source copied.
-- `results/`: raw runs and generated figures, excluded from Git.
+If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Julia 1.12.6) or newer. See [Colab runtime versions](https://research.google.com/colaboratory/runtime-version-faq.html). [notebooks/README.md](notebooks/README.md) covers the other source options.
 
-Fixed seed: **20261018**. Pass a seeded RNG to every stochastic preprocessing or
-subset-selection step. Store data URL/license/SHA-256, reversible item mappings,
-parameters, runtime/environment, and Git revision alongside each result.
+## Layout
 
-Only Julia standard libraries are used initially. Image and plotting dependencies
-remain subject to DAT-5 clarification; their owners must pin approved additions in
-the environment and commit the regenerated Manifest. Never import a FIM library.
+- `src/`: the package. `structures.jl` holds the types and thresholds, `utils.jl` the SPMF reader and writer, `algorithm/` the Eclat variants.
+- `demo.jl`: the CLI.
+- `tests/`: the test suite and fixture maps. `test/` holds only the entry-point shim.
+- `data/toy/`: five hand-derived fixture databases. `data/benchmark/` and `data/raw/` hold downloads that stay out of Git.
+- `applications/`: the market basket and image-pattern workstreams.
+- `experiments/`: the benchmark measurement protocol and result fields.
+- `tools/spmf/`: the procedure for independent SPMF reference runs.
+- `results/`: raw runs and figures, kept out of Git.
+- `notebooks/demo.ipynb`: the Colab demo.
+- `docs/report/`: the Vietnamese IEEE-format report, exported as `docs/Report.pdf`.
 
-## Colab and submission links
+## Reproducibility
 
-No public repository or Colab URL exists yet: this setup is local only.
-Run `git archive --format=zip --output=../Itemset-colab.zip HEAD` after a commit,
-upload `notebooks/demo.ipynb` to [Google Colab](https://colab.research.google.com/),
-and select **Runtime → Change runtime type → Julia**. Upload the ZIP using the
-Files sidebar so it is available at `/content/Itemset-colab.zip`, then run all cells.
-The notebook also accepts a future public GitHub URL and explicit commit. It uses
-the provided Julia kernel directly and records its version and thread count.
-If the selected runtime is older than 1.12, select runtime version **2026.07**
-(Julia 1.12.6) or a newer compatible runtime; see [Colab's runtime versions](https://research.google.com/colaboratory/runtime-version-faq.html).
-This follows your native-kernel preference; the preserved assignment's Python-only
-Colab note predates [native Julia support](https://juliahub.com/blog/julia-now-available-on-google-colab).
-
-Before submission, create the public GitHub repository, publish/clean-run the
-notebook and add its public link here, add accessible Hugging Face/Kaggle data links
-with checksums, and export `docs/Report.pdf`. The notebook is a setup demonstration;
-each owner still supplies their actual application/experiment module.
+Every stochastic step takes an RNG seeded with `DEFAULT_SEED` from `src/structures.jl`. Each result records the input checksum, item mapping, parameters, environment, and Git revision listed in [experiments/README.md](experiments/README.md). The package uses only Julia standard libraries and never a frequent-itemset-mining library, because the brief requires the team to implement Eclat from the paper.
 
 ## References
 
-- Original paper: M. J. Zaki, *Scalable Algorithms for Association Mining*, IEEE
-  TKDE 12(3), 372–390 (2000). [Paper hosted by SPMF](https://www.philippe-fournier-viger.com/spmf/zaki2000.pdf).
-- [SPMF documentation](https://www.philippe-fournier-viger.com/spmf/documentation.php)
-  and [dataset catalog](https://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php).
-- [Julia release feed/checksums](https://julialang-s3.julialang.org/bin/versions.json).
-
-Implement Eclat from the paper, retain authorship history, and be able to explain
-all submitted code. Final application outputs must come from the team's miner.
+- M. J. Zaki, "Scalable Algorithms for Association Mining", IEEE TKDE 12(3), 372-390, 2000. [PDF hosted by SPMF](https://www.philippe-fournier-viger.com/spmf/zaki2000.pdf).
+- [SPMF documentation](https://www.philippe-fournier-viger.com/spmf/documentation.php) and [dataset catalog](https://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php).
+- [Julia release versions and checksums](https://julialang-s3.julialang.org/bin/versions.json).

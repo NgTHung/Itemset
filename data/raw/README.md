@@ -1,6 +1,13 @@
 # Application data
 
-Raw retail/image downloads stay local and are ignored. Thien owns retail resources;
-Phat owns image resources. Record accessible source/mirror URLs, license, SHA-256,
-preprocessing, item mappings/codebook settings, and computed statistics in each
-application module. Do not commit credentials or private data.
+The market basket and image-pattern applications start from raw downloads that are too large or too restrictively licensed to commit. They stay in this folder, which Git ignores.
+
+Each application module records, for its data:
+
+- accessible source and mirror URLs,
+- license and SHA-256,
+- preprocessing steps,
+- item mappings or codebook settings,
+- computed statistics.
+
+Never commit credentials or private data.

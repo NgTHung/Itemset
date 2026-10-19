@@ -6,7 +6,7 @@ Usage:
   julia --project=. demo.jl --minsup FRACTION --output PATH [--variant baseline|optimized] INPUT
   julia --project=. demo.jl --min-count COUNT --output PATH [--variant baseline|optimized] INPUT
 
-Setup supports --help and --check-input now. Mining becomes available with DAT-8.
+--check-input prints transaction and distinct-item counts.
 --minsup uses a fraction in (0,1]; --min-count uses an integer >= 1.
 """
 

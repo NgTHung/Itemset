@@ -1,7 +1,8 @@
-# Local setup validation — 2026-10-18
+# Local setup validation, 2026-10-18
 
-Environment: Windows x86_64; Julia 1.13.2 at
-`C:\Users\BBQ\AppData\Local\Programs\Julia-1.13.2\bin\julia.exe`.
+This record shows that the environment, I/O, and test infrastructure worked on a clean local checkout before any mining code existed. It is the evidence behind the test output in the root README.
+
+Environment: Windows x86_64; Julia 1.13.2.
 Invocations below used that full path, `--startup-file=no`, and repository root.
 
 Executed successfully:
@@ -38,7 +39,7 @@ Colab run, hosted public links, and final report PDF are outstanding.
 The IEEE LaTeX skeleton has not been compiled. GitHub CI
 configuration is prepared but cannot run until the repository is published.
 
-## Native Julia notebook update — 2026-10-18
+## Native Julia notebook, 2026-10-18
 
 Per user correction, `demo.ipynb` now targets Colab's native `julia` kernel. All four
 code cells were extracted in order and executed directly in Julia 1.13.2 locally.
