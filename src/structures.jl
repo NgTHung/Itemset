@@ -1,7 +1,7 @@
 """Canonical, ascending integer item IDs; a key never contains duplicates."""
 const Itemset = Tuple{Vararg{Int}}
 const SupportMap = Dict{Itemset,Int}
-const DEFAULT_SEED = 20261018
+const DEFAULT_SEED = 42
 
 """Sort and deduplicate one transaction without changing the caller's data."""
 function canonical_transaction(items)

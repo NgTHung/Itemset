@@ -1,13 +1,25 @@
-# Image-pattern mining — Phat
+# Image-pattern mining
 
-Start with DAT-11 (pilot) and DAT-15 (encoding). Select one real accessible dataset
-and explain descriptors, codebook fitting, fixed seed, and image -> set of visual
-word IDs. Document presence threshold, empty-transaction policy, vocabulary size,
-and information lost (location/multiplicity). Get package permission clarified in
-DAT-5 before adding dependencies; none is silently assumed approved here.
+Images that share a visual pattern often share a set of local features, such as textures or edges. This workstream encodes each image as the set of visual words it contains, mines those sets with `ItemsetMining.mine`, and shows which word combinations recur across images.
+## Encoding
 
-Persist reversible word IDs/codebook settings, show representative patches and
-supporting images, then mine through the shared Eclat API. Fixtures may support
-development; final patterns must come from own validated Eclat. Supply sensitivity,
-interpretation, runnable notebook module, and report text. Thien reviews this work.
-A downstream classifier remains optional and deferred.
+Select one real, publicly accessible image dataset and keep the raw files in [data/raw](../../data/raw/README.md). Explain and record:
+
+- the local descriptor and how it is extracted,
+- how the codebook is fitted, with its vocabulary size and `DEFAULT_SEED`,
+- the presence threshold that turns a descriptor match into a visual word,
+- whether images with no visual words are kept as empty transactions,
+- the reversible mapping between visual words and integer IDs, and the codebook settings.
+
+A transaction keeps only which words are present, so it loses each word's location and count. The report states that loss.
+
+Image and plotting packages need team approval before they enter `Project.toml`.
+
+## Deliverables
+
+- Frequent visual-word sets with representative patches and supporting images.
+- Sensitivity of the patterns to the support threshold and vocabulary size.
+- Interpretation and limitations.
+- A runnable notebook module and the Vietnamese report section.
+
+Fixtures support development. Final patterns come only from the team's validated miner. A downstream classifier is optional.

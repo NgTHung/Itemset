@@ -1,25 +1,31 @@
-# Common measurement protocol — DAT-12 draft, Thien
+# Measurement protocol
 
-Use the same pilot-approved 5–7 decreasing relative minsup points for each of Chess,
-Mushroom, Retail, and T10I4D100K. Compute file statistics instead of copying counts
-from the assignment (some catalog values may be typos). Freeze input SHA-256,
-SPMF JAR SHA/version/Java, Git revision, Julia/OS/CPU/threads, seed, and parameters.
+Benchmark charts in the report compare runs made by different people, on different days, against a Java reference. This protocol fixes how each run is made and recorded, so every chart compares like with like and any point can be rerun.
 
-`result-fields.txt` is the proposed CSV header, not fabricated results. Record one
-row per attempt, retain timeout/error status, preserve stdout/stderr and commands.
-Choose and record repeat count/timeouts after pilots. Do not compare Julia JIT-free
-mining time against Java startup-inclusive process time: record timing boundaries,
-warmup policy, materialization/serialization, and I/O inclusion for each series.
-Report repeat variation. Separate end-to-end timing from any mining-only series.
+## Datasets and thresholds
 
-Peak memory means OS-measured process peak RSS in bytes, not Julia allocations;
-record platform/tool and baseline/optimized variants at the same medium minsup.
-Perform exact itemset/support comparisons, not count-only checks. Reference fixtures
-and runs are Phat's independent responsibility; no source copying is required.
+Run Chess, Mushroom, Retail, and T10I4D100K, prepared as described in [data/benchmark](../data/benchmark/README.md). Use the same 5 to 7 decreasing relative minsup values for every series on a dataset, chosen from a pilot run. Compute transaction counts and widths from the files instead of copying catalog values, because some catalog figures are wrong.
 
-Scalability uses seeded nested subsets at 10/25/50/75/100%, fixed relative minsup,
-and actual transaction counts. Width experiments hold N, universe, and sampling
-model fixed. Reuse raw timing counts for output-size plots instead of rerunning.
-Owners execute/interpret their charts: Hung scalability/counts; Thien time/width;
-Phat correctness/memory. Store raw runs in `results/raw/` and figures in
-`results/figures/`; curate small final evidence into the report with provenance.
+## Record each attempt
+
+Write one CSV row per attempt with the header in [result-fields.txt](result-fields.txt). Keep failed and timed-out attempts with their status, and never replace them with zeros. Save each command with its stdout and stderr in [results/raw](../results/raw/README.md).
+
+Freeze these values for every series: input SHA-256, SPMF JAR version and SHA-256, Java version, Git revision, Julia version, OS, CPU, thread count, `DEFAULT_SEED`, and parameters. Record the repeat count and timeout chosen after the pilot, and report the variation across repeats.
+
+## Timing
+
+Julia compiles a method on its first call, and Java pays JVM startup on every process. Raw times from the two are therefore not comparable. For each series, record what the timer includes: warmup policy, compilation, file I/O, materialization of the output map, and serialization. Keep end-to-end process timing and mining-only timing as separate series.
+
+## Memory
+
+Peak memory is the OS-measured peak resident set size of the process in bytes, not Julia's allocation count, because only RSS is comparable with the Java process. Record the platform and the measuring tool. Measure the baseline and optimized variants at the same medium minsup.
+
+## Correctness
+
+Compare complete itemset and support maps, not only itemset counts, because two outputs with equal counts can disagree on every support. The comparison procedure is in [tools/spmf](../tools/spmf/README.md).
+
+## Scalability and width
+
+Scalability runs use seeded nested subsets of 10, 25, 50, 75, and 100 percent of each database at a fixed relative minsup, and plot the actual transaction counts. Width runs hold N, the item universe, and the sampling model fixed while varying transaction width. Output-size plots reuse the counts from the raw timing runs instead of rerunning.
+
+Store figures in [results/figures](../results/figures/README.md), and copy the ones the report uses into the report with their provenance.

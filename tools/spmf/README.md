@@ -1,12 +1,22 @@
-# Independent reference — Phat / DAT-9
+# SPMF reference runs
 
-Download the executable JAR from [SPMF](https://www.philippe-fournier-viger.com/spmf/download.php),
-record its version and SHA-256 plus `java -version`, and use the Eclat entry in the
-[official documentation](https://www.philippe-fournier-viger.com/spmf/documentation.php).
-JAR files are ignored. Inspect the selected release's CLI support semantics before
-running; record exact commands and thresholds. Do not copy Java source into the miner.
+Hand-derived fixtures can share the same mistake as the miner they test. An independent run of the SPMF Java library gives a second implementation to compare against, so a support error shows up as a disagreement between two programs written by different people.
 
-The comparator must detect missing/extra itemsets, duplicate output, and support
-mismatches after canonicalization. Test deliberately corrupted outputs. Save complete
-maps for five toy databases before DAT-13 and four benchmarks for DAT-32. A hand-made
-expected fixture is not proof that the reference executable was run.
+## Run SPMF
+
+1. Download the executable JAR from [SPMF](https://www.philippe-fournier-viger.com/spmf/download.php) into this folder. Git ignores `*.jar` files here.
+2. Record the SPMF version, the JAR's SHA-256, and the output of `java -version`.
+3. Read the Eclat entry in the [SPMF documentation](https://www.philippe-fournier-viger.com/spmf/documentation.php) for that release, and check how its command line interprets the support threshold before you convert one of ours.
+4. Record every command and threshold exactly as run.
+
+Use SPMF only as an executable. Never copy its Java source into the miner.
+
+## Compare outputs
+
+The comparator canonicalizes both outputs and then reports:
+
+- itemsets missing from either side,
+- itemsets that appear more than once,
+- support mismatches.
+
+Test the comparator on deliberately corrupted outputs, one per failure kind, so a silent comparator cannot pass a broken miner. Keep the complete reference maps for the five toy databases and the four benchmarks in [results/raw](../../results/raw/README.md).
