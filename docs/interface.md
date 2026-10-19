@@ -8,6 +8,8 @@ A database is a vector of transactions, and each transaction is a collection of 
 
 `canonical_transaction` sorts and deduplicates one transaction. Support counts transactions, not item occurrences, so repeated items in one transaction collapse. Repeated transactions stay distinct records, because each is a separate receipt or image.
 
+An empty transaction, such as an image with no visual words, is a valid record and counts in N. Dropping it raises every relative support, so an application keeps empty transactions unless its preprocessing notes justify the removal.
+
 Applications keep their own reversible mapping between labels, such as product names or visual words, and IDs. The miner never sees labels.
 
 ## Read SPMF input
@@ -28,12 +30,18 @@ Applications keep their own reversible mapping between labels, such as product n
 
 The CLI exposes the two forms as the mutually exclusive `--minsup FRACTION` and `--min-count COUNT`.
 
+## Randomness
+
+Every stochastic step, such as fitting a k-means codebook or sampling a benchmark subset, takes an explicit `rng::AbstractRNG` argument and never touches the global RNG, so its output depends only on its arguments. Scripts build the generator as `Random.Xoshiro(DEFAULT_SEED)`, with the seed defined once in `src/structures.jl`. Julia does not promise the same random stream across minor versions, so seeded results reproduce on the version pinned in `.julia-version`.
+
 ## Mine
 
 `mine(transactions; minsup, variant=:baseline)` returns a `SupportMap`, a `Dict{Tuple{Vararg{Int}},Int}` that holds all frequent nonempty itemsets and their exact support counts.
 
 - `mine` validates and canonicalizes every transaction before a variant runs, so both variants reject the same input. An invalid transaction throws `ArgumentError` naming its 1-based index.
 - Keys are canonical: ascending, unique IDs.
+- Keys are tuples whatever a variant uses internally, so caller code such as `patterns[(2, 3)]` works with both variants.
+- Every nonempty subset of a key is also a key, because a subset occurs in at least as many transactions. Rule code can look up any antecedent or consequent without a missing-key check.
 - An empty database, or an absolute threshold above N, returns an empty map.
 - The output has no length cap and never substitutes closed or maximal itemsets, because the SPMF comparison and both applications need the complete set.
 - `variant` is `:baseline` or `:optimized`. Any other symbol throws `ArgumentError`. Both variants return equal maps for the same input, and a failing variant raises an error instead of falling back to the other.
@@ -42,13 +50,16 @@ Callers depend only on this function and its output, never on tidsets or other i
 
 ## Write output
 
-`write_itemsets(path, patterns)` writes one itemset per line in lexicographic key order, in SPMF format:
+`write_itemsets(path, patterns)` writes one itemset per line in SPMF format. Lines are in numeric lexicographic key order: IDs compare as numbers, and a key precedes its extensions.
 
 ```text
-1 2 #SUP: 3
+1 2 #SUP: 1
+1 10 #SUP: 1
+2 #SUP: 1
+10 #SUP: 1
 ```
 
-The fixed order makes output files byte-comparable across variants and runs. It validates every key and support before writing any line, so an invalid map never produces partial output. An empty map writes an empty file.
+The fixed order makes output files byte-comparable across variants and runs. SPMF writes its output in mining order, so a comparator parses both files into maps instead of comparing bytes. It validates every key and support before writing any line, so an invalid map never produces partial output. An empty map writes an empty file.
 
 ## Association rules
 

@@ -37,6 +37,9 @@ include("oracle.jl")
         @test brute_force_supports(Vector{Int}[], 1) == SupportMap()
         @test brute_force_supports([[0], Int[]], 1) == SupportMap((0,)=>1)
         @test_throws ArgumentError brute_force_supports([collect(1:17)], 1)
+        for case in MINING_CASES, key in keys(case.expected), drop in eachindex(key)
+            length(key) > 1 && @test haskey(case.expected, Tuple(deleteat!(collect(key), drop)))
+        end
     end
     @testset "SPMF input and fixture integrity" begin
         @test read_transactions(IOBuffer("@ITEM=0=zero\n% comment\n# comment\n\n2 0 2\n2 0\n")) == [[0,2], [0,2]]
@@ -58,6 +61,9 @@ include("oracle.jl")
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((2,1)=>2))
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((1,)=>0))
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict(()=>1))
+        io = IOBuffer()
+        write_itemsets(io, SupportMap((10,)=>1, (2,)=>1, (1, 10)=>1, (1, 2)=>1))
+        @test String(take!(io)) == "1 2 #SUP: 1\n1 10 #SUP: 1\n2 #SUP: 1\n10 #SUP: 1\n"
         @test_throws ArgumentError mine([[1]]; minsup=1, variant=:unknown)
         @test_throws ErrorException mine([[1]]; minsup=1)
         @test_throws ErrorException mine([[1]]; minsup=1, variant=:optimized)
