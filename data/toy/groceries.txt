@@ -1,0 +1,10 @@
+@CONVERTED_FROM_TEXT
+@ITEM=1=beer
+@ITEM=2=bread
+@ITEM=3=butter
+@ITEM=4=milk
+2 4
+2 3
+2 3 4
+1 4
+2 3

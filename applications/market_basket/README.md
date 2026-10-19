@@ -18,4 +18,4 @@ Use a public retail dataset with meaningful product labels and a known license, 
 - Limitations of the data and the method.
 - A runnable notebook module and the Vietnamese report section.
 
-Develop and test the rule code against `data/toy/baskets.expected.txt`. Final rules come only from the team's validated miner, never from fixtures.
+Develop and test the rule code against `GROCERY_RULES` in `tests/fixtures.jl`, built from [data/toy/groceries.txt](../../data/toy/README.md). Encode labels with `encode_transactions` and write SPMF files with `write_transactions`, as [docs/interface.md](../../docs/interface.md#item-labels) describes. Final rules come only from the team's validated miner, never from fixtures.

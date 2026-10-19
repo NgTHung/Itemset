@@ -58,7 +58,7 @@ include("oracle.jl")
         @test read_transactions(IOBuffer("@ITEM=0=zero\n% comment\n# comment\n\n2 0 2\n2 0\n")) == [[0,2], [0,2]]
         @test_throws ArgumentError read_transactions(IOBuffer("1 -1\n"))
         @test_throws ArgumentError read_transactions(IOBuffer("1 x\n"))
-        @test length(MINING_CASES) == 5
+        @test length(MINING_CASES) == 6
         for case in MINING_CASES
             transactions = read_transactions(joinpath(TOY_DIR, case.name * ".txt"))
             min_count = support_threshold(case.minsup, length(transactions))
@@ -69,6 +69,22 @@ include("oracle.jl")
             expected_path = joinpath(TOY_DIR, case.name * ".expected.txt")
             @test actual == (isfile(expected_path) ? replace(read(expected_path, String), "\r\n"=>"\n") : "")
         end
+    end
+    @testset "Market basket fixture" begin
+        transactions, labels = encode_transactions(GROCERY_ROWS)
+        @test labels == ["beer", "bread", "butter", "milk"]
+        path = joinpath(TOY_DIR, "groceries.txt")
+        @test transactions == read_transactions(path)
+        @test replace(read(path, String), "\r\n"=>"\n") == sprint(io -> write_transactions(io, transactions; labels))
+        patterns = only(c for c in MINING_CASES if c.name == "groceries").expected
+        n = length(transactions)
+        for r in GROCERY_RULES
+            union_key = Tuple(sort([r.antecedent..., r.consequent...]))
+            @test r.support == patterns[union_key]
+            @test r.confidence == r.support // patterns[r.antecedent]
+            @test r.lift == r.confidence / (patterns[r.consequent] // n)
+        end
+        @test length(GROCERY_RULES) == sum(2^length(k) - 2 for k in keys(patterns) if length(k) >= 2)
     end
     @testset "SPMF transaction output" begin
         io = IOBuffer()
