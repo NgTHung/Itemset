@@ -86,6 +86,21 @@ include("oracle.jl")
         end
         @test length(GROCERY_RULES) == sum(2^length(k) - 2 for k in keys(patterns) if length(k) >= 2)
     end
+    @testset "Image-pattern fixture" begin
+        c = IMAGE_CASE
+        @test [findall(row) for row in eachrow(c.presence)] == c.transactions
+        n = length(c.transactions)
+        @test brute_force_supports(c.transactions, support_threshold(c.minsup, n)) == c.expected
+        @test keys(c.supporting_images) == keys(c.expected)
+        for (k, images) in c.supporting_images
+            @test images == findall(t -> issubset(k, t), c.transactions)
+            @test length(images) == c.expected[k]
+        end
+        @test brute_force_supports(c.transactions, support_threshold(c.sensitive_minsup, n)) == c.sensitive_expected
+        @test_throws ArgumentError write_transactions(IOBuffer(), c.transactions)
+        kept = filter(!isempty, c.transactions)
+        @test brute_force_supports(kept, support_threshold(c.sensitive_minsup, length(kept))) == c.expected
+    end
     @testset "SPMF transaction output" begin
         io = IOBuffer()
         write_transactions(io, [[3, 1], [2]])

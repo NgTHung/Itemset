@@ -27,3 +27,18 @@ const GROCERY_RULES = [
     (antecedent=(2,), consequent=(4,), support=2, confidence=1//2, lift=5//6),
     (antecedent=(4,), consequent=(2,), support=2, confidence=2//3, lift=5//6),
 ]
+
+# In memory because image 3 has no visual words, and SPMF text cannot encode an
+# empty transaction.
+const IMAGE_CASE = (
+    words = ["corner", "edge", "texture"],
+    # Rows are images, columns are visual-word IDs.
+    presence = Bool[1 1 0; 1 1 1; 0 0 0; 0 1 1],
+    transactions = [[1, 2], [1, 2, 3], Int[], [2, 3]],
+    minsup = 0.5,
+    expected = SupportMap((1,)=>2, (2,)=>3, (3,)=>2, (1,2)=>2, (2,3)=>2),
+    supporting_images = Dict((1,)=>[1, 2], (2,)=>[1, 2, 4], (3,)=>[2, 4], (1,2)=>[1, 2], (2,3)=>[2, 4]),
+    # At 0.6 the empty image decides the threshold: 3 of 4 images, or 2 of 3 without it.
+    sensitive_minsup = 0.6,
+    sensitive_expected = SupportMap((2,)=>3),
+)
