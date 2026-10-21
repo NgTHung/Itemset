@@ -8,6 +8,7 @@ __pycache__/
 *.jl.mem
 data/benchmark/*
 !data/benchmark/README.md
+!data/benchmark/manifest.toml
 data/raw/*
 !data/raw/README.md
 results/raw/*
