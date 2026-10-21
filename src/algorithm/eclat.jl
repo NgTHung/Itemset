@@ -7,12 +7,14 @@ separately and empty transactions count in the relative-support denominator.
 There is no length cap and no closed or maximal substitution, because callers
 compare complete maps. See `docs/interface.md` for the full contract.
 
-Throws `ArgumentError` for an unknown `variant` or invalid `minsup`, and
-`ErrorException` for a variant without an implementation.
+Throws `ArgumentError` for an unknown `variant`, invalid `minsup`, or an invalid
+transaction, whose 1-based index the message names. Throws `ErrorException` for
+a variant without an implementation.
 """
 function mine(transactions; minsup::Real, variant::Symbol=:baseline)
     variant in (:baseline, :optimized) ||
         throw(ArgumentError("variant must be :baseline or :optimized"))
-    support_threshold(minsup, length(transactions))
+    database = canonical_database(transactions)
+    support_threshold(minsup, length(database))
     throw(ErrorException("Eclat $variant is not implemented"))
 end

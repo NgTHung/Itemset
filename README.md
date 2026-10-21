@@ -16,11 +16,11 @@ julia --startup-file=no --project=. test/runtests.jl
 
 `test/runtests.jl` includes `tests/runtests.jl`, so the brief's command `julia --project test/runtests.jl` and `Pkg.test()` run the same suite.
 
-Latest local test run, 2026-10-18, Windows x86_64, Julia 1.13.2 ([details](docs/setup-validation.md)):
+Latest local test run, 2026-10-19, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
 
 ```text
 Test Summary: | Pass  Total
-Itemset setup |   71     71
+Itemset setup |  148    148
 Testing ItemsetMining tests passed
 ```
 
@@ -34,7 +34,9 @@ patterns = mine(transactions; minsup=0.5, variant=:baseline)
 write_itemsets("results/patterns.txt", patterns)
 ```
 
-An integer `minsup` is an absolute count and a floating-point `minsup` is a fraction, so `minsup=1` means one transaction and `minsup=1.0` means all of them. [docs/interface.md](docs/interface.md) defines the full input, threshold, and output contract that both applications rely on.
+An integer `minsup` is an absolute count and a floating-point `minsup` is a fraction, so `minsup=1` means one transaction and `minsup=1.0` means all of them.
+
+Applications that start from labels, such as product names, map them to IDs and back with `encode_transactions` and `decode_itemset`, and save SPMF input with `write_transactions`. [docs/interface.md](docs/interface.md) defines the full input, label, threshold, and output contract that both applications rely on, with a worked example.
 
 Both variants of `mine` raise `ErrorException`; the Linear project tracks the implementation.
 
@@ -63,7 +65,7 @@ If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Juli
 - `src/`: the package. `structures.jl` holds the types and thresholds, `utils.jl` the SPMF reader and writer, `algorithm/` the Eclat variants.
 - `demo.jl`: the CLI.
 - `tests/`: the test suite and fixture maps. `test/` holds only the entry-point shim.
-- `data/toy/`: five hand-derived fixture databases. `data/benchmark/` and `data/raw/` hold downloads that stay out of Git.
+- `data/toy/`: hand-derived fixture databases. `data/benchmark/` and `data/raw/` hold downloads that stay out of Git.
 - `applications/`: the market basket and image-pattern workstreams.
 - `experiments/`: the benchmark measurement protocol and result fields.
 - `tools/spmf/`: the procedure for independent SPMF reference runs.

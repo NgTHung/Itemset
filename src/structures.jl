@@ -5,9 +5,35 @@ const DEFAULT_SEED = 42
 
 """Sort and deduplicate one transaction without changing the caller's data."""
 function canonical_transaction(items)
-    all(x -> x isa Integer && !(x isa Bool) && x >= 0, items) ||
-        throw(ArgumentError("item IDs must be nonnegative integers (not Bool)"))
-    return sort!(unique(Int[x for x in items]))
+    for item in items
+        item isa Integer && !(item isa Bool) && 0 <= item <= typemax(Int) ||
+            throw(ArgumentError("item IDs must be nonnegative Int values (not Bool), got $(repr(item))"))
+    end
+    return sort!(unique(Int[item for item in items]))
+end
+
+"""
+Julia iterates a number or string as a one-element or per-character collection,
+so a flat vector or a bare label would otherwise pass as several transactions.
+"""
+is_item_collection(value) =
+    !(value isa Union{Number,AbstractChar,AbstractString}) && applicable(iterate, value)
+
+"""Canonicalize every transaction. Empty transactions stay, because they count in N."""
+function canonical_database(transactions)
+    database = Vector{Vector{Int}}()
+    for (index, transaction) in enumerate(transactions)
+        is_item_collection(transaction) ||
+            throw(ArgumentError("transaction $index must be a collection of item IDs, got $(repr(transaction))"))
+        try
+            push!(database, canonical_transaction(transaction))
+        catch error
+            # Add the index so the caller can find the bad record in a large database.
+            error isa ArgumentError || rethrow()
+            throw(ArgumentError("transaction $index: $(error.msg)"))
+        end
+    end
+    return database
 end
 
 """

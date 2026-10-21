@@ -22,4 +22,4 @@ Image and plotting packages need team approval before they enter `Project.toml`.
 - Interpretation and limitations.
 - A runnable notebook module and the Vietnamese report section.
 
-Fixtures support development. Final patterns come only from the team's validated miner. A downstream classifier is optional.
+Develop the encoding and visualization against `IMAGE_CASE` in `tests/fixtures.jl`, described in [data/toy](../../data/toy/README.md). Find an itemset's supporting images by scanning the application's own transactions, never from miner internals. Fixtures support development. Final patterns come only from the team's validated miner. A downstream classifier is optional.

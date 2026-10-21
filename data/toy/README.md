@@ -9,5 +9,10 @@ Each database here is small enough to mine by hand, so its expected output is kn
 | `disjoint.txt` | 3 | 2 | No frequent itemsets. Item 0 is intentional. |
 | `dense.txt` | 2 | 2 | All seven nonempty subsets of `{1,2,3}` have support 2. |
 | `empty.txt` | 0 | 1 | No frequent itemsets. |
+| `groceries.txt` | 5 | 2 (minsup 0.4) | Bread 4, butter 3, milk 3, bread and butter 3, bread and milk 2. Beer occurs once and is not frequent. |
 
-Expected outputs are in the matching `*.expected.txt` files, and `tests/fixtures.jl` holds the same five maps for the test suite. Databases with no frequent itemsets have no expected file, because the expected output is empty.
+Expected outputs are in the matching `*.expected.txt` files, and `tests/fixtures.jl` holds the same maps for the test suite. A test also checks every fixture map against a brute-force count of all itemsets, so a map that omits an itemset fails.
+
+`groceries.txt` carries its labels in SPMF `@ITEM` lines, written by `write_transactions` from `GROCERY_ROWS`. `GROCERY_RULES` lists all four rules from its map with exact support, confidence, and lift. Confidences differ and lift falls on both sides of 1, so a swapped antecedent or a wrong denominator changes a value. Databases with no frequent itemsets have no expected file, because the expected output is empty.
+
+`IMAGE_CASE` in `tests/fixtures.jl` is a four-image visual-word database. It lives in memory because image 3 has no visual words and SPMF text cannot encode an empty transaction. It gives the presence matrix, its transactions, the expected map at minsup 0.5, and the images that support each itemset. At minsup 0.6, keeping the empty image leaves only `{2}` frequent, while dropping it makes all five itemsets frequent, which shows why the choice belongs in the preprocessing notes.
