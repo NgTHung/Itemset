@@ -20,7 +20,7 @@ Latest local test run, 2026-10-19, Windows x86_64, Julia 1.13.2. [docs/setup-val
 
 ```text
 Test Summary: | Pass  Total
-Itemset setup |  148    148
+Itemset setup |  490    490
 Testing ItemsetMining tests passed
 ```
 
@@ -38,14 +38,14 @@ An integer `minsup` is an absolute count and a floating-point `minsup` is a frac
 
 Applications that start from labels, such as product names, map them to IDs and back with `encode_transactions` and `decode_itemset`, and save SPMF input with `write_transactions`. [docs/interface.md](docs/interface.md) defines the full input, label, threshold, and output contract that both applications rely on, with a worked example.
 
-Both variants of `mine` raise `ErrorException`; the Linear project tracks the implementation.
+`variant=:baseline` runs Eclat as the paper describes it. [docs/eclat.md](docs/eclat.md) states its invariants, why it outputs each frequent itemset once with its exact support, and its cost.
 
 ## Use the CLI
 
 ```sh
 julia --project=. demo.jl --check-input data/toy/baskets.txt
 julia --project=. demo.jl --minsup 0.5 --output results/patterns.txt data/toy/baskets.txt
-julia --project=. demo.jl --min-count 2 --variant optimized --output results/patterns.txt data/toy/baskets.txt
+julia --project=. demo.jl --min-count 2 --variant baseline --output results/patterns.txt data/toy/baskets.txt
 ```
 
 `--check-input` prints the transaction and distinct-item counts. `--minsup` and `--min-count` are mutually exclusive. Run `demo.jl --help` for every option.
@@ -62,7 +62,7 @@ If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Juli
 
 ## Layout
 
-- `src/`: the package. `structures.jl` holds the types and thresholds, `utils.jl` the SPMF reader and writer, `algorithm/` the Eclat variants.
+- `src/`: the package. `structures.jl` holds the types and thresholds, `utils.jl` the SPMF reader and writer, `algorithm/` the Eclat variants, which [docs/eclat.md](docs/eclat.md) explains.
 - `demo.jl`: the CLI.
 - `tests/`: the test suite and fixture maps. `test/` holds only the entry-point shim.
 - `data/toy/`: hand-derived fixture databases. `data/benchmark/` and `data/raw/` hold downloads that stay out of Git.

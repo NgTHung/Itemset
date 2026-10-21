@@ -1,4 +1,5 @@
 using Test
+using Random
 using ItemsetMining
 
 include("fixtures.jl")
@@ -134,6 +135,7 @@ include("oracle.jl")
         @test_throws ArgumentError write_itemsets(path, Dict((2, 1)=>2))
         @test read(path, String) == "keep\n"
     end
+    include("eclat.jl")
     @testset "Invalid output and unfinished miner" begin
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((2,1)=>2))
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((1,)=>0))
@@ -142,7 +144,6 @@ include("oracle.jl")
         write_itemsets(io, SupportMap((10,)=>1, (2,)=>1, (1, 10)=>1, (1, 2)=>1))
         @test String(take!(io)) == "1 2 #SUP: 1\n1 10 #SUP: 1\n2 #SUP: 1\n10 #SUP: 1\n"
         @test_throws ArgumentError mine([[1]]; minsup=1, variant=:unknown)
-        @test_throws ErrorException mine([[1]]; minsup=1)
         @test_throws ErrorException mine([[1]]; minsup=1, variant=:optimized)
     end
     @testset "CLI" begin
@@ -152,5 +153,24 @@ include("oracle.jl")
         @test_throws ArgumentError main(["--unknown"])
         @test_throws ArgumentError main(["--minsup"])
         @test_throws ArgumentError main(["--check-input"])
+        mktempdir() do dir
+            output = joinpath(dir, "patterns.txt")
+            for case in MINING_CASES
+                input = joinpath(TOY_DIR, case.name * ".txt")
+                threshold = case.minsup isa Integer ? "--min-count" : "--minsup"
+                @test main([threshold, string(case.minsup), "--variant", "baseline", "--output", output, input]) == 0
+                @test read(output, String) == sprint(write_itemsets, case.expected)
+            end
+            baskets = joinpath(TOY_DIR, "baskets.txt")
+            @test main(["--minsup", "0.5", "--output", output, baskets]) == 0
+            @test read(output, String) == replace(read(joinpath(TOY_DIR, "baskets.expected.txt"), String), "\r\n"=>"\n")
+            @test_throws "exactly one support threshold" main(["--minsup", "0.5", "--min-count", "2", "--output", output, baskets])
+            @test_throws "are required" main(["--minsup", "0.5", baskets])
+            @test_throws "must differ" main(["--min-count", "2", "--output", baskets, baskets])
+            @test_throws "only one input" main(["--min-count", "2", "--output", output, baskets, baskets])
+            @test_throws "variant must be" main(["--min-count", "2", "--variant", "fast", "--output", output, baskets])
+            @test_throws ArgumentError main(["--minsup", "2", "--output", output, baskets])
+            @test_throws ArgumentError main(["--min-count", "0.5", "--output", output, baskets])
+        end
     end
 end
