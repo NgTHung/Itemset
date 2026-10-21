@@ -175,4 +175,5 @@ include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
         end
     end
     include("benchmark_data.jl")
+    include("harness.jl")
 end
