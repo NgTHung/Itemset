@@ -5,6 +5,7 @@ using ItemsetMining
 include("fixtures.jl")
 include("oracle.jl")
 include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
+include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBasket.jl"))
 
 @testset "Itemset setup" begin
     @testset "Transaction and support contract" begin
@@ -176,4 +177,5 @@ include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
     end
     include("benchmark_data.jl")
     include("harness.jl")
+    include("market_basket.jl")
 end
