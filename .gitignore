@@ -11,6 +11,7 @@ data/benchmark/*
 !data/benchmark/manifest.toml
 data/raw/*
 !data/raw/README.md
+!data/raw/manifest.toml
 results/raw/*
 !results/raw/README.md
 results/figures/*
