@@ -151,20 +151,17 @@ toy_config(; kw...) = Experiments.parse_run_config(merge(Dict{String,Any}(
             manifest, data = toy_benchmark(dir)
             out = joinpath(dir, "run")
             rows = Experiments.run_experiment(toy_config(), manifest; data_dir=data, out_dir=out)
-            @test all(r -> r["status"] in ("ok", "error"), rows)
+            @test [r["timing_scope"] for r in rows] == ["process", "read", "mine", "write"]
             for row in rows
+                @test row["status"] == "ok" && isempty(row["error"])
                 @test !isempty(row["run_id"]) && !isempty(row["code_revision"])
                 @test row["minsup_count"] == "2" && row["transactions"] == "4"
                 @test row["seed"] == string(DEFAULT_SEED)
-                if row["status"] == "ok"
-                    @test row["output_count"] == "6"
-                    @test row["peak_rss_bytes"] != ""
-                else
-                    @test !isempty(row["error"])
-                end
+                @test row["output_count"] == "6"
+                @test parse(Int, row["peak_rss_bytes"]) > 0
+                @test parse(Float64, row["elapsed_seconds"]) >= 0
             end
-            ok = filter(r -> r["status"] == "ok", rows)
-            @test isempty(ok) || Set(r["timing_scope"] for r in ok) == Set(["process", "read", "mine", "write"])
+            @test parse(Int, rows[3]["allocated_bytes"]) > 0
             @test isfile(joinpath(out, "attempts", rows[1]["attempt_id"], "command.txt"))
         end
     end
