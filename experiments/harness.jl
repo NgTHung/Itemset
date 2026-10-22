@@ -170,10 +170,12 @@ function code_revision(project::AbstractString)
     end
 end
 
+first_line(text::AbstractString) = String(rstrip(first(split(text, '\n')), '\r'))
+
 function java_version(java::AbstractString)
     buffer = IOBuffer()
     run(pipeline(`$java -version`; stdout=buffer, stderr=buffer))
-    return first(split(String(take!(buffer)), '\n'))
+    return first_line(String(take!(buffer)))
 end
 
 """Facts shared by every row of a run. Throws `ArgumentError` when SPMF cannot run."""

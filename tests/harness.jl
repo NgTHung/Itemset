@@ -110,6 +110,13 @@ toy_config(; kw...) = Experiments.parse_run_config(merge(Dict{String,Any}(
         @test_throws ArgumentError Experiments.csv_line(Dict("dataset" => "x"))
     end
 
+    @testset "Java version line" begin
+        # Java on Windows ends its lines with CRLF; the recorded version must not keep the CR.
+        @test Experiments.first_line("openjdk version \"25.0.4.1\"\r\nOpenJDK Runtime\r\n") ==
+              "openjdk version \"25.0.4.1\""
+        @test Experiments.first_line("openjdk 25\nOpenJDK") == "openjdk 25"
+    end
+
     @testset "SPMF statistics" begin
         stdout_text = """
         =============  ECLAT v2.65 - STATS =============
