@@ -1,6 +1,6 @@
 # Image-pattern mining
 
-Images that share a visual pattern often share a set of local features, such as textures or edges. This workstream encodes each image as the set of visual words it contains, mines those sets with `ItemsetMining.mine`, and shows which word combinations recur across images.
+Images that share a visual pattern often share a set of local features, such as textures or edges. This workstream encodes each image as the set of visual words it contains, mines those sets with `ItemsetMining.mine`, and shows which word combinations recur across images. The [Semeion pilot record](../../docs/semeion-pilot-2026-10-24.md) gives the dataset checksum, settings, and measured output.
 ## Encoding
 
 Select one real, publicly accessible image dataset and keep the raw files in [data/raw](../../data/raw/README.md). Explain and record:
@@ -14,6 +14,14 @@ Select one real, publicly accessible image dataset and keep the raw files in [da
 A transaction keeps only which words are present, so it loses each word's location and count. The report states that loss.
 
 Image and plotting packages need team approval before they enter `Project.toml`.
+
+The Semeion pilot uses only Julia standard libraries. From the repository root, download `semeion.data` from the [UCI source](https://archive.ics.uci.edu/ml/machine-learning-databases/semeion/semeion.data) into `data/raw/semeion/`, verify its hash against the dated record, then run:
+
+```sh
+julia --startup-file=no --project=. scripts/image_pilot.jl data/raw/semeion/semeion.data results/raw/semeion-pilot
+```
+
+The output directory must not exist. The runner writes transactions, word frequencies, codebook centers, observed representative patches, source-image and patch montages, and baseline Eclat counts at three support thresholds. The [Julia notebook](../../notebooks/demo.ipynb) runs the same pilot.
 
 ## Deliverables
 
