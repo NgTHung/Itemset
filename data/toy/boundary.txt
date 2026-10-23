@@ -1,0 +1,5 @@
+# Four transactions exercise counts at and below the threshold.
+1 2
+1
+2
+3
