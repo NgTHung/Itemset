@@ -4,6 +4,7 @@ using ItemsetMining
 
 include("fixtures.jl")
 include("oracle.jl")
+include(joinpath(dirname(@__DIR__), "tools", "spmf", "compare.jl"))
 include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
 
 @testset "Itemset setup" begin
@@ -69,7 +70,7 @@ include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
         @test read_transactions(IOBuffer("@ITEM=0=zero\n% comment\n# comment\n\n2 0 2\n2 0\n")) == [[0,2], [0,2]]
         @test_throws ArgumentError read_transactions(IOBuffer("1 -1\n"))
         @test_throws ArgumentError read_transactions(IOBuffer("1 x\n"))
-        @test length(MINING_CASES) == 6
+        @test length(MINING_CASES) == 8
         for case in MINING_CASES
             transactions = read_transactions(joinpath(TOY_DIR, case.name * ".txt"))
             min_count = support_threshold(case.minsup, length(transactions))
@@ -80,7 +81,12 @@ include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
             expected_path = joinpath(TOY_DIR, case.name * ".expected.txt")
             @test actual == (isfile(expected_path) ? replace(read(expected_path, String), "\r\n"=>"\n") : "")
         end
+        boundary = read_transactions(joinpath(TOY_DIR, "boundary.txt"))
+        @test brute_force_supports(boundary, 1) == BOUNDARY_LOW_EXPECTED
+        @test sprint(write_itemsets, BOUNDARY_LOW_EXPECTED) ==
+              replace(read(joinpath(TOY_DIR, "boundary-count-1.expected.txt"), String), "\r\n"=>"\n")
     end
+    include("spmf_compare.jl")
     @testset "Market basket fixture" begin
         transactions, labels = encode_transactions(GROCERY_ROWS)
         @test labels == ["beer", "bread", "butter", "milk"]

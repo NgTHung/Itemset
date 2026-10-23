@@ -8,6 +8,8 @@ Each database here is small enough to mine by hand, so its expected output is kn
 | `duplicates.txt` | 3 | 2 | `{1,2}` has support 2 and `{2}` support 3. Repeated items collapse; repeated baskets count separately. |
 | `disjoint.txt` | 3 | 2 | No frequent itemsets. Item 0 is intentional. |
 | `dense.txt` | 2 | 2 | All seven nonempty subsets of `{1,2,3}` have support 2. |
+| `boundary.txt` | 4 | 2 | Items 1 and 2 occur twice; item 3 falls below the threshold. At count 1, the pair `{1,2}` also appears. |
+| `nested.txt` | 4 | 2 | Item 1 occurs three times; item 2 and pair `{1,2}` occur twice. |
 | `empty.txt` | 0 | 1 | No frequent itemsets. |
 | `groceries.txt` | 5 | 2 (minsup 0.4) | Bread 4, butter 3, milk 3, bread and butter 3, bread and milk 2. Beer occurs once and is not frequent. |
 
