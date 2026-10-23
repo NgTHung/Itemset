@@ -1,0 +1,78 @@
+# Each dataset is identified by the SHA-256 of its prepared text file; the
+# statistics are computed from that file with `read_transactions`.
+# `experiments/prepare_benchmarks.jl` downloads, verifies, and checks them.
+
+[chess]
+version = "FIMI 2003, byte-identical SPMF copy"
+file = "chess.txt"
+sha256 = "a12ea887df58a396709430af5bf0a9a32d1f6eba8e7c13dd41f28b98572c5db2"
+transactions = 3196
+items = 75
+total_items = 118252
+max_width = 37
+min_item = 1
+max_item = 75
+origin = "UCI Chess (King-Rook vs. King-Pawn), binarized by R. Bayardo for FIMI"
+terms = "UCI Machine Learning Repository dataset; cite the FIMI repository and UCI"
+
+[[chess.sources]]
+url = "https://www.philippe-fournier-viger.com/spmf/publicdatasets/chess.txt"
+format = "text"
+
+[[chess.sources]]
+url = "https://cs.rpi.edu/~zaki/Workshops/FIMI/data/chess.dat.gz"
+format = "gzip"
+
+[mushroom]
+version = "FIMI 2003"
+file = "mushroom.txt"
+sha256 = "6cf94bc482712c3936f0b40c921381ab2b776c3d9941880fecac4d83ca5cbeb5"
+transactions = 8124
+items = 119
+total_items = 186852
+max_width = 23
+min_item = 1
+max_item = 119
+origin = "UCI Mushroom, binarized by R. Bayardo for FIMI"
+terms = "UCI Machine Learning Repository dataset; cite the FIMI repository and UCI"
+notes = "SPMF's mushrooms.txt is a different file with 8416 transactions and IDs up to 128, so it is not a source of this dataset."
+
+[[mushroom.sources]]
+url = "https://cs.rpi.edu/~zaki/Workshops/FIMI/data/mushroom.dat.gz"
+format = "gzip"
+
+[retail]
+version = "FIMI 2003, SPMF copy with every item ID increased by 1"
+file = "retail.txt"
+sha256 = "732c26de19888cb570d3fbb97e47206a9b1c0ce064f85dc1403314ba38f04eaa"
+transactions = 88162
+items = 16470
+total_items = 908576
+max_width = 76
+min_item = 1
+max_item = 16470
+origin = "Anonymized receipts from a Belgian retail store, donated by T. Brijs to FIMI"
+terms = "Any use is allowed with proper acknowledgement (Brijs et al., KDD 1999) and a copy of the work sent to the donor"
+notes = "FIMI's retail.dat uses item 0, which SPMF rejects. The SPMF copy shifts every ID by 1, which keeps every support unchanged."
+
+[[retail.sources]]
+url = "https://www.philippe-fournier-viger.com/spmf/publicdatasets/retail.txt"
+format = "text"
+
+[T10I4D100K]
+version = "FIMI 2003, SPMF copy with every item ID increased by 1"
+file = "T10I4D100K.txt"
+sha256 = "949983f61aa976d1b774474fadd31c5f15775b24728a5e7c8b79801822ab3f89"
+transactions = 100000
+items = 870
+total_items = 1010228
+max_width = 29
+min_item = 1
+max_item = 1000
+origin = "Synthetic, IBM Almaden Quest generator, published by FIMI"
+terms = "Synthetic data published on the FIMI repository; cite FIMI"
+notes = "FIMI's T10I4D100K.dat uses item 0, which SPMF rejects. The SPMF copy shifts every ID by 1, which keeps every support unchanged."
+
+[[T10I4D100K.sources]]
+url = "https://www.philippe-fournier-viger.com/spmf/publicdatasets/T10I4D100K.txt"
+format = "text"

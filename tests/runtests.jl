@@ -4,6 +4,7 @@ using ItemsetMining
 
 include("fixtures.jl")
 include("oracle.jl")
+include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
 
 @testset "Itemset setup" begin
     @testset "Transaction and support contract" begin
@@ -173,4 +174,5 @@ include("oracle.jl")
             @test_throws ArgumentError main(["--min-count", "0.5", "--output", output, baskets])
         end
     end
+    include("benchmark_data.jl")
 end
