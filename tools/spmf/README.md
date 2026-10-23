@@ -11,6 +11,15 @@ Hand-derived fixtures can share the same mistake as the miner they test. An inde
 
 Use SPMF only as an executable. Never copy its Java source into the miner.
 
+Use a Java runtime compatible with the downloaded JAR. The executable fetched
+on 24 October 2026 requires Java 25. Input files with `@ITEM` labels make SPMF
+write label strings. For an integer-map comparison, write the same transactions
+without labels first:
+
+```powershell
+julia --startup-file=no --project=. -e 'using ItemsetMining; write_transactions(ARGS[2], read_transactions(ARGS[1]))' data/toy/groceries.txt results/raw/groceries-numeric.txt
+```
+
 SPMF accepts a relative minimum support percentage. Convert a fixture's count
 threshold to a percentage whose ceiling over the transaction count is the same
 count, and record both values. For `baskets.txt`, two of four transactions is
@@ -49,4 +58,12 @@ makes the comparison fail even when its first occurrence agrees. A perfect
 comparison exits with code 0; any difference exits with code 1; malformed
 output exits with code 2.
 
-Test the comparator on deliberately corrupted outputs, one per failure kind, so a silent comparator cannot pass a broken miner. Generate reference outputs for at least five distinct small databases and boundary thresholds, then retain their complete maps and comparison evidence in [results/raw](../../results/raw/README.md). The boundary fixture uses both 50% (count 2 of 4) and 25% (count 1 of 4). Hand-derived files in `data/toy/` are test fixtures, not independent SPMF evidence.
+Test the comparator on deliberately corrupted outputs, one per failure kind,
+so a silent comparator cannot pass a broken miner. Generate reference outputs
+for at least five distinct small databases and boundary thresholds, then
+retain their complete maps and comparison evidence in
+[results/raw](../../results/raw/README.md). The boundary fixture uses both
+50% (count 2 of 4) and 25% (count 1 of 4). Hand-derived files in `data/toy/`
+are test fixtures, not independent SPMF evidence. The dated
+[toy validation record](../../docs/spmf-toy-validation-2026-10-24.md) reports
+one run with complete-map results.

@@ -3,7 +3,41 @@
 Thien mô tả ít nhất bốn benchmark, nguồn/checksum, thống kê thực tế, 5--7 ngưỡng
 minsup, máy chạy, revision, seed, warmup/JIT, số lần lặp và phạm vi đo thời gian.
 \subsection{Độ đúng và bộ nhớ}
-Phat trình bày so sánh toàn bộ itemset/support với SPMF và peak RSS của hai phiên bản.
+Để kiểm tra độ đúng, chúng tôi chạy Eclat của SPMF như chương trình tham chiếu
+độc lập. Bộ so sánh đọc toàn bộ ánh xạ từ tập mục phổ biến (frequent itemset)
+sang độ hỗ trợ (support), chuẩn hóa thứ tự mục rồi đối chiếu từng cặp. Tỉ lệ
+khớp là số tập mục có cùng độ hỗ trợ trong cả hai đầu ra chia cho số tập mục
+khác nhau trong hợp của hai đầu ra. Bản đồ trống ở cả hai phía được tính là
+khớp hoàn toàn.
+
+Bảng~\ref{tab:toy-spmf} trình bày kết quả trên năm cơ sở dữ liệu nhỏ. $N$ là
+số giao dịch; $s$ là ngưỡng hỗ trợ theo số giao dịch. Cột ``Khớp'' ghi số cặp
+tập mục và độ hỗ trợ giống SPMF trên tổng số tập mục khác nhau. Mỗi phép so
+sánh của bản cơ bản đạt 100\%, không có tập mục thiếu, thừa, lặp hoặc sai độ
+hỗ trợ. Cơ sở dữ liệu \texttt{boundary} được chạy ở hai ngưỡng để kiểm tra
+tập mục vừa nằm trên và dưới ngưỡng. Lệnh, checksum đầu vào và kết quả thô
+được ghi tại \texttt{results/raw/spmf-toy-2026-10-24/}; giao thức và bản ghi
+ngày 24/10/2026 nằm trong \texttt{tools/spmf/README.md} và
+\texttt{docs/spmf-toy-validation-2026-10-24.md}.
+
+\begin{table}[t]
+\centering
+\caption{Đối chiếu toàn bộ tập mục và độ hỗ trợ của bản Eclat cơ bản với SPMF
+trên cơ sở dữ liệu nhỏ.}
+\label{tab:toy-spmf}
+\begin{tabular}{lrrr}
+\hline
+Dữ liệu & $N$ & $s$ & Khớp \\
+\hline
+Baskets & 4 & 2 & 6/6 \\
+Dense & 2 & 2 & 7/7 \\
+Groceries & 5 & 2 & 5/5 \\
+Boundary & 4 & 2 & 2/2 \\
+Boundary & 4 & 1 & 4/4 \\
+Nested & 4 & 2 & 3/3 \\
+\hline
+\end{tabular}
+\end{table}
 \subsection{Thời gian, số lượng kết quả và khả năng mở rộng}
 Thien viết runtime/độ dài giao dịch; Hung viết output size và tập con lồng nhau
 10\%, 25\%, 50\%, 75\%, 100\%. Dẫn chiếu hình và dữ liệu thô khi có kết quả.
