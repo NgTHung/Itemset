@@ -1,0 +1,19 @@
+# Raw application downloads, identified by SHA-256. These files are not SPMF
+# transaction databases, so entries carry no transaction statistics.
+# `applications/market_basket/prepare.jl` downloads and verifies them.
+
+[online_retail_ii]
+version = "UCI Online Retail II (dataset 502), both yearly sheets as one CSV"
+file = "online_retail_II.csv"
+sha256 = "32569a66f3842a82b0d8c4d63b263c5d98a76bde5d1f65c6c01bf457e541d3a9"
+origin = "D. Chen, Online Retail II, UCI Machine Learning Repository, 2012, https://doi.org/10.24432/C5CG6D"
+terms = "CC BY 4.0; cite the UCI dataset"
+notes = "Two Hugging Face mirrors, pinned to a revision, serve byte-identical files with 1,067,371 data rows, the instance count UCI publishes."
+
+[[online_retail_ii.sources]]
+url = "https://huggingface.co/datasets/attik/Online-Retail-II-UCI/resolve/0b3df9f6148646fa3e490141472dd76c191480ef/online_retail_II.csv"
+format = "text"
+
+[[online_retail_ii.sources]]
+url = "https://huggingface.co/datasets/mishrasiddhant911/online-retail-II/resolve/7a89989f793752d046ad3c01adc857d5525b5360/online_retail_II.csv"
+format = "text"

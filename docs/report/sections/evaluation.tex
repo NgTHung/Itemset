@@ -1,7 +1,65 @@
 \section{Thực nghiệm và đánh giá}
 \subsection{Dữ liệu và giao thức chung}
-Thien mô tả ít nhất bốn benchmark, nguồn/checksum, thống kê thực tế, 5--7 ngưỡng
-minsup, máy chạy, revision, seed, warmup/JIT, số lần lặp và phạm vi đo thời gian.
+\label{sec:protocol}
+Nhóm thực nghiệm trên bốn cơ sở dữ liệu chuẩn (benchmark, bộ dữ liệu dùng để so
+sánh thuật toán) của cộng đồng FIM: Chess, Mushroom, Retail và T10I4D100K, đều có
+nguồn gốc từ kho FIMI~\cite{fimi}. Bảng~\ref{tab:datasets} liệt kê các thống kê
+do nhóm tự tính từ chính các tệp dữ liệu, trong đó $N$ là số giao dịch, $|I|$ là
+số item phân biệt, $\bar{w}$ là độ dài giao dịch trung bình và mật độ
+$d = \bar{w} / |I|$ là tỉ lệ item trung bình có mặt trong một giao dịch. Chess và
+Mushroom là dữ liệu dày đặc (dense, $d \ge 0{,}19$), còn Retail và T10I4D100K là
+dữ liệu thưa (sparse, $d \le 0{,}012$).
+
+\begin{table}[t]
+\centering
+\caption{Thống kê bốn benchmark, tính từ tệp đã kiểm tra SHA-256}
+\label{tab:datasets}
+\begin{tabular}{lrrrrr}
+\hline
+Dữ liệu & $N$ & $|I|$ & $\bar{w}$ & $w_{\max}$ & $d$ \\
+\hline
+Chess & 3\,196 & 75 & 37,00 & 37 & 0,493 \\
+Mushroom & 8\,124 & 119 & 23,00 & 23 & 0,193 \\
+Retail & 88\,162 & 16\,470 & 10,31 & 76 & 0,0006 \\
+T10I4D100K & 100\,000 & 870 & 10,10 & 29 & 0,0116 \\
+\hline
+\end{tabular}
+\end{table}
+
+Mỗi tệp được định danh bằng mã băm SHA-256 thay vì bằng tên, vì cùng một tên có
+thể ứng với nhiều phiên bản khác nhau. Bản \texttt{mushrooms.txt} trên SPMF có
+8\,416 giao dịch, khác với bản 8\,124 giao dịch của FIMI mà đề bài và đa số bài
+báo sử dụng, nên nhóm dùng bản của FIMI. Retail là các hóa đơn ẩn danh của một cửa
+hàng bán lẻ ở Bỉ~\cite{brijs1999}. Retail và T10I4D100K của FIMI
+chứa item 0 trong khi SPMF chỉ nhận item nguyên dương, nên nhóm dùng bản của SPMF,
+trong đó mọi mã item được cộng thêm 1. Phép đổi tên này giữ nguyên support của
+mọi itemset. Kịch bản \texttt{experiments/prepare\_benchmarks.jl} tải lại dữ liệu,
+kiểm tra mã băm và thống kê trước khi đưa tệp vào sử dụng.
+
+Ngưỡng support tối thiểu tương đối minsup được đổi thành số giao dịch
+$\sigma = \lceil \mathrm{minsup} \cdot N \rceil$. Khi đo thực nghiệm, nhóm phát
+hiện SPMF tính phép nhân này bằng số thực dấu phẩy động 64 bit, nên với
+$\mathrm{minsup} = 0{,}07$ và $N = 100$, SPMF yêu cầu $\sigma = 8$ trong khi phép
+tính thập phân chính xác cho $\sigma = 7$. Vì vậy, trình chạy thực nghiệm từ chối
+mọi ngưỡng mà hai cách tính cho kết quả khác nhau, để sai lệch giữa hai cài đặt
+chỉ có thể đến từ thuật toán.
+
+Mọi lần chạy (attempt) diễn ra trong một tiến trình (process) mới, có giới hạn
+thời gian (timeout) và được ghi thành các dòng CSV với cùng một tập trường: dữ
+liệu và mã băm, minsup và $\sigma$, revision Git, phiên bản thuật toán, môi trường,
+seed, thời gian, bộ nhớ đỉnh, số itemset và trạng thái. Lần chạy lỗi hoặc quá
+thời gian vẫn được giữ lại với trạng thái tương ứng, không bao giờ được thay bằng
+giá trị 0. Thời gian được tách theo phạm vi đo (timing scope): \emph{process} đo
+toàn bộ tiến trình, gồm cả khởi động Julia, biên dịch JIT (just-in-time, biên dịch
+khi chạy) hoặc khởi động JVM; \emph{mine} đo riêng lời gọi \texttt{mine} sau khi
+đã chạy khởi động (warm-up) trên một cơ sở dữ liệu nhỏ, nên không chứa thời gian
+biên dịch. Với SPMF, nhóm dùng thêm thời gian do SPMF tự báo cáo. Bộ nhớ đỉnh là
+peak RSS (resident set size, lượng bộ nhớ vật lý lớn nhất mà tiến trình chiếm) do
+hệ điều hành đo, vì chỉ đại lượng này so sánh được giữa tiến trình Julia và Java.
+
+Các thực nghiệm chạy trên máy AMD Ryzen 7 H 260 (16 luồng logic, 31,3 GiB RAM),
+Windows 11, Julia 1.13.2 với một luồng, SPMF v2.66~\cite{spmf2016} trên Java
+Temurin 25.0.4.1.
 \subsection{Độ đúng và bộ nhớ}
 Phat trình bày so sánh toàn bộ itemset/support với SPMF và peak RSS của hai phiên bản.
 \subsection{Thời gian, số lượng kết quả và khả năng mở rộng}

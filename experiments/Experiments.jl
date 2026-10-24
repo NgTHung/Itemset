@@ -12,5 +12,7 @@ using SHA: sha256
 using TOML: TOML
 
 include("datasets.jl")
+include("harness.jl")
+include("runner.jl")
 
 end
