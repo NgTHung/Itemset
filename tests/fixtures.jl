@@ -46,3 +46,24 @@ const IMAGE_CASE = (
     sensitive_minsup = 0.6,
     sensitive_expected = SupportMap((2,)=>3),
 )
+
+# Raw receipts in the Online Retail II layout. Each cleaning step removes the
+# rows its comment names, so a reordered or missing step changes a count.
+const RECEIPT_CASE = (
+    file = "receipts.csv",
+    steps = [
+        (name="raw", removed=0, rows=14, invoices=6),
+        (name="duplicate rows", removed=1, rows=13, invoices=6),          # row 3
+        (name="cancelled invoices", removed=1, rows=12, invoices=5),      # C1004
+        (name="adjustment invoices", removed=1, rows=11, invoices=4),     # A1005
+        (name="nonpositive quantity", removed=1, rows=10, invoices=4),    # 21232 check
+        (name="nonpositive price", removed=1, rows=9, invoices=4),        # 22728 at 0.0
+        (name="non-product codes", removed=2, rows=7, invoices=3),        # POST, M
+    ],
+    invoices = ["1001", "1002", "1006"],
+    # 85123a and 85123A are one product; IDs follow sorted stock codes.
+    codes = ["22728", "71053", "85099B", "85123A"],
+    descriptions = ["ALARM CLOCK BAKELIKE PINK", "WHITE METAL LANTERN",
+                    "JUMBO BAG \"RED\" RETROSPOT", "WHITE HANGING HEART T-LIGHT HOLDER"],
+    transactions = [[2, 4], [1, 4], [1, 2, 3]],
+)

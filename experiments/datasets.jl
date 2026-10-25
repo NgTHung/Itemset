@@ -21,8 +21,9 @@ Base.@kwdef struct DatasetSource
 end
 
 """
-A benchmark identified by the SHA-256 of its prepared text file. Sources are
-only locations: any source whose bytes hash to `sha256` is acceptable.
+A file identified by its SHA-256. Sources are only locations: any source whose
+bytes hash to `sha256` is acceptable. `stats` is `nothing` for a raw file, such
+as an application's CSV, that is not an SPMF transaction database.
 """
 Base.@kwdef struct DatasetEntry
     name::String
@@ -30,8 +31,10 @@ Base.@kwdef struct DatasetEntry
     file::String
     sha256::String
     sources::Vector{DatasetSource}
-    stats::DatasetStats
+    stats::Union{Nothing,DatasetStats}
 end
+
+const STAT_KEYS = ("transactions", "items", "total_items", "max_width", "min_item", "max_item")
 
 """
     dataset_stats(transactions) -> DatasetStats
@@ -58,8 +61,9 @@ file_sha256(path::AbstractString) = open(io -> bytes2hex(sha256(io)), path)
 """
     load_manifest(path) -> Dict{String,DatasetEntry}
 
-Read the benchmark manifest. Throws `ArgumentError` naming the dataset and key
-for a missing or malformed field, so a typo fails before any download starts.
+Read a manifest. An entry gives either all statistics or none. Throws
+`ArgumentError` naming the dataset and key for a missing or malformed field, so
+a typo fails before any download starts.
 """
 load_manifest(path::AbstractString) = parse_manifest(read(path, String))
 
@@ -73,8 +77,8 @@ function parse_manifest(text::AbstractString)
             value
         end
         version, file, sha = field("version", String), field("file", String), field("sha256", String)
-        stats = DatasetStats(; (Symbol(key) => field(key, Int) for key in
-            ("transactions", "items", "total_items", "max_width", "min_item", "max_item"))...)
+        stats = any(in(keys(table)), STAT_KEYS) ?
+            DatasetStats(; (Symbol(key) => field(key, Int) for key in STAT_KEYS)...) : nothing
         sources = DatasetSource[]
         for source in field("sources", Vector)
             format = Symbol(get(source, "format", ""))
@@ -92,7 +96,7 @@ end
 """
     prepare_dataset(entry, dir; fetch=Downloads.download) -> path
 
-Return `dir/entry.file` after checking its SHA-256 and statistics, downloading it
+Return `dir/entry.file` after checking its SHA-256 and any statistics, downloading it
 first if it is absent or has the wrong bytes. Sources are tried in order and the
 first verified one wins. A file reaches its final name only after both checks
 pass, so an interrupted or wrong download never looks prepared. Throws
@@ -111,9 +115,11 @@ function prepare_dataset(entry::DatasetEntry, dir::AbstractString; fetch=Downloa
                 # Verified bytes with the wrong statistics mean the manifest
                 # itself is wrong, so this stops the search instead of trying
                 # another source.
-                stats = dataset_stats(read_transactions(staged))
-                stats == entry.stats ||
-                    error("dataset $(entry.name): computed $stats differs from manifest $(entry.stats)")
+                if entry.stats !== nothing
+                    stats = dataset_stats(read_transactions(staged))
+                    stats == entry.stats ||
+                        error("dataset $(entry.name): computed $stats differs from manifest $(entry.stats)")
+                end
                 mv(staged, path; force=true)
                 return path
             end

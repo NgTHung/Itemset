@@ -68,6 +68,28 @@ end
         @test_throws ArgumentError Experiments.parse_manifest(bad_format)
     end
 
+    @testset "Raw files without transaction statistics" begin
+        csv_sha = hex_sha256("a,b\n")
+        raw = """
+        [receipts]
+        version = "x"
+        file = "receipts.csv"
+        sha256 = "$csv_sha"
+
+        [[receipts.sources]]
+        url = "https://example.org/receipts.csv"
+        format = "text"
+        """
+        entry = Experiments.parse_manifest(raw)["receipts"]
+        @test entry.stats === nothing
+        partial = replace(raw, "sha256" => "transactions = 1\nsha256")
+        @test_throws ArgumentError Experiments.parse_manifest(partial)
+        mktempdir() do dir
+            fetch = fake_fetch(Dict(entry.sources[1].url => Vector{UInt8}("a,b\n")), Ref(0))
+            @test read(Experiments.prepare_dataset(entry, dir; fetch), String) == "a,b\n"
+        end
+    end
+
     @testset "Download, verify, and cache" begin
         mktempdir() do dir
             calls = Ref(0)
