@@ -65,18 +65,22 @@ Temurin 25.0.4.1.
 độc lập. Bộ so sánh đọc toàn bộ ánh xạ từ tập mục phổ biến (frequent itemset)
 sang độ hỗ trợ (support), chuẩn hóa thứ tự mục rồi đối chiếu từng cặp. Tỉ lệ
 khớp là số tập mục có cùng độ hỗ trợ trong cả hai đầu ra chia cho số tập mục
-khác nhau trong hợp của hai đầu ra. Bản đồ trống ở cả hai phía được tính là
-khớp hoàn toàn.
+khác nhau trong hợp của hai đầu ra. Ánh xạ trống ở cả hai phía được tính là
+khớp hoàn toàn. Một tập mục xuất hiện hai lần trong cùng một đầu ra không được
+tính là khớp, vì khi đó độ hỗ trợ của nó không xác định.
 
-Bảng~\ref{tab:toy-spmf} trình bày kết quả trên năm cơ sở dữ liệu nhỏ. $N$ là
-số giao dịch; $s$ là ngưỡng hỗ trợ theo số giao dịch. Cột ``Khớp'' ghi số cặp
-tập mục và độ hỗ trợ giống SPMF trên tổng số tập mục khác nhau. Mỗi phép so
-sánh của bản cơ bản đạt 100\%, không có tập mục thiếu, thừa, lặp hoặc sai độ
-hỗ trợ. Cơ sở dữ liệu \texttt{boundary} được chạy ở hai ngưỡng để kiểm tra
-tập mục vừa nằm trên và dưới ngưỡng. Lệnh, checksum đầu vào và kết quả thô
-được ghi tại \texttt{results/raw/spmf-toy-2026-10-24/}; giao thức và bản ghi
-ngày 24/10/2026 nằm trong \texttt{tools/spmf/README.md} và
-\texttt{docs/spmf-toy-validation-2026-10-24.md}.
+Bảng~\ref{tab:toy-spmf} trình bày kết quả trên bảy cơ sở dữ liệu nhỏ. $N$ là
+số giao dịch; $\sigma$ là ngưỡng hỗ trợ theo số giao dịch như ở
+Mục~\ref{sec:protocol}. Cột ``Khớp'' ghi số tập mục có cùng độ hỗ trợ với SPMF
+trên tổng số tập mục khác nhau. Mỗi phép so sánh của bản cơ bản đạt 100\%,
+không có tập mục thiếu, thừa, lặp hoặc sai độ hỗ trợ; với \texttt{disjoint},
+cả hai chương trình đều trả về ánh xạ trống. Cơ sở dữ liệu \texttt{boundary}
+được chạy ở hai ngưỡng để kiểm tra tập mục vừa nằm trên và dưới ngưỡng. Mỗi
+ngưỡng được chọn sao cho SPMF và phép tính thập phân cho cùng $\sigma$. Đầu ra
+gốc của SPMF và danh sách lần chạy nằm trong \texttt{data/toy/spmf/}, kèm kịch
+bản \texttt{tools/spmf/toy\_reference.jl} để tạo lại; bộ kiểm thử đối chiếu
+các đầu ra này với mọi phiên bản Eclat ở mỗi lần chạy. Giao thức nằm trong
+\texttt{tools/spmf/README.md}.
 
 \begin{table}[t]
 \centering
@@ -85,9 +89,11 @@ trên cơ sở dữ liệu nhỏ.}
 \label{tab:toy-spmf}
 \begin{tabular}{lrrr}
 \hline
-Dữ liệu & $N$ & $s$ & Khớp \\
+Dữ liệu & $N$ & $\sigma$ & Khớp \\
 \hline
 Baskets & 4 & 2 & 6/6 \\
+Duplicates & 3 & 2 & 3/3 \\
+Disjoint & 3 & 2 & 0/0 \\
 Dense & 2 & 2 & 7/7 \\
 Groceries & 5 & 2 & 5/5 \\
 Boundary & 4 & 2 & 2/2 \\

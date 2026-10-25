@@ -43,18 +43,23 @@ julia --startup-file=no --project=. demo.jl --min-count 2 --variant baseline --o
 julia --startup-file=no --project=. tools/spmf/compare.jl results/raw/baskets-spmf.txt results/raw/baskets-julia.txt
 ```
 
-The exact-map match rate is equal-support itemsets divided by the distinct keys
-in the union of both maps. Two empty maps have a 100% rate. A duplicate key
-makes the comparison fail even when its first occurrence agrees. A perfect
-comparison exits with code 0; any difference exits with code 1; malformed
-output exits with code 2.
+The exact-map match rate is the number of itemsets that occur once in each map with equal support, divided by the distinct keys in the union of both maps. Two empty maps have a 100% rate. A duplicated itemset never counts as matching and makes the comparison fail, because its supports are ambiguous; the report lists each duplicate with its own support and line.
 
-Test the comparator on deliberately corrupted outputs, one per failure kind,
-so a silent comparator cannot pass a broken miner. Generate reference outputs
-for at least five distinct small databases and boundary thresholds, then
-retain their complete maps and comparison evidence in
-[results/raw](../../results/raw/README.md). The boundary fixture uses both
-50% (count 2 of 4) and 25% (count 1 of 4). Hand-derived files in `data/toy/`
-are test fixtures, not independent SPMF evidence. The dated
-[toy validation record](../../docs/spmf-toy-validation-2026-10-24.md) reports
-one run with complete-map results.
+The exit code separates a wrong miner from a broken run:
+
+- 0: the maps are equal.
+- 1: any missing, extra, duplicated, or support-mismatched itemset.
+- 2: a file is malformed. The message names the file and line.
+- 3: a setup error, such as a wrong argument count or an unreadable file.
+
+`tests/spmf_compare.jl` feeds the comparator one corrupted output per failure kind, so a silent comparator cannot pass a broken miner. Hand-derived files in `data/toy/` are test fixtures, not independent SPMF evidence.
+
+## Toy reference outputs
+
+SPMF's raw output for the toy databases lives in [data/toy/spmf](../../data/toy/README.md#spmf-reference-outputs), and the test suite compares every Eclat variant with it on each run. `data/toy/spmf/runs.toml` lists each run; a test checks that every fraction gives SPMF the same count as `support_threshold`. The boundary fixture runs at 0.5 (count 2 of 4) and 0.25 (count 1 of 4). To regenerate the outputs after a JAR or fixture change, run:
+
+```sh
+julia --startup-file=no --project=. tools/spmf/toy_reference.jl path/to/java
+```
+
+The script rewrites each input without `@ITEM` labels first, so SPMF writes item IDs. Review the resulting diff before committing it, because a changed output means SPMF and the fixture disagree.

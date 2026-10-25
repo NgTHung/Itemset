@@ -25,8 +25,4 @@ Expected outputs are in the matching `*.expected.txt` files, and `tests/fixtures
 
 Hand-derived maps can share a mistake with the miner, so `spmf/` holds SPMF's own Eclat output for the toy databases, unmodified apart from Git's line-ending normalization. `spmf/runs.toml` lists each run's input, fraction, and count; every fraction gives SPMF the same count as `support_threshold`, which a test checks. The test suite compares `mine` against each output for every variant. `empty.txt` is absent because SPMF rejects an empty input file.
 
-The outputs were generated on 25 October 2026 with the SPMF JAR whose SHA-256 is in [tools/spmf](../../tools/spmf/README.md) and Temurin Java 25.0.4.1+1:
-
-```sh
-julia --startup-file=no --project=. tools/spmf/toy_reference.jl path/to/java
-```
+[tools/spmf](../../tools/spmf/README.md#toy-reference-outputs) explains how to regenerate them, and the [dated validation record](../../docs/spmf-toy-validation-2026-10-25.md) gives the environment and results of the committed run.
