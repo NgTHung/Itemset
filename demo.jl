@@ -31,7 +31,10 @@ function main(args)
     while index <= length(args)
         arg = args[index]
         if arg in ("--minsup", "--min-count", "--variant", "--output")
-            index < length(args) || throw(ArgumentError("$arg needs a value"))
+            # A missing value would otherwise shift every later argument, so `--output --variant`
+            # would make "--variant" the output path instead of failing here.
+            index < length(args) && !startswith(args[index + 1], "--") ||
+                throw(ArgumentError("$arg needs a value"))
             value = args[index + 1]
             if arg in ("--minsup", "--min-count")
                 threshold === nothing || throw(ArgumentError("choose exactly one support threshold"))

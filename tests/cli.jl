@@ -41,6 +41,10 @@ threshold_flag(minsup) = minsup isa Integer ? "--min-count" : "--minsup"
             @test_throws "\"0.5\"" main(["--min-count", "0.5", "--output", output, baskets])
             @test_throws ArgumentError main(["--minsup", "2", "--output", output, baskets])
         end
+        @testset "An option never takes the next option as its value" begin
+            @test_throws "--output needs a value" main(["--minsup", "0.5", "--output", "--variant", "baseline", baskets])
+            @test_throws "--minsup needs a value" main(["--minsup", "--output", output, baskets])
+        end
         @testset "Failures leave existing output untouched" begin
             write(output, "keep\n")
             @test_throws "line 2" main(["--min-count", "1", "--output", output, malformed])
