@@ -1,0 +1,50 @@
+# Toy databases mined by SPMF Eclat. Each minsup gives the same count in SPMF's
+# Float64 arithmetic and in support_threshold, so both programs mine at the same count.
+
+[[run]]
+input = "baskets.txt"
+minsup = 0.5
+count = 2
+output = "baskets-0.5.txt"
+
+[[run]]
+input = "duplicates.txt"
+minsup = 0.6
+count = 2
+output = "duplicates-0.6.txt"
+
+[[run]]
+input = "disjoint.txt"
+minsup = 0.6
+count = 2
+output = "disjoint-0.6.txt"
+
+[[run]]
+input = "dense.txt"
+minsup = 1.0
+count = 2
+output = "dense-1.0.txt"
+
+[[run]]
+input = "boundary.txt"
+minsup = 0.5
+count = 2
+output = "boundary-0.5.txt"
+
+[[run]]
+input = "boundary.txt"
+minsup = 0.25
+count = 1
+output = "boundary-0.25.txt"
+
+[[run]]
+input = "nested.txt"
+minsup = 0.5
+count = 2
+output = "nested-0.5.txt"
+
+[[run]]
+input = "groceries.txt"
+minsup = 0.4
+count = 2
+output = "groceries-0.4.txt"

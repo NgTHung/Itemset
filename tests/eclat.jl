@@ -16,6 +16,15 @@ end
         end
         boundary = read_transactions(joinpath(TOY_DIR, "boundary.txt"))
         @test mine(boundary; minsup=1, variant) == BOUNDARY_LOW_EXPECTED
+    end
+    @testset "SPMF reference outputs" begin
+        for r in SPMF_TOY_RUNS
+            transactions = read_transactions(joinpath(TOY_DIR, r.input))
+            reference = open(parse_itemsets, joinpath(SPMF_TOY_DIR, r.output)).itemsets
+            @test mine(transactions; minsup=r.minsup, variant) == reference
+        end
+    end
+    @testset "Image fixture" begin
         c = IMAGE_CASE
         @test mine(c.transactions; minsup=c.minsup, variant) == c.expected
         @test mine(c.transactions; minsup=c.sensitive_minsup, variant) == c.sensitive_expected

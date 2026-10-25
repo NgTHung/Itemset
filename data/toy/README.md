@@ -20,3 +20,13 @@ Expected outputs are in the matching `*.expected.txt` files, and `tests/fixtures
 `IMAGE_CASE` in `tests/fixtures.jl` is a four-image visual-word database. It lives in memory because image 3 has no visual words and SPMF text cannot encode an empty transaction. It gives the presence matrix, its transactions, the expected map at minsup 0.5, and the images that support each itemset. At minsup 0.6, keeping the empty image leaves only `{2}` frequent, while dropping it makes all five itemsets frequent, which shows why the choice belongs in the preprocessing notes.
 
 `receipts.csv` holds 14 raw receipt lines in the Online Retail II layout for the market basket cleaning. Each cleaning step removes the rows that `RECEIPT_CASE` in `tests/fixtures.jl` names: a duplicate, a cancellation, a bad-debt adjustment, a negative quantity, a zero price, and postage and manual codes. Three invoices and four products remain, and a lowercase stock code merges with its uppercase twin.
+
+## SPMF reference outputs
+
+Hand-derived maps can share a mistake with the miner, so `spmf/` holds SPMF's own Eclat output for the toy databases, unmodified apart from Git's line-ending normalization. `spmf/runs.toml` lists each run's input, fraction, and count; every fraction gives SPMF the same count as `support_threshold`, which a test checks. The test suite compares `mine` against each output for every variant. `empty.txt` is absent because SPMF rejects an empty input file.
+
+The outputs were generated on 25 October 2026 with the SPMF JAR whose SHA-256 is in [tools/spmf](../../tools/spmf/README.md) and Temurin Java 25.0.4.1+1:
+
+```sh
+julia --startup-file=no --project=. tools/spmf/toy_reference.jl path/to/java
+```

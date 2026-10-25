@@ -1,4 +1,9 @@
+import TOML
+
 const TOY_DIR = joinpath(dirname(@__DIR__), "data", "toy")
+const SPMF_TOY_DIR = joinpath(TOY_DIR, "spmf")
+const SPMF_TOY_RUNS = [(input=r["input"], minsup=r["minsup"], count=r["count"], output=r["output"])
+                       for r in TOML.parsefile(joinpath(SPMF_TOY_DIR, "runs.toml"))["run"]]
 
 const MINING_CASES = [
     (name="baskets", minsup=0.5, expected=SupportMap(

@@ -40,4 +40,14 @@
         @test result.matches
         @test result.match_rate == 1.0
     end
+    @testset "Reference thresholds give SPMF's count" begin
+        @test length(SPMF_TOY_RUNS) == 8
+        @test length(unique(r.input for r in SPMF_TOY_RUNS)) >= 5
+        for r in SPMF_TOY_RUNS
+            n = length(read_transactions(joinpath(TOY_DIR, r.input)))
+            @test support_threshold(r.minsup, n) == r.count
+            @test Experiments.threshold_agrees(r.minsup, n)
+            @test isempty(open(parse_itemsets, joinpath(SPMF_TOY_DIR, r.output)).duplicates)
+        end
+    end
 end
