@@ -87,6 +87,24 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         @test sprint(write_itemsets, BOUNDARY_LOW_EXPECTED) ==
               replace(read(joinpath(TOY_DIR, "boundary-count-1.expected.txt"), String), "\r\n"=>"\n")
     end
+    @testset "SPMF itemset records" begin
+        text = "@FILETYPE=x\n% header\n\n2 1 #SUP: 3\n1 #SUP: 4\n1 2 #SUP: 5\n"
+        @test read_itemset_records(IOBuffer(text)) == [
+            (itemset=(1, 2), support=3, line=4),
+            (itemset=(1,), support=4, line=5),
+            (itemset=(1, 2), support=5, line=6),
+        ]
+        patterns = only(c for c in MINING_CASES if c.name == "baskets").expected
+        mktempdir() do dir
+            path = joinpath(dir, "patterns.txt")
+            write_itemsets(path, patterns)
+            @test Dict(r.itemset => r.support for r in read_itemset_records(path)) == patterns
+        end
+        @test isempty(read_itemset_records(IOBuffer("")))
+        for bad in ("1 2 #SUP: x", "-1 #SUP: 2", "1 1 #SUP: 2", "#SUP: 1", "1 #SUP: 0", "1 2")
+            @test_throws "line 2" read_itemset_records(IOBuffer("% header\n$bad\n"))
+        end
+    end
     include("spmf_compare.jl")
     @testset "Market basket fixture" begin
         transactions, labels = encode_transactions(GROCERY_ROWS)

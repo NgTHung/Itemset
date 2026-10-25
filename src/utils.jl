@@ -8,20 +8,62 @@ function read_transactions(io::IO)
     transactions = Vector{Vector{Int}}()
     for (line_number, line) in enumerate(eachline(io))
         value = strip(line)
-        (isempty(value) || startswith(value, ('#', '%', '@'))) && continue
-        items = Int[]
-        for token in split(value)
-            item = tryparse(Int, token)
-            (item === nothing || item < 0) &&
-                throw(ArgumentError("line $line_number: invalid item ID $(repr(token))"))
-            push!(items, item)
-        end
-        push!(transactions, canonical_transaction(items))
+        is_spmf_metadata(value) && continue
+        push!(transactions, canonical_transaction(parse_item_ids(value, line_number)))
     end
     return transactions
 end
 
 read_transactions(path::AbstractString) = open(read_transactions, path)
+
+is_spmf_metadata(line::AbstractString) = isempty(line) || startswith(line, ('#', '%', '@'))
+
+function parse_item_ids(text::AbstractString, line_number::Integer)
+    items = Int[]
+    for token in split(text)
+        item = tryparse(Int, token)
+        (item === nothing || item < 0) &&
+            throw(ArgumentError("line $line_number: invalid item ID $(repr(token))"))
+        push!(items, item)
+    end
+    return items
+end
+
+const ItemsetRecord = @NamedTuple{itemset::Itemset, support::Int, line::Int}
+
+"""
+    read_itemset_records(io_or_path) -> Vector{@NamedTuple{itemset, support, line}}
+
+Read SPMF frequent-itemset output, such as `write_itemsets` or SPMF writes, as
+one record per itemset line in file order. Each itemset is canonical, and
+`line` is its 1-based line number. Repeated itemsets stay as separate records,
+so a comparison can report them instead of losing one support.
+
+Skips the same metadata lines as `read_transactions`, except a line holding
+`#SUP:`, because `#SUP: 1` is an empty itemset, not a comment. Throws
+`ArgumentError` with the line number for a line without `#SUP:`, an invalid or
+repeated item ID, an empty itemset, or a support below 1.
+"""
+function read_itemset_records(io::IO)
+    records = ItemsetRecord[]
+    for (line_number, line) in enumerate(eachline(io))
+        value = strip(line)
+        is_spmf_metadata(value) && !occursin("#SUP:", value) && continue
+        parts = match(r"^(.*?)\s*#SUP:\s*(\S*)$", value)
+        parts === nothing &&
+            throw(ArgumentError("line $line_number: expected 'items #SUP: count', got $(repr(value))"))
+        items = parse_item_ids(parts[1], line_number)
+        isempty(items) && throw(ArgumentError("line $line_number: empty itemset"))
+        allunique(items) || throw(ArgumentError("line $line_number: repeated item ID in $(repr(value))"))
+        support = tryparse(Int, parts[2])
+        (support === nothing || support < 1) &&
+            throw(ArgumentError("line $line_number: invalid support $(repr(parts[2]))"))
+        push!(records, (itemset=Tuple(sort!(items)), support=support, line=line_number))
+    end
+    return records
+end
+
+read_itemset_records(path::AbstractString) = open(read_itemset_records, path)
 
 """
     write_transactions(io_or_path, transactions; labels=nothing)
