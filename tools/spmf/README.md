@@ -16,6 +16,14 @@ java -jar tools/spmf/spmf.jar run Eclat INPUT OUTPUT MINSUP
 
 Use SPMF only as an executable. Never copy its Java source into the miner.
 
+## Labeled inputs
+
+Input files with `@ITEM` labels make SPMF write label strings. For an integer-map comparison, write the same transactions without labels first:
+
+```powershell
+julia --startup-file=no --project=. -e 'using ItemsetMining; write_transactions(ARGS[2], read_transactions(ARGS[1]))' data/toy/groceries.txt results/raw/groceries-numeric.txt
+```
+
 ## Thresholds
 
 SPMF turns a fraction into a count as `ceil(minsup * N)` in `Float64`. On a database of 100 transactions where an item occurs 7 times, `0.07` and `7%` both drop that item, while `0.069` keeps it, so SPMF requires 8 transactions where `support_threshold(0.07, 100)` requires 7. Compare only thresholds where both counts agree; the harness checks this before it runs anything.
@@ -28,4 +36,30 @@ SPMF writes two `@` metadata lines and then the itemsets in mining order, so a c
 - itemsets that appear more than once,
 - support mismatches.
 
-Test the comparator on deliberately corrupted outputs, one per failure kind, so a silent comparator cannot pass a broken miner. Keep the complete reference maps for the toy databases and the four benchmarks in [results/raw](../../results/raw/README.md).
+Run it with the reference file first and the candidate file second:
+
+```powershell
+julia --startup-file=no --project=. demo.jl --min-count 2 --variant baseline --output results/raw/baskets-julia.txt data/toy/baskets.txt
+julia --startup-file=no --project=. tools/spmf/compare.jl results/raw/baskets-spmf.txt results/raw/baskets-julia.txt
+```
+
+The exact-map match rate is the number of itemsets that occur once in each map with equal support, divided by the distinct keys in the union of both maps. Two empty maps have a 100% rate. A duplicated itemset never counts as matching and makes the comparison fail, because its supports are ambiguous; the report lists each duplicate with its own support and line.
+
+The exit code separates a wrong miner from a broken run:
+
+- 0: the maps are equal.
+- 1: any missing, extra, duplicated, or support-mismatched itemset.
+- 2: a file is malformed. The message names the file and line.
+- 3: a setup error, such as a wrong argument count or an unreadable file.
+
+`tests/spmf_compare.jl` feeds the comparator one corrupted output per failure kind, so a silent comparator cannot pass a broken miner. Hand-derived files in `data/toy/` are test fixtures, not independent SPMF evidence.
+
+## Toy reference outputs
+
+SPMF's raw output for the toy databases lives in [data/toy/spmf](../../data/toy/README.md#spmf-reference-outputs), and the test suite compares every Eclat variant with it on each run. `data/toy/spmf/runs.toml` lists each run; a test checks that every fraction gives SPMF the same count as `support_threshold`. The boundary fixture runs at 0.5 (count 2 of 4) and 0.25 (count 1 of 4). To regenerate the outputs after a JAR or fixture change, run:
+
+```sh
+julia --startup-file=no --project=. tools/spmf/toy_reference.jl path/to/java
+```
+
+The script rewrites each input without `@ITEM` labels first, so SPMF writes item IDs. Review the resulting diff before committing it, because a changed output means SPMF and the fixture disagree.

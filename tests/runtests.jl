@@ -4,6 +4,7 @@ using ItemsetMining
 
 include("fixtures.jl")
 include("oracle.jl")
+include(joinpath(dirname(@__DIR__), "tools", "spmf", "compare.jl"))
 include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
 include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBasket.jl"))
 
@@ -70,7 +71,7 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         @test read_transactions(IOBuffer("@ITEM=0=zero\n% comment\n# comment\n\n2 0 2\n2 0\n")) == [[0,2], [0,2]]
         @test_throws ArgumentError read_transactions(IOBuffer("1 -1\n"))
         @test_throws ArgumentError read_transactions(IOBuffer("1 x\n"))
-        @test length(MINING_CASES) == 6
+        @test length(MINING_CASES) == 8
         for case in MINING_CASES
             transactions = read_transactions(joinpath(TOY_DIR, case.name * ".txt"))
             min_count = support_threshold(case.minsup, length(transactions))
@@ -81,7 +82,30 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
             expected_path = joinpath(TOY_DIR, case.name * ".expected.txt")
             @test actual == (isfile(expected_path) ? replace(read(expected_path, String), "\r\n"=>"\n") : "")
         end
+        boundary = read_transactions(joinpath(TOY_DIR, "boundary.txt"))
+        @test brute_force_supports(boundary, 1) == BOUNDARY_LOW_EXPECTED
+        @test sprint(write_itemsets, BOUNDARY_LOW_EXPECTED) ==
+              replace(read(joinpath(TOY_DIR, "boundary-count-1.expected.txt"), String), "\r\n"=>"\n")
     end
+    @testset "SPMF itemset records" begin
+        text = "@FILETYPE=x\n% header\n\n2 1 #SUP: 3\n1 #SUP: 4\n1 2 #SUP: 5\n"
+        @test read_itemset_records(IOBuffer(text)) == [
+            (itemset=(1, 2), support=3, line=4),
+            (itemset=(1,), support=4, line=5),
+            (itemset=(1, 2), support=5, line=6),
+        ]
+        patterns = only(c for c in MINING_CASES if c.name == "baskets").expected
+        mktempdir() do dir
+            path = joinpath(dir, "patterns.txt")
+            write_itemsets(path, patterns)
+            @test Dict(r.itemset => r.support for r in read_itemset_records(path)) == patterns
+        end
+        @test isempty(read_itemset_records(IOBuffer("")))
+        for bad in ("1 2 #SUP: x", "-1 #SUP: 2", "1 1 #SUP: 2", "#SUP: 1", "1 #SUP: 0", "1 2")
+            @test_throws "line 2" read_itemset_records(IOBuffer("% header\n$bad\n"))
+        end
+    end
+    include("spmf_compare.jl")
     @testset "Market basket fixture" begin
         transactions, labels = encode_transactions(GROCERY_ROWS)
         @test labels == ["beer", "bread", "butter", "milk"]

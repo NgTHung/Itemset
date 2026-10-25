@@ -1,4 +1,9 @@
+import TOML
+
 const TOY_DIR = joinpath(dirname(@__DIR__), "data", "toy")
+const SPMF_TOY_DIR = joinpath(TOY_DIR, "spmf")
+const SPMF_TOY_RUNS = [(input=r["input"], minsup=r["minsup"], count=r["count"], output=r["output"])
+                       for r in TOML.parsefile(joinpath(SPMF_TOY_DIR, "runs.toml"))["run"]]
 
 const MINING_CASES = [
     (name="baskets", minsup=0.5, expected=SupportMap(
@@ -7,10 +12,14 @@ const MINING_CASES = [
     (name="disjoint", minsup=2, expected=SupportMap()),
     (name="dense", minsup=2, expected=SupportMap(
         (1,)=>2, (2,)=>2, (3,)=>2, (1,2)=>2, (1,3)=>2, (2,3)=>2, (1,2,3)=>2)),
+    (name="boundary", minsup=2, expected=SupportMap((1,)=>2, (2,)=>2)),
+    (name="nested", minsup=2, expected=SupportMap((1,)=>3, (2,)=>2, (1,2)=>2)),
     (name="empty", minsup=1, expected=SupportMap()),
     (name="groceries", minsup=0.4, expected=SupportMap(
         (2,)=>4, (3,)=>3, (4,)=>3, (2,3)=>3, (2,4)=>2)),
 ]
+
+const BOUNDARY_LOW_EXPECTED = SupportMap((1,)=>2, (2,)=>2, (3,)=>1, (1,2)=>1)
 
 const GROCERY_ROWS = [
     ["bread", "milk"],

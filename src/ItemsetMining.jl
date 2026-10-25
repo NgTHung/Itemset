@@ -2,7 +2,8 @@ module ItemsetMining
 
 export Itemset, SupportMap, DEFAULT_SEED, canonical_transaction,
        support_threshold, read_transactions, write_itemsets, mine,
-       encode_transactions, decode_itemset, write_transactions
+       encode_transactions, decode_itemset, write_transactions,
+       read_itemset_records
 
 include("structures.jl")
 include("encoding.jl")
