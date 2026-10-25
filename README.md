@@ -50,6 +50,14 @@ julia --project=. demo.jl --min-count 2 --variant baseline --output results/patt
 
 `--check-input` prints the transaction and distinct-item counts. `--minsup` and `--min-count` are mutually exclusive. Run `demo.jl --help` for every option.
 
+The CLI exits with 0 after it writes the output. On any error it prints `ERROR:` and the cause, such as the input line that failed to parse, to stderr, exits with 1, and leaves an existing output file unchanged, because it mines the whole map before it opens the output. A script can therefore trust the output file whenever the exit code is 0.
+
+To check the output against the committed SPMF result for the same toy run, use the [comparator](tools/spmf/README.md#compare-outputs):
+
+```sh
+julia --project=. tools/spmf/compare.jl data/toy/spmf/baskets-0.5.txt results/patterns.txt
+```
+
 ## Run on Colab
 
 `notebooks/demo.ipynb` runs on Colab's native Julia kernel, so it calls the package directly without a Python wrapper.
