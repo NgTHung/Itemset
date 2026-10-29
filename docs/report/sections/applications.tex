@@ -53,9 +53,149 @@ Kết quả gồm 39\,516 giỏ hàng trên 4\,725 sản phẩm. Độ dài gi�
 số giỏ hàng đến từ Anh. Với Eclat của nhóm, minsup 0,01 (396 hóa đơn) cho
 1\,355 tập phổ biến, trong đó 648 tập có từ hai sản phẩm trở lên.
 
-Sinh luật bằng kết quả Eclat của nhóm; giải thích support, confidence, lift và
-top-10 luật theo lift. Bổ sung phân tích kinh doanh, độ nhạy ngưỡng và giới hạn
-suy luận.
+\subsubsection{Luật kết hợp}
+Một luật kết hợp (association rule) $X \Rightarrow Y$ gồm vế trái (antecedent)
+$X$ và vế phải (consequent) $Y$ là hai tập sản phẩm khác rỗng, rời nhau. Gọi
+$N$ là số giỏ hàng và $\sigma(Z)$ là số giỏ hàng chứa mọi sản phẩm của tập $Z$.
+Ba độ đo của luật là
+\begin{align}
+\mathrm{supp}(X \Rightarrow Y) &= \frac{\sigma(X \cup Y)}{N}, \label{eq:rule-supp}\\
+\mathrm{conf}(X \Rightarrow Y) &= \frac{\sigma(X \cup Y)}{\sigma(X)}, \label{eq:rule-conf}\\
+\mathrm{lift}(X \Rightarrow Y) &= \frac{\mathrm{conf}(X \Rightarrow Y)}{\sigma(Y)/N}
+  = \frac{N\,\sigma(X \cup Y)}{\sigma(X)\,\sigma(Y)}. \label{eq:rule-lift}
+\end{align}
+Độ hỗ trợ (support)~\eqref{eq:rule-supp} là tỉ lệ giỏ hàng chứa cả hai vế; độ
+tin cậy (confidence)~\eqref{eq:rule-conf} là tỉ lệ giỏ hàng có $X$ cũng có $Y$;
+độ nâng (lift)~\eqref{eq:rule-lift} cho biết $Y$ đi cùng $X$ nhiều gấp bao nhiêu
+lần so với khi hai vế độc lập, nên lift lớn hơn 1 nghĩa là hai vế hay được mua
+cùng nhau. Lift đối xứng theo $X$ và $Y$, còn độ tin cậy thì không.
+
+Nhóm khai thác 39\,516 giỏ hàng bằng Eclat của nhóm với minsup 0,01, tức mỗi
+mẫu dựa trên ít nhất 396 hóa đơn, và nhận 1\,355 tập phổ biến. Mỗi tập phổ biến
+$Z$ có $m \ge 2$ sản phẩm được tách thành mọi cặp $X$, $Y = Z \setminus X$, tức
+$2^m - 2$ luật; ngưỡng minsup đã áp lên $X \cup Y$ khi khai thác, và mọi tập con
+của $Z$ đều có trong kết quả nên $\sigma(X)$, $\sigma(Y)$ luôn tra được. Các độ
+đo được tính bằng phân số chính xác. Điều kiện
+$\mathrm{conf} \ge \mathrm{minconf}$ được kiểm tra dưới dạng
+$\sigma(X \cup Y) \ge \lceil \mathrm{minconf} \cdot \sigma(X) \rceil$ với phép
+tính thập phân như ở Mục~\ref{sec:protocol}, vì số thực 0,1 trong máy lớn hơn
+$1/10$ một chút và sẽ loại nhầm luật có độ tin cậy đúng bằng $1/10$. Với
+minconf 0,5, 455 trong 1\,804 luật được giữ lại, và mọi luật có lift trên 1,4.
+
+Để kiểm tra, nhóm chạy Eclat của SPMF trên cùng tệp giỏ hàng: hai kết quả khớp
+100\% trên 1\,355 tập phổ biến. Một chương trình riêng sinh luật từ kết quả của
+SPMF cũng cho đúng 455 luật, và độ hỗ trợ, độ tin cậy, lift của 10 luật đứng đầu
+khớp với phép đếm trực tiếp trên giỏ hàng.
+
+Luật được xếp theo lift giảm dần, rồi độ tin cậy, rồi số giỏ hàng, cuối cùng
+theo mã sản phẩm, để thứ tự luôn xác định. Hai luật $X \Rightarrow Y$ và
+$Y \Rightarrow X$ luôn bằng lift nên hướng có độ tin cậy cao hơn đứng trước.
+Bảng~\ref{tab:top-rules} liệt kê 10 luật đứng đầu; không luật nào ngoài bảng có
+lift bằng luật thứ 10.
+
+\begin{table}[t]
+\centering
+\caption{10 luật có lift cao nhất (minsup 0,01, minconf 0,5). B, K, L là bộ
+Poppy's Playhouse Bedroom, Kitchen, Livingroom; $\sigma$ là số giỏ hàng chứa cả
+hai vế}
+\label{tab:top-rules}
+\begin{tabular}{rlrrrr}
+\hline
+Hạng & Luật & $\sigma$ & supp & conf & lift \\
+\hline
+1 & B + K $\Rightarrow$ L & 409 & 0,0104 & 0,734 & 51,45 \\
+2 & L $\Rightarrow$ B + K & 409 & 0,0104 & 0,725 & 51,45 \\
+3 & L + K $\Rightarrow$ B & 409 & 0,0104 & 0,863 & 48,50 \\
+4 & B $\Rightarrow$ L + K & 409 & 0,0104 & 0,582 & 48,50 \\
+5 & B + L $\Rightarrow$ K & 409 & 0,0104 & 0,887 & 47,25 \\
+6 & K $\Rightarrow$ B + L & 409 & 0,0104 & 0,551 & 47,25 \\
+7 & L $\Rightarrow$ B & 461 & 0,0117 & 0,817 & 45,95 \\
+8 & B $\Rightarrow$ L & 461 & 0,0117 & 0,656 & 45,95 \\
+9 & L $\Rightarrow$ K & 474 & 0,0120 & 0,840 & 44,76 \\
+10 & K $\Rightarrow$ L & 474 & 0,0120 & 0,639 & 44,76 \\
+\hline
+\end{tabular}
+\end{table}
+
+Cả 10 luật đều thuộc một dòng sản phẩm: sáu cách tách của tập ba phòng đồ chơi
+Poppy's Playhouse và hai cặp luật đối xứng. Một tập phổ biến sinh nhiều luật gần
+giống nhau, nên Bảng~\ref{tab:top-groups} chỉ giữ luật tốt nhất của mỗi nhóm sản
+phẩm $X \cup Y$ khác nhau.
+
+\begin{table*}[t]
+\centering
+\caption{Luật tốt nhất của 10 nhóm sản phẩm có lift cao nhất, cùng lift khi đếm
+lại trong từng năm và khi bỏ 1\% giỏ hàng lớn nhất}
+\label{tab:top-groups}
+\begin{tabular}{rlrrrrrr}
+\hline
+ & Luật & $\sigma$ & conf & lift & lift năm 1 & lift năm 2 & lift bỏ giỏ lớn \\
+\hline
+1 & Poppy's Playhouse Bedroom + Kitchen $\Rightarrow$ Livingroom & 409 & 0,734 & 51,4 & 63,4 & 43,1 & 57,4 \\
+2 & Poppy's Playhouse Livingroom $\Rightarrow$ Bedroom & 461 & 0,817 & 45,9 & 60,1 & 37,1 & 52,3 \\
+3 & Poppy's Playhouse Livingroom $\Rightarrow$ Kitchen & 474 & 0,840 & 44,8 & 58,0 & 36,2 & 50,3 \\
+4 & Poppy's Playhouse Bedroom $\Rightarrow$ Kitchen & 557 & 0,792 & 42,2 & 56,2 & 33,6 & 48,4 \\
+5 & Wooden Tree $\Rightarrow$ Wooden Star Christmas Scandinavian & 437 & 0,790 & 40,7 & 56,0 & 32,1 & 46,6 \\
+6 & Small Marshmallows Pink Bowl $\Rightarrow$ Small Dolly Mix Orange Bowl & 457 & 0,744 & 40,1 & 62,0 & 29,3 & 48,4 \\
+7 & Set/10 Blue Spotty $\Rightarrow$ Pink Polkadot Party Candles & 488 & 0,776 & 38,0 & 33,2 & 44,3 & 40,3 \\
+8 & Key Fob Garage Design $\Rightarrow$ Key Fob Back Door & 402 & 0,646 & 37,1 & 33,8 & 41,1 & 42,4 \\
+9 & Feltcraft Princess Lola $\Rightarrow$ Princess Charlotte Doll & 401 & 0,620 & 35,8 & 52,2 & 27,2 & 39,1 \\
+10 & Pink Polkadot Cup $\Rightarrow$ Blue Polkadot Cup & 521 & 0,694 & 35,6 & 31,3 & 41,2 & 39,3 \\
+\hline
+\end{tabular}
+\end{table*}
+
+\subsubsection{Ý nghĩa kinh doanh}
+Các nhóm trong Bảng~\ref{tab:top-groups} gợi ý hai giả thuyết có thể hành động.
+Thứ nhất, khách mua trọn bộ sưu tập: ba phòng Poppy's Playhouse, hai mẫu búp bê
+Feltcraft và hai món trang trí Giáng sinh kiểu Scandinavia. Trong 82\% giỏ hàng
+có phòng Livingroom cũng có phòng Bedroom, nên cửa hàng có thể bán theo bộ, đặt
+các món cạnh nhau trên trang sản phẩm, hoặc gợi ý món còn thiếu khi giỏ hàng mới
+có một phòng. Thứ hai, khách mua nhiều biến thể màu của cùng một sản phẩm: nến
+tiệc xanh và hồng, cốc chấm bi hồng và xanh, móc khóa hai kiểu. Cửa hàng có thể
+bán gói nhiều màu và nhập hàng các biến thể cùng lúc. Bằng chứng cho cả hai là
+lift trên 35, độ tin cậy từ 0,62 đến 0,84 và hơn 400 hóa đơn cho mỗi nhóm.
+
+Luật kết hợp chỉ cho biết hai sản phẩm xuất hiện cùng hóa đơn, không cho biết
+mua $X$ là nguyên nhân mua $Y$. Nhiều khách hàng là nhà bán sỉ, nên một nguyên
+nhân chung, như việc nhập cả dòng sản phẩm cho cửa hàng của họ hay mùa Giáng
+sinh, có thể tạo ra cả hai vế. Vì vậy các gợi ý trên là giả thuyết cần kiểm
+chứng, chẳng hạn bằng thử nghiệm A/B cho gói sản phẩm, trước khi thay đổi cách
+bán hàng.
+
+\subsubsection{Độ vững của kết quả}
+Lift và độ tin cậy là tính chất của dữ liệu, nên thay đổi ngưỡng chỉ quyết định
+luật nào được giữ và luật đó được xếp hạng cùng những luật nào. Khi tăng minconf
+lên 0,6, hai luật có độ tin cậy 0,58 và 0,55 bị loại khỏi Bảng~\ref{tab:top-rules}
+nhưng cả 10 nhóm vẫn còn. Khi giảm minsup xuống 0,0075, mọi luật vẫn còn nhưng
+các luật hiếm hơn có lift cao hơn đẩy 10 nhóm xuống hạng 32 đến 108. Khi tăng
+minsup lên 0,015 (593 hóa đơn), cả 10 nhóm biến mất vì chúng chỉ có 401 đến 557
+hóa đơn: các mẫu có lift cao nhất nằm sát ngưỡng hỗ trợ.
+
+Để phân biệt mẫu vững với mẫu ngẫu nhiên, nhóm đếm lại mỗi luật trong năm thứ
+nhất (trước 01/12/2010, 19\,743 giỏ hàng), năm thứ hai (19\,773 giỏ hàng) và
+khi bỏ 393 giỏ hàng có hơn 197 sản phẩm, tức 1\% giỏ hàng lớn nhất. Nhóm đếm
+trực tiếp thay vì khai thác lại, vì khai thác một nửa dữ liệu với cùng minsup
+tương đối sẽ loại những mẫu chỉ hơi dưới ngưỡng mới và trông như mẫu đã biến
+mất. Bảng~\ref{tab:top-groups} cho thấy mọi nhóm giữ lift trên 27 và độ tin cậy
+từ 0,62 đến 0,90 trong mọi tập con, với ít nhất 108 hóa đơn mỗi năm, nên chúng
+không phải sản phẩm của một mùa hay của vài đơn bán sỉ lớn.
+
+Ngược lại, ở minsup 0,005 (198 hóa đơn), chín trong mười nhóm đứng đầu là bộ
+nhãn cắm cây gia vị (Herb Marker) với lift khoảng 150. Năm thứ nhất chỉ có 7 đến
+11 hóa đơn của mỗi nhóm, khiến lift của năm đó lên tới 1\,480--1\,795 và không
+còn ý nghĩa, còn năm thứ hai có 193 đến 221 hóa đơn. Những luật này dựa trên
+khoảng một nửa số hóa đơn của các nhóm chính và chủ yếu trên một mùa bán hàng,
+nên nhóm xem chúng là hướng cần theo dõi, không phải kết luận.
+
+\subsubsection{Giới hạn}
+Dữ liệu đến từ một cửa hàng quà tặng trực tuyến trong hai năm, 92\% hóa đơn ở
+Anh và nhiều khách là nhà bán sỉ, nên các luật không đại diện cho bán lẻ nói
+chung. Giỏ hàng chỉ ghi sản phẩm có mặt, bỏ qua số lượng và giá, nên một hóa
+đơn mua một chiếc và một hóa đơn mua trăm chiếc có trọng số như nhau. Lift ưu
+tiên các sản phẩm ít gặp, vì vậy bảng xếp hạng theo lift cần đọc cùng số hóa
+đơn hỗ trợ. Cuối cùng, mô tả sản phẩm là nhãn do cửa hàng nhập, có thể khác nhau
+giữa các mã gần giống nhau.
 \subsection{Khai thác mẫu hình ảnh — Phat}
 Mô tả ảnh thực, descriptors, codebook và ánh xạ visual words thành transaction.
 Trình bày patches, itemset và ảnh hỗ trợ; phân tích độ nhạy và thông tin vị trí/
