@@ -4,7 +4,7 @@ The market basket application needs association rules that come from the team's 
 
 ## Run
 
-Windows 11, AMD Ryzen 7 H 260, Julia 1.13.2, main at `9b8e563` with the uncommitted rule code. Input SHA-256 `32569a66…` (Online Retail II, 39,516 cleaned baskets, 4,725 products).
+Windows 11, AMD Ryzen 7 H 260, Julia 1.13.2, rule code at `b91ee30`, the revision `summary.toml` records. Input SHA-256 `32569a66…` (Online Retail II, 39,516 cleaned baskets, 4,725 products).
 
 ```sh
 julia --startup-file=no --project=. applications/market_basket/prepare.jl
