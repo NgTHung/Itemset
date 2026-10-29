@@ -38,7 +38,7 @@ end
 
     @testset "Committed manifest" begin
         manifest = Experiments.load_manifest(MANIFEST_PATH)
-        @test sort!(collect(keys(manifest))) == ["T10I4D100K", "chess", "mushroom", "retail"]
+        @test sort!(collect(keys(manifest))) == ["T10I4D100K", "accidents", "chess", "mushroom", "retail"]
         for entry in values(manifest)
             @test length(entry.sha256) == 64
             @test !isempty(entry.sources)
@@ -48,6 +48,8 @@ end
         end
         @test manifest["chess"].stats.transactions == 3196
         @test manifest["retail"].stats.items == 16470
+        @test manifest["accidents"].stats.transactions == 340183
+        @test manifest["accidents"].stats.items == 468
     end
 
     @testset "Invalid manifest" begin

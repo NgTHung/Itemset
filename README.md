@@ -73,7 +73,9 @@ If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Juli
 - `src/`: the package. `structures.jl` holds the types and thresholds, `utils.jl` the SPMF reader and writer, `algorithm/` the Eclat variants, which [docs/eclat.md](docs/eclat.md) explains.
 - `demo.jl`: the CLI.
 - `tests/`: the test suite and fixture maps. `test/` holds only the entry-point shim.
-- `data/toy/`: hand-derived fixture databases. `data/benchmark/` and `data/raw/` hold downloads that stay out of Git.
+- `data/toy/`: hand-derived fixture databases.
+- `data/correctness/`: a mid-size database whose complete SPMF map the tests compare with every variant.
+- `data/benchmark/` and `data/raw/` hold downloads that stay out of Git.
 - `applications/`: the market basket and image-pattern workstreams.
 - `experiments/`: the benchmark measurement protocol and result fields.
 - `tools/spmf/`: the procedure for independent SPMF reference runs.

@@ -13,7 +13,7 @@ A config in `experiments/configs/` names the variants (`baseline`, `optimized`, 
 
 ## Datasets and thresholds
 
-Use the four benchmarks in [data/benchmark](../data/benchmark/README.md). Every series on a dataset uses the same 5 to 7 decreasing relative minsup values, chosen from a pilot run.
+Use the five benchmarks in [data/benchmark](../data/benchmark/README.md). Every series on a dataset uses the same 5 to 7 decreasing relative minsup values, chosen from a pilot run.
 
 The harness rejects a threshold before any run when `support_threshold` and SPMF turn it into different counts, because the two maps would then differ for a reason unrelated to correctness. [tools/spmf](../tools/spmf/README.md#thresholds) records how SPMF rounds.
 

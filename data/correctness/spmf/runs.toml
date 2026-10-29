@@ -1,0 +1,10 @@
+# Mid-size databases mined by SPMF Eclat. Each input is pinned by its SHA-256,
+# and each minsup gives the same count in SPMF's Float64 arithmetic and in
+# support_threshold, so both programs mine at the same count.
+
+[[run]]
+input = "t25i10d10k.txt"
+input_sha256 = "bada34032cae267782302bcc2225e8813ef4a8329d659453cb732b036b170f2e"
+minsup = 0.008
+count = 80
+output = "t25i10d10k-0.008.txt"

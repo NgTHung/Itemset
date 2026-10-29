@@ -1,0 +1,13 @@
+# Coarse pilot for Accidents, run after the four-dataset pilot in pilot.toml,
+# to find where its series becomes slow. Same settings as pilot.toml, so the
+# two pilots are comparable.
+name = "pilot-accidents"
+variants = ["baseline", "spmf"]
+repeats = 1
+timeout_seconds = 300
+keep_outputs = true
+spmf_version = "2.66"
+
+[[series]]
+dataset = "accidents"
+minsup = [0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2]

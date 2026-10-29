@@ -76,3 +76,25 @@ notes = "FIMI's T10I4D100K.dat uses item 0, which SPMF rejects. The SPMF copy sh
 [[T10I4D100K.sources]]
 url = "https://www.philippe-fournier-viger.com/spmf/publicdatasets/T10I4D100K.txt"
 format = "text"
+
+[accidents]
+version = "FIMI 2003, byte-identical SPMF copy"
+file = "accidents.txt"
+sha256 = "8c2275550966e3cb4b6066f2bb168489a9566c500af559fa3925f1b11d97f0cd"
+transactions = 340183
+items = 468
+total_items = 11500870
+max_width = 51
+min_item = 1
+max_item = 468
+origin = "Anonymized injury traffic accidents in Flanders, Belgium, 1991-2000, from the Belgian National Institute of Statistics, donated by K. Geurts to FIMI"
+terms = "Any use is allowed with proper acknowledgement (Geurts et al., TRB 2003) and a copy of the work sent to the donor"
+notes = "FIMI's accidents.pdf describes 340,184 records; accidents.dat holds 340,183 transactions, the count the brief and SPMF report."
+
+[[accidents.sources]]
+url = "https://www.philippe-fournier-viger.com/spmf/publicdatasets/accidents.txt"
+format = "text"
+
+[[accidents.sources]]
+url = "https://cs.rpi.edu/~zaki/Workshops/FIMI/data/accidents.dat.gz"
+format = "gzip"

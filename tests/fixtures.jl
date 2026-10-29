@@ -2,8 +2,16 @@ import TOML
 
 const TOY_DIR = joinpath(dirname(@__DIR__), "data", "toy")
 const SPMF_TOY_DIR = joinpath(TOY_DIR, "spmf")
-const SPMF_TOY_RUNS = [(input=r["input"], minsup=r["minsup"], count=r["count"], output=r["output"])
-                       for r in TOML.parsefile(joinpath(SPMF_TOY_DIR, "runs.toml"))["run"]]
+const CORRECTNESS_DIR = joinpath(dirname(@__DIR__), "data", "correctness")
+const SPMF_CORRECTNESS_DIR = joinpath(CORRECTNESS_DIR, "spmf")
+
+# `input_sha256` is `nothing` for toy inputs, which are small enough to review by eye.
+spmf_runs(dir) = [(input=r["input"], input_sha256=get(r, "input_sha256", nothing), minsup=r["minsup"],
+                   count=r["count"], output=r["output"])
+                  for r in TOML.parsefile(joinpath(dir, "runs.toml"))["run"]]
+
+const SPMF_TOY_RUNS = spmf_runs(SPMF_TOY_DIR)
+const SPMF_CORRECTNESS_RUNS = spmf_runs(SPMF_CORRECTNESS_DIR)
 
 const MINING_CASES = [
     (name="baskets", minsup=0.5, expected=SupportMap(
