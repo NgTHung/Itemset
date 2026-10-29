@@ -36,11 +36,24 @@ Rows without a customer ID stay, because a receipt is a basket whoever paid; 2,9
 
 The result is 39,516 baskets over 4,725 products. Widths have a median of 15, a 90th percentile of 51, and a maximum of 1,106 for wholesale orders, with a mean of 25.1. 92% of baskets come from the United Kingdom.
 
-## Deliverables
+## Derive and check rules
 
-- Top-10 rules by lift, with support and confidence, labelled with product names and a business interpretation. Rule measures follow [docs/interface.md](../../docs/interface.md#association-rules).
-- Sensitivity of the rules to the support threshold.
-- Limitations of the data and the method.
-- A runnable notebook module and the Vietnamese report section.
+```sh
+julia --startup-file=no --project=. applications/market_basket/analyze.jl
+```
 
-Develop and test the rule code against `GROCERY_RULES` in `tests/fixtures.jl`, built from [data/toy/groceries.txt](../../data/toy/README.md). `RECEIPT_CASE` and [data/toy/receipts.csv](../../data/toy/receipts.csv) check the cleaning. Final rules come only from the team's validated miner, never from fixtures.
+The script mines the baskets with `mine` at minsup 0.01, so every pattern rests on at least 396 receipts, and keeps rules with confidence of at least 0.5. `rules.jl` enumerates every split of each frequent itemset into a nonempty antecedent X and consequent Y. The miner already applied minsup to X ∪ Y. Measures follow [docs/interface.md](../../docs/interface.md#association-rules) and are exact fractions. The minconf test uses the identity confidence ≥ minconf exactly when support(X ∪ Y) ≥ ⌈minconf · support(X)⌉, computed by `support_threshold`. Comparing with the `Float64` value 0.1 would drop a rule whose confidence is exactly one tenth.
+
+Rules rank by lift, then confidence, then support, then item IDs. Mirrored rules X ⇒ Y and Y ⇒ X always share a lift, so the higher-confidence direction ranks first. `top_rules` reports how many rules outside the top 10 tie with the tenth. A single frequent itemset with m items yields up to 2^m − 2 rules, so `top_rule_groups` also lists the best rule of each of the first ten distinct product groups.
+
+The script writes to `results/raw/market_basket/`, which Git ignores, in about two and a half minutes:
+
+- `rules.tsv`, `top_rules.tsv`, `top_groups.tsv`: ranked rules with labels, IDs, support count, relative support, confidence, and lift.
+- `sensitivity.tsv`: for minsup 0.0075, 0.01, and 0.015 and minconf 0.4, 0.5, and 0.6, the rule count, and the rank of each top group's rule.
+- `stability.tsv`: each top group recounted in each year (split at 2010-12-01) and without baskets above the 99th percentile of width. `measure_rule` recounts the supports directly; mining a subset again at the same relative minsup would drop patterns just under the smaller threshold.
+- `rare_groups.tsv`: the top groups at minsup 0.005, recounted per year, for comparing rare high-lift patterns with the base ones.
+- `summary.toml`: input SHA-256, code revision, thresholds, and counts.
+
+[docs/market-basket-rules-2026-10-29.md](../../docs/market-basket-rules-2026-10-29.md) records the results and their checks against SPMF.
+
+Rule tests use `GROCERY_RULES` in `tests/fixtures.jl` and compare every rule on 60 seeded random databases with a direct count. `RECEIPT_CASE` and [data/toy/receipts.csv](../../data/toy/receipts.csv) check the cleaning. Final rules come only from the team's validated miner, never from fixtures.
