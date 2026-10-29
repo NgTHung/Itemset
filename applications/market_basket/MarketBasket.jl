@@ -2,11 +2,13 @@
 Turn Online Retail II receipt lines into integer-ID baskets for `mine`. One
 transaction is one invoice and one item is one product stock code. Every
 cleaning step is counted, so the report can explain how each filter changes the
-transaction and item counts.
+transaction and item counts. `rules.jl` derives association rules from the
+mined baskets.
 """
 module MarketBasket
 
 using ItemsetMining
+using Printf: @sprintf
 
 const HEADER = "Invoice,StockCode,Description,Quantity,InvoiceDate,Price,Customer ID,Country"
 
@@ -176,17 +178,34 @@ end
 Clean `lines` and group them into one basket per invoice, ordered by invoice
 number. IDs come from `encode_transactions` over stock codes, so `codes[id]`
 and `descriptions[id]` reverse the mapping and row order never changes it.
+`dates[i]` is the earliest `InvoiceDate` text of `invoices[i]`; the ISO layout
+sorts as text, so the earliest is well defined.
 """
 function prepare_baskets(lines::AbstractVector{ReceiptLine})
     kept, steps = clean_receipts(lines)
     by_invoice = Dict{String,Vector{String}}()
+    first_date = Dict{String,String}()
     for line in kept
         push!(get!(by_invoice, line.invoice, String[]), normalize_code(line.stock_code))
+        first_date[line.invoice] = min(get(first_date, line.invoice, line.invoice_date), line.invoice_date)
     end
     invoices = sort!(collect(keys(by_invoice)); by=invoice_number)
     transactions, codes = encode_transactions([by_invoice[i] for i in invoices])
     codes = Vector{String}(codes)
-    return (; invoices, codes, descriptions=item_descriptions(kept, codes), transactions, steps)
+    dates = [first_date[i] for i in invoices]
+    return (; invoices, dates, codes, descriptions=item_descriptions(kept, codes), transactions, steps)
+end
+
+"""
+    split_by_date(basket, cutoff) -> (before, from)
+
+Split the transactions of `prepare_baskets` output at the date text `cutoff`:
+`before` holds baskets dated earlier, `from` the rest, each in invoice order.
+Mining each part separately shows whether a pattern holds in both periods.
+"""
+function split_by_date(basket, cutoff::AbstractString)
+    early = basket.dates .< cutoff
+    return basket.transactions[early], basket.transactions[.!early]
 end
 
 """
@@ -221,5 +240,7 @@ function write_market_basket(dir::AbstractString, basket)
     end
     return nothing
 end
+
+include("rules.jl")
 
 end

@@ -35,6 +35,7 @@ const RECEIPT_HEADER = "Invoice,StockCode,Description,Quantity,InvoiceDate,Price
     @testset "Baskets and reversible mapping" begin
         basket = MarketBasket.prepare_baskets(MarketBasket.read_receipts(RECEIPTS_PATH))
         @test basket.invoices == RECEIPT_CASE.invoices
+        @test basket.dates == RECEIPT_CASE.dates
         @test basket.codes == RECEIPT_CASE.codes
         # 22728 has two descriptions once each; the tie goes to the smaller string.
         @test basket.descriptions == RECEIPT_CASE.descriptions
@@ -49,8 +50,8 @@ const RECEIPT_HEADER = "Invoice,StockCode,Description,Quantity,InvoiceDate,Price
         @test shuffled != lines
         a = MarketBasket.prepare_baskets(lines)
         b = MarketBasket.prepare_baskets(shuffled)
-        @test (a.invoices, a.codes, a.descriptions, a.transactions) ==
-              (b.invoices, b.codes, b.descriptions, b.transactions)
+        @test (a.invoices, a.dates, a.codes, a.descriptions, a.transactions) ==
+              (b.invoices, b.dates, b.codes, b.descriptions, b.transactions)
     end
 
     @testset "Write baskets, items, and cleaning report" begin
