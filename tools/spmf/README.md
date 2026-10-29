@@ -54,12 +54,12 @@ The exit code separates a wrong miner from a broken run:
 
 `tests/spmf_compare.jl` feeds the comparator one corrupted output per failure kind, so a silent comparator cannot pass a broken miner. Hand-derived files in `data/toy/` are test fixtures, not independent SPMF evidence.
 
-## Toy reference outputs
+## Reference outputs
 
-SPMF's raw output for the toy databases lives in [data/toy/spmf](../../data/toy/README.md#spmf-reference-outputs), and the test suite compares every Eclat variant with it on each run. `data/toy/spmf/runs.toml` lists each run; a test checks that every fraction gives SPMF the same count as `support_threshold`. The boundary fixture runs at 0.5 (count 2 of 4) and 0.25 (count 1 of 4). To regenerate the outputs after a JAR or fixture change, run:
+SPMF's raw output for the toy databases lives in [data/toy/spmf](../../data/toy/README.md#spmf-reference-outputs), and for the mid-size correctness database in [data/correctness/spmf](../../data/correctness/README.md). The test suite compares every Eclat variant with both on each run. Each `runs.toml` lists its runs; a test checks that every fraction gives SPMF the same count as `support_threshold`, and that each correctness input still has its pinned `input_sha256`. The boundary fixture runs at 0.5 (count 2 of 4) and 0.25 (count 1 of 4). To regenerate the outputs after a JAR or fixture change, run:
 
 ```sh
-julia --startup-file=no --project=. tools/spmf/toy_reference.jl path/to/java
+julia --startup-file=no --project=. tools/spmf/reference_outputs.jl path/to/java
 ```
 
 The script rewrites each input without `@ITEM` labels first, so SPMF writes item IDs. Review the resulting diff before committing it, because a changed output means SPMF and the fixture disagree.
