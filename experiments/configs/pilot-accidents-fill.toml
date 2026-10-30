@@ -4,6 +4,7 @@
 name = "pilot-accidents-fill"
 variants = ["baseline", "spmf"]
 repeats = 1
+skip_after_timeout = true
 timeout_seconds = 300
 keep_outputs = true
 spmf_version = "2.66"

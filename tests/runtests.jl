@@ -175,5 +175,6 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     include("cli.jl")
     include("benchmark_data.jl")
     include("harness.jl")
+    include("measurement_stages.jl")
     include("market_basket.jl")
 end

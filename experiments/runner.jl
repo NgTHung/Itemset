@@ -5,8 +5,8 @@ Run every planned attempt in a fresh process and append its rows to
 `out_dir/runs.csv` as soon as it finishes, so an interrupted run keeps its
 evidence. Each attempt keeps its command, stdout, stderr, and reports under
 `out_dir/attempts/<id>/`. A failed, timed-out, or skipped attempt becomes a row
-with that status, never a zero. After a timeout, later attempts of the same
-dataset and variant are skipped, because lower thresholds only add itemsets.
+with that status, never a zero. `skip_after_timeout` controls optional pilot
+skipping; required series attempt every point and repeat.
 """
 function run_experiment(config::RunConfig, manifest::AbstractDict{String,DatasetEntry};
                         data_dir::AbstractString, out_dir::AbstractString)
@@ -15,22 +15,28 @@ function run_experiment(config::RunConfig, manifest::AbstractDict{String,Dataset
     mkpath(joinpath(out_dir, "attempts"))
     open(io -> TOML.print(io, env), joinpath(out_dir, "environment.toml"), "w")
     open(io -> TOML.print(io, config.table), joinpath(out_dir, "config.toml"), "w")
+    archive_sources(config, out_dir)
     inputs = Dict(name => prepare_dataset(manifest[name], data_dir)
                   for name in unique(a.entry.name for a in attempts))
     run_id = basename(normpath(out_dir))
     timed_out = Dict{Tuple{String,Symbol},Float64}()
     rows = Dict{String,String}[]
+    references = Dict{Tuple{String,Int},String}()
     open(joinpath(out_dir, "runs.csv"), "w") do csv
         println(csv, join(RESULT_FIELDS, ','))
         for attempt in attempts
             base = base_row(attempt, config, env, run_id)
             key = (attempt.entry.name, attempt.variant)
-            new_rows = if haskey(timed_out, key)
+            reference() = get!(references, (attempt.entry.name, attempt.minsup_count)) do
+                prepare_reference(attempt, config, inputs[attempt.entry.name],
+                    joinpath(out_dir, "references", "$(attempt.entry.name)-c$(attempt.minsup_count)"))
+            end
+            new_rows = if config.skip_after_timeout && haskey(timed_out, key)
                 [merge(base, Dict("timing_scope" => "process", "status" => "skipped",
                     "error" => "an earlier attempt at minsup $(timed_out[key]) timed out"))]
             else
                 run_attempt(attempt, config, inputs[attempt.entry.name],
-                            joinpath(out_dir, "attempts", attempt.id), base)
+                            joinpath(out_dir, "attempts", attempt.id), base; reference)
             end
             any(r -> r["status"] == "timeout", new_rows) && (timed_out[key] = attempt.minsup)
             for row in new_rows
@@ -38,6 +44,8 @@ function run_experiment(config::RunConfig, manifest::AbstractDict{String,Dataset
             end
             flush(csv)
             append!(rows, new_rows)
+            write_summary(rows, joinpath(out_dir, "summary.csv"))
+            GC.gc()
             println(stderr, attempt.id, ": ", first(new_rows)["status"], " ",
                     first(new_rows)["elapsed_seconds"])
         end
@@ -47,7 +55,7 @@ end
 
 function base_row(attempt::Attempt, config::RunConfig, env, run_id)
     stats = attempt.entry.stats
-    spmf = attempt.variant == :spmf
+    spmf = attempt.variant in REFERENCE_VARIANTS
     row = Dict{String,String}(field => "" for field in RESULT_FIELDS)
     merge!(row, Dict(
         "run_id" => run_id, "attempt_id" => attempt.id,
@@ -56,6 +64,7 @@ function base_row(attempt::Attempt, config::RunConfig, env, run_id)
         "items" => string(stats.items), "mean_width" => string(round(mean_width(stats); digits=4)),
         "minsup_relative" => string(attempt.minsup), "minsup_count" => string(attempt.minsup_count),
         "code_revision" => spmf ? "" : env["code_revision"], "variant" => string(attempt.variant),
+        "stage" => config.stage, "mode" => string(config.mode), "correctness_status" => "not_checked",
         "reference_version" => spmf ? env["reference_version"] : "",
         "julia_version" => env["julia_version"], "java_version" => spmf ? env["java_version"] : "",
         "os" => env["os"], "cpu" => env["cpu"], "threads" => spmf ? "" : string(config.julia_threads),
@@ -64,7 +73,8 @@ function base_row(attempt::Attempt, config::RunConfig, env, run_id)
     return row
 end
 
-function run_attempt(attempt::Attempt, config::RunConfig, input::String, dir::String, base)
+function run_attempt(attempt::Attempt, config::RunConfig, input::String, dir::String, base;
+                     reference=() -> throw(ArgumentError("no SPMF reference supplied")))
     mkpath(dir)
     paths = Dict(name => joinpath(dir, name) for name in
                  ("stdout.txt", "stderr.txt", "measure.toml", "worker.toml", "output.txt"))
@@ -80,22 +90,35 @@ function run_attempt(attempt::Attempt, config::RunConfig, input::String, dir::St
         "elapsed_seconds" => string(measured["elapsed_seconds"]),
         "peak_rss_bytes" => measured["peak_rss_bytes"] < 0 ? "" : string(measured["peak_rss_bytes"]),
         "memory_tool" => measured["memory_tool"], "status" => measured["status"],
-        "warmup_policy" => attempt.variant == :spmf ? "cold-jvm" : "cold-process"))
+        "warmup_policy" => attempt.variant in REFERENCE_VARIANTS ? "cold-jvm" :
+                           config.mode == :cold ? "cold-process" : "warm-worker"))
     rows = if measured["status"] == "timeout"
         [merge(process, Dict("error" => "killed after $(config.timeout_seconds) s"))]
     elseif measured["status"] == "error"
         [merge(process, Dict("error" => last_lines(paths["stderr.txt"])))]
     else
         try
-            completed_rows(attempt, process, paths)
+            completed = completed_rows(attempt, process, paths)
+            verification = config.verify_outputs ?
+                verify_output(reference(), paths["output.txt"], joinpath(dir, "comparison.toml")) :
+                Dict("correctness_status" => "unverified")
+            for row in completed
+                merge!(row, verification)
+                if row["correctness_status"] == "failed"
+                    merge!(row, Dict("status" => "error", "error" => "exact-map comparison failed; see comparison.toml"))
+                end
+            end
+            completed
         catch err
             # Output that disagrees with the run's own report is a failed
             # attempt, recorded with the reason instead of a number.
             err isa ArgumentError || rethrow()
-            [merge(process, Dict("status" => "error", "error" => err.msg))]
+            [merge(process, Dict("status" => "error", "correctness_status" => "failed", "error" => err.msg))]
         end
     end
-    config.keep_outputs || rm(paths["output.txt"]; force=true)
+    if !config.keep_outputs && all(r -> r["status"] == "ok", rows)
+        rm(paths["output.txt"]; force=true)
+    end
     return rows
 end
 
@@ -105,8 +128,13 @@ function completed_rows(attempt::Attempt, process, paths)
     output_count = count_itemset_lines(paths["output.txt"])
     common = merge(process, Dict("output_count" => string(output_count),
                                  "output_sha256" => file_sha256(paths["output.txt"])))
-    if attempt.variant == :spmf
-        stats = parse_spmf_stats(read(paths["stdout.txt"], String))
+    if attempt.variant in REFERENCE_VARIANTS
+        text = read(paths["stdout.txt"], String)
+        stats = attempt.variant == :spmf ? parse_spmf_stats(text) : parse_prepost_stats(text)
+        if attempt.variant == :prepost
+            stats.minsup_count == attempt.minsup_count || throw(ArgumentError(
+                "PrePost+ used count $(stats.minsup_count), expected $(attempt.minsup_count)"))
+        end
         stats.transactions == n ||
             throw(ArgumentError("SPMF read $(stats.transactions) transactions, expected $n"))
         stats.itemsets == output_count ||
@@ -121,12 +149,13 @@ function completed_rows(attempt::Attempt, process, paths)
         throw(ArgumentError("worker used count $(report["minsup_count"]), expected $(attempt.minsup_count)"))
     report["output_count"] == output_count ||
         throw(ArgumentError("worker mined $(report["output_count"]) itemsets but wrote $output_count"))
-    warm(scope, seconds) = merge(common, Dict("timing_scope" => scope, "warmup_policy" => "toy-warmup",
-                                              "elapsed_seconds" => string(seconds)))
-    mine_row = merge(warm("mine", report["mine_seconds"]), Dict(
-        "allocated_bytes" => string(report["mine_allocated_bytes"]),
-        "gc_seconds" => string(report["mine_gc_seconds"])))
-    return [common, warm("read", report["read_seconds"]), mine_row, warm("write", report["write_seconds"])]
+    report["mode"] == process["mode"] || throw(ArgumentError("worker mode disagrees with config"))
+    phases = [merge(common, Dict("timing_scope" => scope,
+        "warmup_policy" => report["mode"] == "warm" ? "dataset-warmup" : "cold-call",
+        "elapsed_seconds" => string(report[scope * "_seconds"]),
+        "allocated_bytes" => string(report[scope * "_allocated_bytes"]),
+        "gc_seconds" => string(report[scope * "_gc_seconds"]))) for scope in ("read", "mine", "write")]
+    return [common; phases]
 end
 
 """The last nonempty stderr lines, enough to name an exception without its stack trace."""

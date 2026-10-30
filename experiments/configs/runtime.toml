@@ -1,13 +1,13 @@
-# Thresholds proposed from the 2026-10-22 pilot (docs/threshold-pilot-2026-10-22.md)
-# and, for Accidents, the 2026-10-29 pilot (docs/threshold-pilot-accidents-2026-10-29.md):
-# every point finished for the baseline within the 300 s timeout, and SPMF
-# rounds each to the same count as support_threshold. Add "optimized" to the
-# variants once it exists, so every series shares these points.
+# Add optimized only after its complete-map correctness gate passes.
 name = "runtime"
-variants = ["baseline", "spmf"]
-repeats = 3
+variants = ["baseline", "spmf", "prepost"]
+mode = "cold"
+stage = "B0"
+repeats = 5
 timeout_seconds = 300
-keep_outputs = false
+keep_outputs = true
+verify_outputs = true
+skip_after_timeout = false
 spmf_version = "2.66"
 
 [[series]]
