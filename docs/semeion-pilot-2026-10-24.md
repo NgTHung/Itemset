@@ -7,7 +7,7 @@ Handwritten digits provide a small real image set for checking whether local str
 The official `semeion.data` file is 2,889,702 bytes. Its SHA-256 is `f43228ae3da5ea6a3c95069d53450b86166770e3b719dcc333182128fe08d4b1`. The accompanying `semeion.names` SHA-256 is `d7b5e6469a897fbe16a10a57ecfa6b4fcbf32ba45c539c61877be1626d564d78`. The [dataset source](https://archive.ics.uci.edu/ml/machine-learning-databases/semeion/semeion.data) is the input to these commands, run from the repository root:
 
 ```sh
-curl -L https://archive.ics.uci.edu/ml/machine-learning-databases/semeion/semeion.data -o data/raw/semeion/semeion.data
+curl -fL --create-dirs https://archive.ics.uci.edu/ml/machine-learning-databases/semeion/semeion.data -o data/raw/semeion/semeion.data
 sha256sum data/raw/semeion/semeion.data
 julia --startup-file=no --project=. test/runtests.jl
 julia --startup-file=no --project=. scripts/image_pilot.jl data/raw/semeion/semeion.data results/raw/semeion-pilot-2026-10-24
@@ -33,4 +33,4 @@ The 1,593 transactions have width 0 to 8, median 4, and 11 are empty. All 24 wor
 
 The most common word is 13, appearing in 863 images. Its nearest observed patch, image 2 at row 1, column 9, is a short horizontal stroke. The word set {8, 13} occurs in 330 images. The transaction table permits an exact scan of its supporting image IDs and labels; the SVGs help inspect the original pixels and patches. A visual word is a quantized local shape, not a semantic digit part. The transaction discards patch position and repeat count, so co-occurrence alone does not establish a digit-specific feature or predictive performance.
 
-The local baseline run establishes that the chosen thresholds are manageable. It is not an independent SPMF correctness comparison or a hosted Colab run. The final image evaluation can use this frozen encoding and the team's validated miner after the reference comparator and application integration are complete.
+The pilot records itemset counts at these three thresholds. It does not establish a runtime benchmark, an independent SPMF correctness comparison, or a hosted Colab run. The [30 October validation record](semeion-validation-2026-10-30.md) gives later reruns and independent comparisons.

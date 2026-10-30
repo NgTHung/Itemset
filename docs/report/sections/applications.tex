@@ -70,7 +70,8 @@ có nhiều patch cùng từ.
 Bản mã hóa sinh 18.386 patch từ 1.593 ảnh. Độ rộng transaction nhỏ nhất,
 trung vị và lớn nhất lần lượt là 0, 4 và 8; 11 ảnh không có từ nào. Cả
 24 từ đều được sử dụng. Hình ảnh nguồn theo nhãn và patch quan sát gần mỗi
-tâm được lưu trong \texttt{digits.svg} và \texttt{visual\_words.svg}; đường
+tâm, đồng thời được gán vào đúng từ và đạt ngưỡng khoảng cách, được lưu trong
+\texttt{digits.svg} và \texttt{visual\_words.svg}; đường
 dẫn và lệnh tái tạo nằm trong bản ghi thực nghiệm của kho mã nguồn.
 
 \begin{table}[ht]
@@ -92,5 +93,9 @@ Bảng~\ref{tab:semeion-pilot} dùng toàn bộ ảnh và biến thể Eclat cơ
 Từ 13 xuất hiện trong 863 ảnh; patch đại diện của nó là một nét ngang ngắn.
 Cặp từ \{8, 13\} xuất hiện trong 330 ảnh. Đây là mẫu đồng xuất hiện, chưa
 chứng minh khả năng phân biệt nhãn. Phép đổi ảnh thành tập từ cũng làm mất
-vị trí và số lần lặp của patch. Phân tích chính thức cần đối chiếu đầu ra
-với SPMF và kiểm tra ảnh hỗ trợ trước khi diễn giải theo từng chữ số.
+vị trí và số lần lặp của patch. Đối chiếu toàn bộ đầu ra với SPMF Eclat cho
+6/6, 18/18 và 46/46 itemset khớp chính xác support tại ba ngưỡng trên.
+Đầu vào SPMF bỏ 11 ảnh rỗng, còn 1.582 giao dịch; nhóm dùng các ngưỡng
+tương ứng cùng số ảnh tối thiểu 319, 160 và 80 để giữ nguyên bài toán.
+Tệp \texttt{supporting\_images.tsv} lưu ID và nhãn của mọi ảnh hỗ trợ
+từng itemset, kèm các montage ảnh nguồn để kiểm tra trước khi diễn giải.
