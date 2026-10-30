@@ -86,3 +86,12 @@ The uploaded parts and script were downloaded from Linear, checked against the l
 The first figure used the label `invalid` for the interrupted Retail attempt. That label was a reporting error. The attempt has `status = interrupted`, `correctness_status = not_checked`, and no output file or completion report. All 31 completed baseline runs match SPMF exactly; the complete series has zero observed correctness failures.
 
 The corrected figures and plot summary separate correctness failures, interruptions, other incomplete attempts, and unverified outputs. Timings and raw evidence are unchanged. The original evidence archive retains the first figure for provenance; a separate correction bundle accompanies it in [DAT-17](https://linear.app/nguyen-tuan-hung/issue/DAT-17).
+
+## Retail correctness recheck, 2026-10-30T13:37:16Z
+
+Three fresh cold repeats of Retail/0.001 (absolute count 89) ran at revision `c1490d0`. All three baseline outputs and all six reference-contender outputs match a fresh, separately executed SPMF Eclat reference exactly. Each output has 7,589 patterns. There are zero missing, extra, duplicated, or support-mismatched itemsets, and no interrupted or timed-out attempts.
+
+Baseline process times are 184.84, 194.18, 192.17 seconds in repeat order. The median is 192.17 seconds, IQR 4.67 seconds, and maximum baseline RSS 314.1 MiB. No mining code changed.
+
+The [run directory](../results/raw/retail-correctness-rerun-20261030T133716Z/) retains all nine outputs, configs, environment and source checksums, per-phase allocations and GC, process RSS, commands, reports, and comparison diagnostics. The [audit](../results/raw/retail-correctness-rerun-20261030T133716Z/audit.json) verifies every output and reference checksum and independently checks all eight summary groups. This rerun remains separate from the original evidence, which retains the reboot interruption.
+
