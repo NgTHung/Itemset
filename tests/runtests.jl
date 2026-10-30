@@ -6,6 +6,7 @@ include("fixtures.jl")
 include("oracle.jl")
 include(joinpath(dirname(@__DIR__), "tools", "spmf", "compare.jl"))
 include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
+include(joinpath(dirname(@__DIR__), "applications", "image_patterns", "SemeionPilot.jl"))
 include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBasket.jl"))
 
 @testset "Itemset setup" begin
@@ -174,6 +175,8 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     end
     include("cli.jl")
     include("benchmark_data.jl")
+    include("image_patterns.jl")
+    include("image_pilot_cli.jl")
     include("harness.jl")
     include("market_basket.jl")
 end

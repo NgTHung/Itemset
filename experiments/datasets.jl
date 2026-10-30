@@ -43,11 +43,11 @@ Count transactions, distinct items, and widths of canonical transactions, as
 returned by `read_transactions`. An empty database reports zero for every field.
 """
 function dataset_stats(transactions::AbstractVector{<:AbstractVector{Int}})
-    items = Set{Int}()
+    frequencies = item_frequencies(transactions)
+    items = keys(frequencies)
     total = 0
     max_width = 0
     for transaction in transactions
-        union!(items, transaction)
         total += length(transaction)
         max_width = max(max_width, length(transaction))
     end

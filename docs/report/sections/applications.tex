@@ -57,6 +57,45 @@ Sinh luật bằng kết quả Eclat của nhóm; giải thích support, confide
 top-10 luật theo lift. Bổ sung phân tích kinh doanh, độ nhạy ngưỡng và giới hạn
 suy luận.
 \subsection{Khai thác mẫu hình ảnh — Phat}
-Mô tả ảnh thực, descriptors, codebook và ánh xạ visual words thành transaction.
-Trình bày patches, itemset và ảnh hỗ trợ; phân tích độ nhạy và thông tin vị trí/
-số lần xuất hiện bị mất. Kết quả cuối phải dùng Eclat của nhóm.
+Bộ dữ liệu Semeion từ UCI gồm 1.593 ảnh chữ số viết tay nhị phân kích thước
+$16\times16$ pixel, có nhãn từ 0 đến 9~\cite{semeionUCI}. Câu hỏi khảo sát là
+những nét cục bộ nào xuất hiện lặp lại giữa các ảnh. Mỗi ảnh được chia thành
+16 mảnh ảnh (patch) $4\times4$ không chồng lấp. Chúng tôi bỏ mảnh có dưới hai
+pixel nét, rồi dùng k-means với seed 42 để học codebook (từ điển mã) gồm
+24 visual words (từ thị giác). Một từ có mặt trong transaction (giao dịch)
+của ảnh khi khoảng cách Euclid bình phương giữa patch và tâm gần nhất không
+vượt quá 1,0. Mỗi từ chỉ xuất hiện một lần trong transaction, kể cả khi ảnh
+có nhiều patch cùng từ.
+
+Bản mã hóa sinh 18.386 patch từ 1.593 ảnh. Độ rộng transaction nhỏ nhất,
+trung vị và lớn nhất lần lượt là 0, 4 và 8; 11 ảnh không có từ nào. Cả
+24 từ đều được sử dụng. Hình ảnh nguồn theo nhãn và patch quan sát gần mỗi
+tâm, đồng thời được gán vào đúng từ và đạt ngưỡng khoảng cách, được lưu trong
+\texttt{digits.svg} và \texttt{visual\_words.svg}; đường
+dẫn và lệnh tái tạo nằm trong bản ghi thực nghiệm của kho mã nguồn.
+
+\begin{table}[ht]
+\centering
+\caption{Số tập từ thị giác phổ biến trên Semeion với Eclat cơ bản}
+\label{tab:semeion-pilot}
+\begin{tabular}{r r r}
+\hline
+Minsup & Số ảnh tối thiểu & Số itemset \\
+\hline
+0,20 & 319 & 6 \\
+0,10 & 160 & 18 \\
+0,05 & 80 & 46 \\
+\hline
+\end{tabular}
+\end{table}
+
+Bảng~\ref{tab:semeion-pilot} dùng toàn bộ ảnh và biến thể Eclat cơ bản.
+Từ 13 xuất hiện trong 863 ảnh; patch đại diện của nó là một nét ngang ngắn.
+Cặp từ \{8, 13\} xuất hiện trong 330 ảnh. Đây là mẫu đồng xuất hiện, chưa
+chứng minh khả năng phân biệt nhãn. Phép đổi ảnh thành tập từ cũng làm mất
+vị trí và số lần lặp của patch. Đối chiếu toàn bộ đầu ra với SPMF Eclat cho
+6/6, 18/18 và 46/46 itemset khớp chính xác support tại ba ngưỡng trên.
+Đầu vào SPMF bỏ 11 ảnh rỗng, còn 1.582 giao dịch; nhóm dùng các ngưỡng
+tương ứng cùng số ảnh tối thiểu 319, 160 và 80 để giữ nguyên bài toán.
+Tệp \texttt{supporting\_images.tsv} lưu ID và nhãn của mọi ảnh hỗ trợ
+từng itemset, kèm các montage ảnh nguồn để kiểm tra trước khi diễn giải.
