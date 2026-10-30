@@ -25,6 +25,8 @@ Each attempt runs in a fresh process and adds rows to `runs.csv` with the header
 
 A failed attempt keeps its row with status `error` and the first error line. A timed-out attempt has status `timeout` and wall time until the kill. Every required point and repeat is attempted. Pilot configs can set `skip_after_timeout = true` to skip subsequent attempts of a timed-out variant and dataset. Rows never substitute zero for a missing measurement.
 
+After a host interruption, preserve the partial run and record an attempt without a completion report as `interrupted`, with no elapsed time. Restart the entire interrupted point in a separate run, then cover the remaining points. Link both sessions and retain their samples and failures when combining evidence.
+
 Output counts must match the program's report, and transaction counts must match the manifest. With `verify_outputs = true` (the default), every successful output is compared with a separate SPMF Eclat execution after timing ends. PrePost+'s reported absolute threshold must also agree. A mismatch, duplicate, or malformed output invalidates the timing row. The reference runs and per-attempt `comparison.toml` files preserve the checksums and comparison diagnostics. `keep_outputs = true` retains successful outputs; failures retain their output for diagnosis.
 
 ## Timing
@@ -34,7 +36,7 @@ Julia compiles a method on its first call, and Java pays JVM startup on every pr
 | Scope | Variants | Measures | Warmup |
 |---|---|---|---|
 | `process`, cold mode | all | Spawn to exit, including startup, compilation, input, and output, with no benchmark warmup | `cold-process` or `cold-jvm` |
-| `read`, `mine`, `write`, cold mode | Julia | First calls, including compilation | `cold-call` |
+| `read`, `mine`, `write`, cold mode | Julia | First calls; process timing also captures compilation outside these calls | `cold-call` |
 | `process`, warm mode | Julia | Entire worker, including untimed warmup, for diagnosis | `warm-worker` |
 | `read`, `mine`, `write`, warm mode | Julia | Calls after toy compilation and one full run of the same input to devnull, followed by GC | `dataset-warmup` |
 | `spmf_total` | SPMF references | SPMF's own "Total time" line | `cold-jvm` |

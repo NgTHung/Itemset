@@ -156,8 +156,10 @@ function parse_spmf_stats(text::AbstractString)
 end
 
 """Count itemset lines, skipping SPMF's `@` metadata lines."""
-count_itemset_lines(path::AbstractString) =
-    count(line -> !isempty(line) && !startswith(line, '@'), eachline(path))
+function count_itemset_lines(path::AbstractString)
+    isfile(path) || throw(ArgumentError("missing itemset output at $(repr(path))"))
+    return count(line -> !isempty(line) && !startswith(line, '@'), eachline(path))
+end
 
 function csv_field(value)
     value === missing && return ""

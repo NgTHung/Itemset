@@ -80,6 +80,36 @@
                 @test all(r -> parse(Int, r["allocated_bytes"]) > 0, rows[2:end])
                 @test isfile(joinpath(dir, mode, "comparison.toml"))
             end
+            write(reference, "1 #SUP: 999\n")
+            config = toy_config(; verify_outputs=true)
+            attempt = only(Experiments.plan_attempts(config, manifest))
+            base = Dict(field => "" for field in Experiments.RESULT_FIELDS)
+            base["mode"] = "cold"
+            rows = Experiments.run_attempt(attempt, config, joinpath(data, "baskets.txt"),
+                joinpath(dir, "mismatch"), base; reference=() -> reference)
+            @test all(r -> r["status"] == "error" && r["correctness_status"] == "failed", rows)
+            @test isfile(joinpath(dir, "mismatch", "output.txt"))
+        end
+    end
+
+    @testset "Missing output is a recorded validation error" begin
+        mktempdir() do dir
+            manifest, _ = toy_benchmark(dir)
+            attempt = only(Experiments.plan_attempts(toy_config(), manifest))
+            @test_throws ArgumentError Experiments.completed_rows(attempt, Dict{String,String}(),
+                Dict("output.txt" => joinpath(dir, "missing.txt")))
+        end
+    end
+
+    @testset "Required attempts continue after timeout" begin
+        mktempdir() do dir
+            manifest, data = toy_benchmark(dir)
+            config = toy_config(; timeout_seconds=0.2, repeats=2,
+                series=[Dict("dataset"=>"baskets", "minsup"=>[0.5, 0.75])])
+            rows = Experiments.run_experiment(config, manifest; data_dir=data, out_dir=joinpath(dir, "run"))
+            @test length(rows) == 4
+            @test all(r -> r["status"] == "timeout", rows)
+            @test isfile(joinpath(dir, "run", "source-checksums.toml"))
         end
     end
 
