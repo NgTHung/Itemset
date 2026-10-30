@@ -3,6 +3,7 @@ using Random
 using SHA
 
 include(joinpath(dirname(@__DIR__), "applications", "image_patterns", "SemeionPilot.jl"))
+include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
 using .SemeionPilot
 
 const VOCABULARY_SIZE = 24
@@ -49,37 +50,70 @@ function write_codebook_tsv(path, codebook)
     write(path, String(take!(io)))
 end
 
-function threshold_results_tsv(transactions)
+function median_width(widths)
+    isempty(widths) && throw(ArgumentError("cannot take median of empty widths"))
+    ordered = sort(widths)
+    n = length(ordered)
+    isodd(n) ? Float64(ordered[cld(n, 2)]) : (ordered[n ÷ 2] + ordered[n ÷ 2 + 1]) / 2
+end
+
+function mining_runs(transactions)
+    mine(transactions; minsup=first(SUPPORT_LEVELS), variant=:baseline)
+    map(SUPPORT_LEVELS) do minsup
+        elapsed = @elapsed patterns = mine(transactions; minsup, variant=:baseline)
+        (; minsup, min_count=support_threshold(minsup, length(transactions)), patterns, elapsed)
+    end
+end
+
+function threshold_results_tsv(runs)
     io = IOBuffer()
     println(io, "minsup\tmin_count\titemsets\telapsed_seconds")
-    mine(transactions; minsup=first(SUPPORT_LEVELS), variant=:baseline)
-    for minsup in SUPPORT_LEVELS
-        elapsed = @elapsed patterns = mine(transactions; minsup, variant=:baseline)
-        println(io, minsup, '\t', support_threshold(minsup, length(transactions)),
-                '\t', length(patterns), '\t', elapsed)
+    for result in runs
+        println(io, result.minsup, '\t', result.min_count,
+                '\t', length(result.patterns), '\t', result.elapsed)
     end
     String(take!(io))
 end
 
-function main(args)
+function supporting_results_tsv(runs, images, transactions)
+    io = IOBuffer()
+    println(io, "minsup\titems\tsupport\timage_ids\tlabels")
+    for result in runs, itemset in sort!(collect(keys(result.patterns)))
+        positions = SemeionPilot.supporting_images(transactions, itemset)
+        length(positions) == result.patterns[itemset] || error("support scan differs for $itemset")
+        println(io, result.minsup, '\t', join(itemset, ','), '\t', length(positions), '\t',
+                join([images[p].id for p in positions], ','), '\t',
+                join([images[p].label for p in positions], ','))
+    end
+    String(take!(io))
+end
+
+semeion_entry() = Experiments.load_manifest(joinpath(dirname(@__DIR__), "data", "raw", "manifest.toml"))["semeion"]
+
+function main(args; entry=semeion_entry(), fetch=Experiments.Downloads.download,
+              vocabulary_size::Int=VOCABULARY_SIZE)
     length(args) == 2 ||
         throw(ArgumentError("usage: julia --project=. scripts/image_pilot.jl INPUT OUTPUT_DIR; got $(length(args)) arguments"))
     input, output_dir = args
-    isfile(input) || throw(ArgumentError("input file does not exist: $input"))
     ispath(output_dir) && throw(ArgumentError("output path already exists: $output_dir"))
+    basename(input) == entry.file || throw(ArgumentError("input must be named $(entry.file): $input"))
+    mkpath(dirname(abspath(input)))
+    input = Experiments.prepare_dataset(entry, dirname(abspath(input)); fetch)
     images = SemeionPilot.read_semeion(input)
     patches, references = SemeionPilot.extract_patches(images; min_ink=MIN_INK)
-    codebook = SemeionPilot.fit_codebook(patches, VOCABULARY_SIZE;
+    codebook = SemeionPilot.fit_codebook(patches, vocabulary_size;
                                          rng=Xoshiro(DEFAULT_SEED), iterations=ITERATIONS)
     transactions = SemeionPilot.encode_images(images, codebook;
                                                min_ink=MIN_INK, max_distance2=MAX_DISTANCE2)
-    examples = SemeionPilot.representative_patches(patches, references, codebook)
-    frequencies = [count(transaction -> word in transaction, transactions)
-                   for word in 1:VOCABULARY_SIZE]
+    examples = SemeionPilot.representative_patches(patches, references, codebook; max_distance2=MAX_DISTANCE2)
+    counts = item_frequencies(transactions)
+    frequencies = [get(counts, word, 0) for word in 1:vocabulary_size]
     widths = sort!(length.(transactions))
     label_counts = [count(image -> image.label == label, images) for label in 0:9]
     input_sha = bytes2hex(sha256(read(input)))
-    threshold_results = threshold_results_tsv(transactions)
+    runs = mining_runs(transactions)
+    threshold_results = threshold_results_tsv(runs)
+    supporting_results = supporting_results_tsv(runs, images, transactions)
     summary = """
     dataset=UCI Semeion Handwritten Digit
     source=https://archive.ics.uci.edu/dataset/178/semeion+handwritten+digit
@@ -87,7 +121,7 @@ function main(args)
     input_sha256=$input_sha
     julia_version=$(VERSION)
     seed=$(DEFAULT_SEED)
-    vocabulary_size=$VOCABULARY_SIZE
+    vocabulary_size=$vocabulary_size
     min_ink=$MIN_INK
     max_distance2=$MAX_DISTANCE2
     iterations=$ITERATIONS
@@ -95,7 +129,7 @@ function main(args)
     patches=$(length(patches))
     distinct_patches=$(length(unique(patches)))
     widths_min=$(first(widths))
-    widths_median=$(widths[cld(length(widths), 2)])
+    widths_median=$(median_width(widths))
     widths_max=$(last(widths))
     empty_transactions=$(count(isempty, transactions))
     words_used=$(count(>(0), frequencies))
@@ -110,6 +144,15 @@ function main(args)
     SemeionPilot.write_digit_montage_svg(joinpath(output_dir, "digits.svg"), images)
     SemeionPilot.write_word_montage_svg(joinpath(output_dir, "visual_words.svg"), examples)
     write(joinpath(output_dir, "thresholds.tsv"), threshold_results)
+    write(joinpath(output_dir, "supporting_images.tsv"), supporting_results)
+    for result in runs
+        write_itemsets(joinpath(output_dir, "patterns-$(result.minsup).txt"), result.patterns)
+        isempty(result.patterns) && continue
+        selected = first(sort!(collect(keys(result.patterns));
+                               by=key -> (-length(key), -result.patterns[key], key)))
+        SemeionPilot.write_supporting_images_svg(joinpath(output_dir, "supporting-$(result.minsup).svg"),
+                                                 images, transactions, selected)
+    end
     print(summary)
     output_dir
 end

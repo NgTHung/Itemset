@@ -1,4 +1,10 @@
 @testset "Semeion image pilot" begin
+    @testset "Shared transaction frequencies" begin
+        @test item_frequencies([[1, 1, 2], Int[], [2]]) == Dict(1 => 1, 2 => 2)
+        @test item_frequencies(Vector{Int}[]) == Dict{Int,Int}()
+        @test_throws ArgumentError item_frequencies([[-1]])
+        @test_throws ArgumentError item_frequencies([1])
+    end
     @testset "Dataset parsing" begin
         row = join(vcat(fill("0.0000", 256), ["0", "0", "1"], fill("0", 7)), " ")
         images = SemeionPilot.read_semeion(IOBuffer(row * "\n"))
@@ -51,5 +57,32 @@
         invalid_codebook[1, 1] = NaN
         @test_throws ArgumentError SemeionPilot.encode_images(images, invalid_codebook)
         @test_throws ArgumentError SemeionPilot.representative_patches(patches, refs, invalid_codebook)
+    end
+
+    @testset "Representatives follow accepted assignments" begin
+        patch = ntuple(_ -> UInt8(0), 16)
+        refs = [SemeionPilot.PatchRef(42, 1, 1)]
+        centers = hcat(zeros(16), fill(0.1, 16))
+        examples = SemeionPilot.representative_patches([patch], refs, centers; max_distance2=0.0)
+        @test [example.word for example in examples] == [1]
+        @test only(examples).ref.image_id == 42
+        @test isempty(SemeionPilot.representative_patches([patch], refs, fill(1.0, 16, 1); max_distance2=1.0))
+        @test_throws ArgumentError SemeionPilot.representative_patches([patch], refs, centers; max_distance2=NaN)
+        tied = SemeionPilot.representative_patches([patch], refs, zeros(16, 2); max_distance2=0.0)
+        @test [example.word for example in tied] == [1]
+    end
+
+    @testset "Supporting montage uses source IDs" begin
+        images = [SemeionPilot.DigitImage(id, label, zeros(UInt8, 16, 16))
+                  for (id, label) in [(10, 0), (42, 1)]]
+        mktempdir() do dir
+            path = joinpath(dir, "support.svg")
+            SemeionPilot.write_supporting_images_svg(path, images, [Int[], [2]], (2,))
+            svg = read(path, String)
+            @test occursin("image 42, label 1", svg)
+            @test !occursin("image 10", svg)
+            @test_throws ArgumentError SemeionPilot.write_supporting_images_svg(path, images, [[2]], (2,))
+            @test read(path, String) == svg
+        end
     end
 end

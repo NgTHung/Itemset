@@ -203,10 +203,7 @@ function write_market_basket(dir::AbstractString, basket)
     end
     mkpath(dir)
     write_transactions(joinpath(dir, "baskets.txt"), basket.transactions; labels=basket.codes)
-    baskets_per_item = zeros(Int, length(basket.codes))
-    for transaction in basket.transactions, id in transaction
-        baskets_per_item[id] += 1
-    end
+    baskets_per_item = item_frequencies(basket.transactions)
     open(joinpath(dir, "items.tsv"), "w") do io
         println(io, "id\tstock_code\tdescription\tbaskets")
         for (id, code) in enumerate(basket.codes)

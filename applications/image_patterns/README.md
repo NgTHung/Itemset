@@ -15,13 +15,13 @@ A transaction keeps only which words are present, so it loses each word's locati
 
 Image and plotting packages need team approval before they enter `Project.toml`.
 
-The Semeion pilot uses only Julia standard libraries. From the repository root, download `semeion.data` from the [UCI source](https://archive.ics.uci.edu/ml/machine-learning-databases/semeion/semeion.data) into `data/raw/semeion/`, verify its hash against the dated record, then run:
+The Semeion runner uses the shared dataset loader and seeded Julia patch encoder. It verifies `semeion.data` against [the raw-data manifest](../../data/raw/manifest.toml), downloads missing data into a staging file, and replaces a corrupt cache only after the replacement verifies. Run from the repository root:
 
 ```sh
 julia --startup-file=no --project=. scripts/image_pilot.jl data/raw/semeion/semeion.data results/raw/semeion-pilot
 ```
 
-The output directory must not exist. The runner writes transactions, word frequencies, codebook centers, observed representative patches, source-image and patch montages, and baseline Eclat counts at three support thresholds. The [Julia notebook](../../notebooks/demo.ipynb) runs the same pilot.
+The output directory must not exist. The runner writes transactions, word frequencies, codebook centers, accepted representative patches, and baseline Eclat results at three support thresholds. `patterns-<minsup>.txt` holds complete itemset/support maps. `supporting_images.tsv` lists every supporting image ID and label for each itemset; `supporting-<minsup>.svg` shows up to ten source images for the longest pattern, breaking ties by support and then item IDs. The [Julia notebook](../../notebooks/demo.ipynb) runs the same verified acquisition and pilot.
 
 ## Deliverables
 

@@ -213,7 +213,7 @@ end
 """
     WordExample(word, patch, ref, distance2)
 
-An observed patch nearest to one codebook word, with its source image position.
+An accepted observed patch assigned to one codebook word, with its source image ID.
 """
 struct WordExample
     word::Int
@@ -223,34 +223,33 @@ struct WordExample
 end
 
 """
-    representative_patches(patches, references, codebook) -> Vector{WordExample}
+    representative_patches(patches, references, codebook; max_distance2=4.0)
 
-Select an actual observed patch nearest to each codebook center. Equal distances
-choose the first patch in dataset order.
+Select the closest accepted patch assigned to each used word by `nearest_word`.
+Unused words have no representative. Equal distances choose the first source patch.
 """
 function representative_patches(patches::AbstractVector{Patch},
                                 references::AbstractVector{PatchRef},
-                                codebook::Matrix{Float64})
+                                codebook::Matrix{Float64}; max_distance2::Float64=4.0)
     length(patches) == length(references) ||
         throw(ArgumentError("patch and reference counts differ: $(length(patches)) and $(length(references))"))
     isempty(patches) && throw(ArgumentError("no patches available for representatives"))
     size(codebook, 1) == 16 && size(codebook, 2) >= 1 ||
         throw(ArgumentError("codebook must have 16 rows and at least one word: $(size(codebook))"))
     all(isfinite, codebook) || throw(ArgumentError("codebook contains a nonfinite center"))
-    examples = WordExample[]
-    for word in axes(codebook, 2)
-        best_index = 1
-        best_distance2 = Inf
-        for index in eachindex(patches)
-            candidate = patch_distance2(patches[index], codebook, word)
-            if candidate < best_distance2
-                best_index = index
-                best_distance2 = candidate
-            end
+    isfinite(max_distance2) && max_distance2 >= 0 ||
+        throw(ArgumentError("max_distance2 must be finite and nonnegative: $max_distance2"))
+    best_indices = zeros(Int, size(codebook, 2))
+    best_distances = fill(Inf, size(codebook, 2))
+    for index in eachindex(patches)
+        word, distance2 = nearest_word(patches[index], codebook)
+        if distance2 <= max_distance2 && distance2 < best_distances[word]
+            best_indices[word] = index
+            best_distances[word] = distance2
         end
-        push!(examples, WordExample(word, patches[best_index], references[best_index], best_distance2))
     end
-    examples
+    [WordExample(word, patches[index], references[index], best_distances[word])
+     for (word, index) in enumerate(best_indices) if index != 0]
 end
 
 function svg_start!(io::IO, width::Int, height::Int)
@@ -317,6 +316,31 @@ function write_word_montage_svg(path::AbstractString, examples::AbstractVector{W
         println(io, "<text x=\"$x\" y=\"$(y + 14)\" font-size=\"11\">word $(example.word)</text>")
         svg_patch!(io, example.patch, x, y + 20)
         println(io, "<text x=\"$x\" y=\"$(y + 81)\" font-size=\"9\">image $(example.ref.image_id)</text>")
+    end
+    println(io, "</svg>")
+    write(path, String(take!(io)))
+    path
+end
+
+"""
+    write_supporting_images_svg(path, images, transactions, itemset; limit=10)
+
+Draw the first `limit` matching images in source order with image IDs and labels.
+Throws `ArgumentError` for mismatched lengths, an empty itemset, or invalid limits.
+"""
+function write_supporting_images_svg(path, images, transactions, itemset; limit::Int=10)
+    length(images) == length(transactions) || throw(ArgumentError("image and transaction counts differ"))
+    limit >= 1 || throw(ArgumentError("limit must be positive: $limit"))
+    positions = supporting_images(transactions, itemset)
+    resize!(positions, min(limit, length(positions)))
+    io = IOBuffer()
+    svg_start!(io, max(200, 90 * length(positions)), 120)
+    println(io, "<text x=\"8\" y=\"14\" font-size=\"12\">words $(join(itemset, ','))</text>")
+    for (index, position) in enumerate(positions)
+        source = images[position]
+        x = 8 + 90 * (index - 1)
+        println(io, "<text x=\"$x\" y=\"30\" font-size=\"10\">image $(source.id), label $(source.label)</text>")
+        svg_digit!(io, source.pixels, x, 38)
     end
     println(io, "</svg>")
     write(path, String(take!(io)))
