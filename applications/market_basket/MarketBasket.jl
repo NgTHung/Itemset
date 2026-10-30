@@ -11,6 +11,7 @@ using ItemsetMining
 using Printf: @sprintf
 
 include("tsv.jl")
+include("cli.jl")
 
 const HEADER = "Invoice,StockCode,Description,Quantity,InvoiceDate,Price,Customer ID,Country"
 

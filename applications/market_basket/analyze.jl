@@ -1,16 +1,17 @@
 using ItemsetMining
-using Printf: @sprintf
 using TOML: TOML
 const ROOT = dirname(dirname(@__DIR__))
 include(joinpath(ROOT, "experiments", "Experiments.jl"))
 include(joinpath(@__DIR__, "MarketBasket.jl"))
 using .Experiments: load_manifest, prepare_dataset, code_revision
-using .MarketBasket: association_rules, top_rules, top_rule_groups, group_ranks, rule_labels,
-                     write_rules, split_by_date, measure_rule, confidence, lift, AssociationRule
+using .MarketBasket: association_rules, top_rules, top_rule_groups, group_ranks, group_key, rule_labels,
+                     write_rules, write_tsv, format_measure, split_by_date, measure_rule, confidence, lift,
+                     AssociationRule
 
 const USAGE = """
 Usage:
   julia --project=. applications/market_basket/analyze.jl [OUT_DIR]
+  julia --project=. applications/market_basket/analyze.jl -h
 
 Mine the cleaned Online Retail II baskets with Eclat, derive association rules,
 and write the top-10 tables and robustness checks to OUT_DIR, by default
@@ -31,14 +32,11 @@ const YEAR_CUTOFF = "2010-12-01"
 # Wholesale orders above the 99th percentile of basket width could create co-occurrence on their own.
 const LARGE_BASKET_QUANTILE = 0.99
 
-group_key(r::AssociationRule) = Tuple(sort!([r.antecedent..., r.consequent...]))
-fmt(x) = @sprintf("%.4f", Float64(x))
-
-"""Mine each named basket set once per threshold, so several minconf values reuse one map."""
-function mined(cache, name::Symbol, transactions, minsup)
-    get!(cache, (name, minsup)) do
+"""Mine `transactions` once per threshold, so several minconf values reuse one map."""
+function mined(cache::Dict{Float64,SupportMap}, transactions, minsup::Float64)
+    get!(cache, minsup) do
         seconds = @elapsed patterns = mine(transactions; minsup)
-        println(stderr, "mined $name at minsup $minsup in $(round(seconds; digits=1)) s")
+        println(stderr, "mined at minsup $minsup in $(round(seconds; digits=1)) s")
         patterns
     end
 end
@@ -47,33 +45,28 @@ end
 function recounted(rule::AssociationRule, transactions)
     r = measure_rule(rule, transactions)
     defined = r.antecedent_support > 0 && r.consequent_support > 0
-    return (string(r.support), defined ? fmt(confidence(r)) : "", defined ? fmt(lift(r)) : "")
-end
-
-function write_tsv(path, header, rows)
-    open(path, "w") do io
-        println(io, join(header, '\t'))
-        foreach(row -> println(io, join(row, '\t')), rows)
-    end
+    return (string(r.support), defined ? format_measure(confidence(r)) : "", defined ? format_measure(lift(r)) : "")
 end
 
 function main(args)
-    if args == ["--help"]
+    if MarketBasket.is_help(args)
         println(USAGE)
         return 0
     end
-    length(args) <= 1 || throw(ArgumentError("expected at most one output folder\n$USAGE"))
-    out = isempty(args) ? joinpath(ROOT, "results", "raw", "market_basket") : only(args)
-    mkpath(out)
+    out = MarketBasket.output_folder(args, joinpath(ROOT, "results", "raw", "market_basket"), USAGE)
     raw_dir = joinpath(ROOT, "data", "raw")
     entry = load_manifest(joinpath(raw_dir, "manifest.toml"))["online_retail_ii"]
     basket = MarketBasket.prepare_baskets(MarketBasket.read_receipts(prepare_dataset(entry, raw_dir)))
     transactions = basket.transactions
     n = length(transactions)
     labels = basket.descriptions
-    cache = Dict{Tuple{Symbol,Float64},SupportMap}()
+    # Every table prints these labels, so one check before the first write keeps a bad
+    # label from leaving a half-written results folder.
+    MarketBasket.check_tsv(("description",), [(label,) for label in labels])
+    mkpath(out)
+    cache = Dict{Float64,SupportMap}()
 
-    patterns = mined(cache, :all, transactions, MINSUP)
+    patterns = mined(cache, transactions, MINSUP)
     rules = association_rules(patterns, n; minconf=MINCONF)
     top = top_rules(rules, TOP)
     groups = top_rule_groups(rules, TOP)
@@ -85,7 +78,7 @@ function main(args)
     # which rules it is ranked against. A group is present while any of its splits
     # passes, and its rank is that of its best passing split, not of the base rule.
     sensitivity = map(Iterators.product(MINSUP_GRID, MINCONF_GRID)) do (minsup, minconf)
-        cell_patterns = mined(cache, :all, transactions, minsup)
+        cell_patterns = mined(cache, transactions, minsup)
         cell = association_rules(cell_patterns, n; minconf)
         by_group = group_ranks(cell)
         top_keys = Set((r.antecedent, r.consequent) for r in top_rules(cell, TOP).rules)
@@ -105,16 +98,16 @@ function main(args)
         ("group_rank", "antecedent", "consequent", "support", "confidence", "lift",
          "support_year1", "confidence_year1", "lift_year1", "support_year2", "confidence_year2", "lift_year2",
          "support_small", "confidence_small", "lift_small"),
-        [(i, rule_labels(g, labels)..., g.support, fmt(confidence(g)), fmt(lift(g)),
+        [(i, rule_labels(g, labels)..., g.support, format_measure(confidence(g)), format_measure(lift(g)),
           recounted(g, year1)..., recounted(g, year2)..., recounted(g, small)...)
          for (i, g) in enumerate(groups)])
 
     base_groups = Set(group_key.(groups))
-    rare = top_rule_groups(association_rules(mined(cache, :all, transactions, RARE_MINSUP), n; minconf=MINCONF), TOP)
+    rare = top_rule_groups(association_rules(mined(cache, transactions, RARE_MINSUP), n; minconf=MINCONF), TOP)
     write_tsv(joinpath(out, "rare_groups.tsv"),
         ("group_rank", "antecedent", "consequent", "support", "confidence", "lift", "in_base_groups",
          "support_year1", "confidence_year1", "lift_year1", "support_year2", "confidence_year2", "lift_year2"),
-        [(i, rule_labels(g, labels)..., g.support, fmt(confidence(g)), fmt(lift(g)), group_key(g) in base_groups,
+        [(i, rule_labels(g, labels)..., g.support, format_measure(confidence(g)), format_measure(lift(g)), group_key(g) in base_groups,
           recounted(g, year1)..., recounted(g, year2)...)
          for (i, g) in enumerate(rare)])
 
@@ -134,7 +127,7 @@ function main(args)
     for (rank, r) in enumerate(top.rules)
         left, right = rule_labels(r, labels)
         println(rank, ". ", left, " => ", right, "  support=", r.support,
-                " confidence=", fmt(confidence(r)), " lift=", fmt(lift(r)))
+                " confidence=", format_measure(confidence(r)), " lift=", format_measure(lift(r)))
     end
     top.ties_beyond > 0 && println("$(top.ties_beyond) more rules share the lift of rule $TOP.")
     println("wrote ", out)
