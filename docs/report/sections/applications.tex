@@ -1,8 +1,61 @@
 \section{Ứng dụng thực tế}
 \subsection{Market Basket Analysis — Thien}
-Mô tả nguồn dữ liệu thực, transaction, làm sạch và ánh xạ sản phẩm. Sinh luật bằng
-kết quả Eclat của nhóm; giải thích support, confidence, lift và top-10 luật theo
-lift. Bổ sung phân tích kinh doanh, độ nhạy ngưỡng và giới hạn suy luận.
+\label{sec:basket}
+Phân tích giỏ hàng (market basket analysis) tìm các nhóm sản phẩm thường được mua
+cùng nhau để nhà bán lẻ sắp xếp, đóng gói hoặc khuyến mãi. Nhóm dùng bộ dữ liệu
+Online Retail II~\cite{chen2012}, giấy phép CC BY 4.0, gồm mọi dòng hóa đơn của
+một cửa hàng quà tặng trực tuyến tại Anh từ 01/12/2009 đến 09/12/2011. Tệp CSV
+được tải từ hai bản sao trên Hugging Face, cố định theo revision; hai bản giống
+nhau từng byte và có đúng 1\,067\,371 dòng như UCI công bố. Mã băm SHA-256 của
+tệp được kiểm tra trước khi xử lý.
+
+Mỗi giao dịch (transaction) là một hóa đơn (invoice), và mỗi item là một mã sản
+phẩm (stock code) viết hoa, vì \texttt{85123a} và \texttt{85123A} chỉ cùng một
+sản phẩm. Mã số nguyên của item được gán theo thứ tự mã sản phẩm bằng hàm
+\texttt{encode\_transactions}, nên ánh xạ không phụ thuộc thứ tự dòng và đảo ngược
+được: tệp \texttt{items.tsv} lưu mã số, mã sản phẩm, mô tả thường gặp nhất và số
+giỏ hàng chứa sản phẩm. Bảng~\ref{tab:basket-cleaning} cho thấy tác động của từng
+bước làm sạch.
+
+\begin{table}[t]
+\centering
+\caption{Số dòng và số hóa đơn sau từng bước làm sạch Online Retail II}
+\label{tab:basket-cleaning}
+\begin{tabular}{lrrr}
+\hline
+Bước & Bỏ & Còn (dòng) & Hóa đơn \\
+\hline
+Dữ liệu gốc & & 1\,067\,371 & 53\,628 \\
+Dòng trùng lặp & 34\,335 & 1\,033\,036 & 53\,628 \\
+Hóa đơn hủy (C) & 19\,104 & 1\,013\,932 & 45\,336 \\
+Điều chỉnh nợ xấu (A) & 6 & 1\,013\,926 & 45\,330 \\
+Số lượng $\le 0$ & 3\,393 & 1\,010\,533 & 41\,937 \\
+Đơn giá $\le 0$ & 2\,621 & 1\,007\,912 & 40\,076 \\
+Mã không phải sản phẩm & 4\,555 & 1\,003\,357 & 39\,516 \\
+\hline
+\end{tabular}
+\end{table}
+
+UCI công bố dữ liệu thành hai sheet theo năm, và cả hai đều chứa các ngày 1--9
+tháng 12 năm 2010, chiếm 22\,844 trong số 34\,335 dòng trùng. Dòng trùng không làm
+thay đổi giỏ hàng vì item lặp lại trong một giao dịch được gộp. Hóa đơn hủy là
+hóa đơn riêng mang tiền tố C dùng để đảo một giao dịch bán trước đó, nên bỏ nó
+giữ nguyên giỏ hàng khách đã mua. Các dòng có số lượng hoặc đơn giá không dương là
+ghi chú kho như ``check'' hay ``damaged'', không phải giao dịch bán; hai bước này
+bỏ 5\,254 hóa đơn chỉ gồm ghi chú và 380 mã chưa từng được bán. Bước cuối bỏ các
+mã dịch vụ như phí vận chuyển, giảm giá, phí ngân hàng và phiếu quà tặng; riêng
+phí vận chuyển xuất hiện trong 8,8\% số hóa đơn nên sẽ tạo luật giả với mọi sản
+phẩm phổ biến. Dòng không có mã khách hàng vẫn được giữ vì một hóa đơn là một giỏ
+hàng bất kể ai trả tiền.
+
+Kết quả gồm 39\,516 giỏ hàng trên 4\,725 sản phẩm. Độ dài giỏ hàng có trung vị
+15, phân vị 90 là 51, trung bình 25,1 và lớn nhất 1\,106 ở các đơn bán sỉ; 92\%
+số giỏ hàng đến từ Anh. Với Eclat của nhóm, minsup 0,01 (396 hóa đơn) cho
+1\,355 tập phổ biến, trong đó 648 tập có từ hai sản phẩm trở lên.
+
+Sinh luật bằng kết quả Eclat của nhóm; giải thích support, confidence, lift và
+top-10 luật theo lift. Bổ sung phân tích kinh doanh, độ nhạy ngưỡng và giới hạn
+suy luận.
 \subsection{Khai thác mẫu hình ảnh — Phat}
 Bộ dữ liệu Semeion từ UCI gồm 1.593 ảnh chữ số viết tay nhị phân kích thước
 $16\times16$ pixel, có nhãn từ 0 đến 9~\cite{semeionUCI}. Câu hỏi khảo sát là

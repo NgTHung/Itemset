@@ -4,8 +4,10 @@ using ItemsetMining
 
 include("fixtures.jl")
 include("oracle.jl")
+include(joinpath(dirname(@__DIR__), "tools", "spmf", "compare.jl"))
 include(joinpath(dirname(@__DIR__), "experiments", "Experiments.jl"))
 include(joinpath(dirname(@__DIR__), "applications", "image_patterns", "SemeionPilot.jl"))
+include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBasket.jl"))
 
 @testset "Itemset setup" begin
     @testset "Transaction and support contract" begin
@@ -70,7 +72,7 @@ include(joinpath(dirname(@__DIR__), "applications", "image_patterns", "SemeionPi
         @test read_transactions(IOBuffer("@ITEM=0=zero\n% comment\n# comment\n\n2 0 2\n2 0\n")) == [[0,2], [0,2]]
         @test_throws ArgumentError read_transactions(IOBuffer("1 -1\n"))
         @test_throws ArgumentError read_transactions(IOBuffer("1 x\n"))
-        @test length(MINING_CASES) == 6
+        @test length(MINING_CASES) == 8
         for case in MINING_CASES
             transactions = read_transactions(joinpath(TOY_DIR, case.name * ".txt"))
             min_count = support_threshold(case.minsup, length(transactions))
@@ -81,7 +83,30 @@ include(joinpath(dirname(@__DIR__), "applications", "image_patterns", "SemeionPi
             expected_path = joinpath(TOY_DIR, case.name * ".expected.txt")
             @test actual == (isfile(expected_path) ? replace(read(expected_path, String), "\r\n"=>"\n") : "")
         end
+        boundary = read_transactions(joinpath(TOY_DIR, "boundary.txt"))
+        @test brute_force_supports(boundary, 1) == BOUNDARY_LOW_EXPECTED
+        @test sprint(write_itemsets, BOUNDARY_LOW_EXPECTED) ==
+              replace(read(joinpath(TOY_DIR, "boundary-count-1.expected.txt"), String), "\r\n"=>"\n")
     end
+    @testset "SPMF itemset records" begin
+        text = "@FILETYPE=x\n% header\n\n2 1 #SUP: 3\n1 #SUP: 4\n1 2 #SUP: 5\n"
+        @test read_itemset_records(IOBuffer(text)) == [
+            (itemset=(1, 2), support=3, line=4),
+            (itemset=(1,), support=4, line=5),
+            (itemset=(1, 2), support=5, line=6),
+        ]
+        patterns = only(c for c in MINING_CASES if c.name == "baskets").expected
+        mktempdir() do dir
+            path = joinpath(dir, "patterns.txt")
+            write_itemsets(path, patterns)
+            @test Dict(r.itemset => r.support for r in read_itemset_records(path)) == patterns
+        end
+        @test isempty(read_itemset_records(IOBuffer("")))
+        for bad in ("1 2 #SUP: x", "-1 #SUP: 2", "1 1 #SUP: 2", "#SUP: 1", "1 #SUP: 0", "1 2")
+            @test_throws "line 2" read_itemset_records(IOBuffer("% header\n$bad\n"))
+        end
+    end
+    include("spmf_compare.jl")
     @testset "Market basket fixture" begin
         transactions, labels = encode_transactions(GROCERY_ROWS)
         @test labels == ["beer", "bread", "butter", "milk"]
@@ -148,33 +173,9 @@ include(joinpath(dirname(@__DIR__), "applications", "image_patterns", "SemeionPi
         @test_throws ArgumentError mine([[1]]; minsup=1, variant=:unknown)
         @test_throws ErrorException mine([[1]]; minsup=1, variant=:optimized)
     end
-    @testset "CLI" begin
-        include(joinpath(dirname(@__DIR__), "demo.jl"))
-        @test main(["--help"]) == 0
-        @test main(["--check-input", joinpath(TOY_DIR, "baskets.txt")]) == 0
-        @test_throws ArgumentError main(["--unknown"])
-        @test_throws ArgumentError main(["--minsup"])
-        @test_throws ArgumentError main(["--check-input"])
-        mktempdir() do dir
-            output = joinpath(dir, "patterns.txt")
-            for case in MINING_CASES
-                input = joinpath(TOY_DIR, case.name * ".txt")
-                threshold = case.minsup isa Integer ? "--min-count" : "--minsup"
-                @test main([threshold, string(case.minsup), "--variant", "baseline", "--output", output, input]) == 0
-                @test read(output, String) == sprint(write_itemsets, case.expected)
-            end
-            baskets = joinpath(TOY_DIR, "baskets.txt")
-            @test main(["--minsup", "0.5", "--output", output, baskets]) == 0
-            @test read(output, String) == replace(read(joinpath(TOY_DIR, "baskets.expected.txt"), String), "\r\n"=>"\n")
-            @test_throws "exactly one support threshold" main(["--minsup", "0.5", "--min-count", "2", "--output", output, baskets])
-            @test_throws "are required" main(["--minsup", "0.5", baskets])
-            @test_throws "must differ" main(["--min-count", "2", "--output", baskets, baskets])
-            @test_throws "only one input" main(["--min-count", "2", "--output", output, baskets, baskets])
-            @test_throws "variant must be" main(["--min-count", "2", "--variant", "fast", "--output", output, baskets])
-            @test_throws ArgumentError main(["--minsup", "2", "--output", output, baskets])
-            @test_throws ArgumentError main(["--min-count", "0.5", "--output", output, baskets])
-        end
-    end
+    include("cli.jl")
     include("benchmark_data.jl")
     include("image_patterns.jl")
+    include("harness.jl")
+    include("market_basket.jl")
 end

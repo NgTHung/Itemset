@@ -14,6 +14,29 @@ end
             transactions = read_transactions(joinpath(TOY_DIR, case.name * ".txt"))
             @test mine(transactions; minsup=case.minsup, variant) == case.expected
         end
+        boundary = read_transactions(joinpath(TOY_DIR, "boundary.txt"))
+        @test mine(boundary; minsup=1, variant) == BOUNDARY_LOW_EXPECTED
+    end
+    @testset "SPMF reference outputs" begin
+        for r in SPMF_TOY_RUNS
+            transactions = read_transactions(joinpath(TOY_DIR, r.input))
+            reference = open(parse_itemsets, joinpath(SPMF_TOY_DIR, r.output)).itemsets
+            @test mine(transactions; minsup=r.minsup, variant) == reference
+        end
+    end
+    @testset "SPMF correctness database" begin
+        for r in SPMF_CORRECTNESS_RUNS
+            transactions = read_transactions(joinpath(CORRECTNESS_DIR, r.input))
+            reference = open(parse_itemsets, joinpath(SPMF_CORRECTNESS_DIR, r.output))
+            mined = ParsedItemsets(mine(transactions; minsup=r.minsup, variant), DuplicateRecord[])
+            result = compare_itemsets(reference, mined)
+            # Counts instead of maps, so a failure prints three numbers, not 14,000 itemsets.
+            @test (missing=length(result.missing), extra=length(result.extra),
+                   mismatched=length(result.support_mismatches)) == (missing=0, extra=0, mismatched=0)
+            @test result.matches
+        end
+    end
+    @testset "Image fixture" begin
         c = IMAGE_CASE
         @test mine(c.transactions; minsup=c.minsup, variant) == c.expected
         @test mine(c.transactions; minsup=c.sensitive_minsup, variant) == c.sensitive_expected

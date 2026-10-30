@@ -82,6 +82,13 @@ Callers depend only on this function and its output, never on tidsets or other i
 
 The fixed order makes output files byte-comparable across variants and runs. SPMF writes its output in mining order, so a comparator parses both files into maps instead of comparing bytes. It validates every key and support before it opens the output, so an invalid map never produces partial output or truncates an existing file. An empty map writes an empty file.
 
+## Read output
+
+`read_itemset_records(path)` reads output from `write_itemsets` or SPMF as one `(itemset, support, line)` record per itemset line, in file order. Itemsets come back canonical, so SPMF's `2 1 #SUP: 3` reads as `(1, 2)`. A repeated itemset stays as a separate record instead of overwriting the first, because the SPMF comparator must report both supports.
+
+- Metadata lines are skipped as in `read_transactions`. A line holding `#SUP:` is always an itemset, so `#SUP: 1` throws instead of passing as a comment.
+- A line without `#SUP:`, an invalid or repeated item ID, an empty itemset, or a support below 1 throws `ArgumentError` with the line number.
+
 ## Association rules
 
 The market basket application derives rules from the `SupportMap` with these definitions, where X and Y are nonempty disjoint itemsets and N is the transaction count:

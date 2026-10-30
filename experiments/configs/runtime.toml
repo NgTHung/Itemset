@@ -1,0 +1,31 @@
+# Thresholds proposed from the 2026-10-22 pilot (docs/threshold-pilot-2026-10-22.md)
+# and, for Accidents, the 2026-10-29 pilot (docs/threshold-pilot-accidents-2026-10-29.md):
+# every point finished for the baseline within the 300 s timeout, and SPMF
+# rounds each to the same count as support_threshold. Add "optimized" to the
+# variants once it exists, so every series shares these points.
+name = "runtime"
+variants = ["baseline", "spmf"]
+repeats = 3
+timeout_seconds = 300
+keep_outputs = false
+spmf_version = "2.66"
+
+[[series]]
+dataset = "chess"
+minsup = [0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6]
+
+[[series]]
+dataset = "mushroom"
+minsup = [0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1]
+
+[[series]]
+dataset = "retail"
+minsup = [0.01, 0.0075, 0.005, 0.0025, 0.0015, 0.001]
+
+[[series]]
+dataset = "T10I4D100K"
+minsup = [0.01, 0.005, 0.0025, 0.001, 0.0005, 0.00025]
+
+[[series]]
+dataset = "accidents"
+minsup = [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65]

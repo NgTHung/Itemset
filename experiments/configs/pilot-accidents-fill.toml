@@ -1,0 +1,13 @@
+# Second pass of the Accidents pilot. The baseline finished only 0.9, 0.8,
+# and 0.7 in pilot-accidents.toml, so this pass measures the points between
+# them to give the series 5 to 7 values. Settings match the first pass.
+name = "pilot-accidents-fill"
+variants = ["baseline", "spmf"]
+repeats = 1
+timeout_seconds = 300
+keep_outputs = true
+spmf_version = "2.66"
+
+[[series]]
+dataset = "accidents"
+minsup = [0.95, 0.85, 0.75, 0.65]

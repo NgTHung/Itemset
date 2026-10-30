@@ -38,7 +38,7 @@ end
 
     @testset "Committed manifest" begin
         manifest = Experiments.load_manifest(MANIFEST_PATH)
-        @test sort!(collect(keys(manifest))) == ["T10I4D100K", "chess", "mushroom", "retail"]
+        @test sort!(collect(keys(manifest))) == ["T10I4D100K", "accidents", "chess", "mushroom", "retail"]
         for entry in values(manifest)
             @test length(entry.sha256) == 64
             @test !isempty(entry.sources)
@@ -48,6 +48,8 @@ end
         end
         @test manifest["chess"].stats.transactions == 3196
         @test manifest["retail"].stats.items == 16470
+        @test manifest["accidents"].stats.transactions == 340183
+        @test manifest["accidents"].stats.items == 468
     end
 
     @testset "Invalid manifest" begin
@@ -66,6 +68,28 @@ end
         @test occursin("toy", err.msg) && occursin("sha256", err.msg)
         bad_format = replace(read(MANIFEST_PATH, String), "format = \"text\"" => "format = \"zip\"")
         @test_throws ArgumentError Experiments.parse_manifest(bad_format)
+    end
+
+    @testset "Raw files without transaction statistics" begin
+        csv_sha = hex_sha256("a,b\n")
+        raw = """
+        [receipts]
+        version = "x"
+        file = "receipts.csv"
+        sha256 = "$csv_sha"
+
+        [[receipts.sources]]
+        url = "https://example.org/receipts.csv"
+        format = "text"
+        """
+        entry = Experiments.parse_manifest(raw)["receipts"]
+        @test entry.stats === nothing
+        partial = replace(raw, "sha256" => "transactions = 1\nsha256")
+        @test_throws ArgumentError Experiments.parse_manifest(partial)
+        mktempdir() do dir
+            fetch = fake_fetch(Dict(entry.sources[1].url => Vector{UInt8}("a,b\n")), Ref(0))
+            @test read(Experiments.prepare_dataset(entry, dir; fetch), String) == "a,b\n"
+        end
     end
 
     @testset "Download, verify, and cache" begin
