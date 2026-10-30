@@ -42,14 +42,14 @@ The result is 39,516 baskets over 4,725 products. Widths have a median of 15, a 
 julia --startup-file=no --project=. applications/market_basket/analyze.jl
 ```
 
-The script mines the baskets with `mine` at minsup 0.01, so every pattern rests on at least 396 receipts, and keeps rules with confidence of at least 0.5. `rules.jl` enumerates every split of each frequent itemset into a nonempty antecedent X and consequent Y. The miner already applied minsup to X ∪ Y. Measures follow [docs/interface.md](../../docs/interface.md#association-rules) and are exact fractions. The minconf test uses the identity confidence ≥ minconf exactly when support(X ∪ Y) ≥ ⌈minconf · support(X)⌉, computed by `support_threshold`. Comparing with the `Float64` value 0.1 would drop a rule whose confidence is exactly one tenth.
+The script mines the baskets with `mine` at minsup 0.01, so every pattern rests on at least 396 receipts, and keeps rules with confidence of at least 0.5. `rules.jl` enumerates every split of each frequent itemset into a nonempty antecedent X and consequent Y. The miner already applied minsup to X ∪ Y. Measures follow [docs/interface.md](../../docs/interface.md#association-rules) and are exact fractions. `minconf` is converted from its decimal text to an exact fraction p/q once, and a rule passes when support(X ∪ Y) · q ≥ p · support(X), computed in `BigInt`, so rounding never decides a rule. Comparing with the `Float64` value 0.1 would drop a rule whose confidence is exactly one tenth.
 
 Rules rank by lift, then confidence, then support, then item IDs. Mirrored rules X ⇒ Y and Y ⇒ X always share a lift, so the higher-confidence direction ranks first. `top_rules` reports how many rules outside the top 10 tie with the tenth. A single frequent itemset with m items yields up to 2^m − 2 rules, so `top_rule_groups` also lists the best rule of each of the first ten distinct product groups.
 
 The script writes to `results/raw/market_basket/`, which Git ignores, in about two and a half minutes:
 
 - `rules.tsv`, `top_rules.tsv`, `top_groups.tsv`: ranked rules with labels, IDs, support count, relative support, confidence, and lift.
-- `sensitivity.tsv`: for minsup 0.0075, 0.01, and 0.015 and minconf 0.4, 0.5, and 0.6, the rule count, and the rank of each top group's rule.
+- `sensitivity.tsv`: for minsup 0.0075, 0.01, and 0.015 and minconf 0.4, 0.5, and 0.6, the rule count, and the rank of each top group's best passing rule. A group counts as present while any split of its itemset passes.
 - `stability.tsv`: each top group recounted in each year (split at 2010-12-01) and without baskets above the 99th percentile of width. `measure_rule` recounts the supports directly; mining a subset again at the same relative minsup would drop patterns just under the smaller threshold.
 - `rare_groups.tsv`: the top groups at minsup 0.005, recounted per year, for comparing rare high-lift patterns with the base ones.
 - `summary.toml`: input SHA-256, code revision, thresholds, and counts.

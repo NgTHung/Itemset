@@ -75,11 +75,11 @@ mẫu dựa trên ít nhất 396 hóa đơn, và nhận 1\,355 tập phổ biế
 $Z$ có $m \ge 2$ sản phẩm được tách thành mọi cặp $X$, $Y = Z \setminus X$, tức
 $2^m - 2$ luật; ngưỡng minsup đã áp lên $X \cup Y$ khi khai thác, và mọi tập con
 của $Z$ đều có trong kết quả nên $\sigma(X)$, $\sigma(Y)$ luôn tra được. Các độ
-đo được tính bằng phân số chính xác. Điều kiện
-$\mathrm{conf} \ge \mathrm{minconf}$ được kiểm tra dưới dạng
-$\sigma(X \cup Y) \ge \lceil \mathrm{minconf} \cdot \sigma(X) \rceil$ với phép
-tính thập phân như ở Mục~\ref{sec:protocol}, vì số thực 0,1 trong máy lớn hơn
-$1/10$ một chút và sẽ loại nhầm luật có độ tin cậy đúng bằng $1/10$. Với
+đo được tính bằng phân số chính xác. Ngưỡng minconf được đổi một lần từ dạng
+thập phân thành phân số $p/q$, và luật được giữ khi
+$\sigma(X \cup Y)\, q \ge p\, \sigma(X)$, tính bằng số nguyên cỡ lớn, nên sai số
+làm tròn không quyết định luật nào. Cách so sánh với số thực 0,1 trong máy, lớn
+hơn $1/10$ một chút, sẽ loại nhầm luật có độ tin cậy đúng bằng $1/10$. Với
 minconf 0,5, 455 trong 1\,804 luật được giữ lại, và mọi luật có lift trên 1,4.
 
 Để kiểm tra, nhóm chạy Eclat của SPMF trên cùng tệp giỏ hàng: hai kết quả khớp
