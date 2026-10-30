@@ -83,4 +83,20 @@
             @test isempty(open(parse_itemsets, joinpath(SPMF_TOY_DIR, r.output)).duplicates)
         end
     end
+    @testset "Correctness database reference" begin
+        @test !isempty(SPMF_CORRECTNESS_RUNS)
+        for r in SPMF_CORRECTNESS_RUNS
+            path = joinpath(CORRECTNESS_DIR, r.input)
+            @test Experiments.file_sha256(path) == r.input_sha256
+            n = length(read_transactions(path))
+            @test support_threshold(r.minsup, n) == r.count
+            @test Experiments.threshold_agrees(r.minsup, n)
+            reference = open(parse_itemsets, joinpath(SPMF_CORRECTNESS_DIR, r.output))
+            @test isempty(reference.duplicates)
+            # The database exists to reach depths and sizes the toy fixtures cannot.
+            @test length(reference.itemsets) >= 10_000
+            @test maximum(length, keys(reference.itemsets)) >= 10
+            @test count(==(r.count), values(reference.itemsets)) >= 100
+        end
+    end
 end
