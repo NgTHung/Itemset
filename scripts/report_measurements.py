@@ -55,12 +55,19 @@ def main():
                           minsup_relative=samples[0]["minsup_relative"],
                           output_count=exact[0]["output_count"] if exact else "",
                           exact_samples=len(exact), total_samples=len(samples),
-                          invalid_samples=len(samples) - len(exact),
+                          correctness_failures=sum(r["correctness_status"] == "failed" for r in samples),
+                          interrupted_samples=sum(r["status"] == "interrupted" for r in samples),
+                          other_incomplete_samples=sum(r["status"] not in ("ok", "interrupted")
+                                                       and r["correctness_status"] != "failed" for r in samples),
+                          unverified_samples=sum(r["status"] == "ok" and r["correctness_status"] not in
+                                                 ("exact", "failed") for r in samples),
                           median_seconds=statistics.median(times) if times else "",
                           q1_seconds=quartiles[0] if times else "",
                           q3_seconds=quartiles[2] if times else "",
                           max_peak_rss_bytes=max((int(r["peak_rss_bytes"]) for r in exact
                                                  if r["peak_rss_bytes"]), default=""))
+            assert sum(record[key] for key in ("exact_samples", "correctness_failures", "interrupted_samples",
+                                               "other_incomplete_samples", "unverified_samples")) == len(samples)
             summary = summaries[point[0], point[1], variant, samples[0]["stage"], args.mode, args.scope]
             if times:
                 assert math.isclose(record["median_seconds"], float(summary["median_seconds"]), rel_tol=1e-12)
@@ -95,10 +102,13 @@ def main():
                             markersize=4.5, capsize=3, linewidth=1.2,
                             color=colors.get(record["variant"], "#555555"),
                             label=names.get(record["variant"], record["variant"]) if point_index == 0 else None)
-            if record["invalid_samples"]:
+            issues = [f"{record[key]} {label}" for key, label in
+                      (("correctness_failures", "correctness failure(s)"), ("interrupted_samples", "interrupted"),
+                       ("other_incomplete_samples", "incomplete"), ("unverified_samples", "unverified")) if record[key]]
+            if issues:
                 ax.text(max(positive_times) * 1.15, y,
-                        f"{record['variant']}: {record['invalid_samples']}/{record['total_samples']} invalid",
-                        fontsize=7, va="center", color="#a02020")
+                        f"{record['variant']}: {', '.join(issues)}",
+                        fontsize=7, va="center", color="#a02020" if record["correctness_failures"] else "#8a6200")
     ax.set_xscale("log")
     ax.xaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:g}"))
     ax.set_yticks(range(len(points)), labels)
@@ -114,27 +124,37 @@ def main():
 
     verified = sum(r["exact_samples"] for r in records)
     total = sum(r["total_samples"] for r in records)
+    failures = sum(r["correctness_failures"] for r in records)
+    interrupted = sum(r["interrupted_samples"] for r in records)
+    incomplete = sum(r["other_incomplete_samples"] for r in records)
+    unverified = sum(r["unverified_samples"] for r in records)
     svg = (args.out / "timings.svg").read_text(encoding="utf-8")
     svg = svg[svg.index("<svg"):]
     cells = "".join("<tr>" + "".join(f"<td>{html.escape(str(r[k]))}</td>" for k in
-                    ("dataset", "minsup_relative", "variant", "median_seconds", "exact_samples", "invalid_samples"))
+                    ("dataset", "minsup_relative", "variant", "median_seconds", "exact_samples",
+                     "correctness_failures", "interrupted_samples", "other_incomplete_samples", "unverified_samples"))
                     + "</tr>" for r in records)
     page = f"""<!doctype html><html><head><meta charset="utf-8"><style>
     svg{{width:100%;height:500px}}p{{color:var(--muted-foreground)}}
     details{{margin-top:12px}}.table{{overflow-x:auto}}table{{border-collapse:collapse;font-size:12px}}
     th,td{{padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}}
     </style></head><body>{svg}
-    <p>{verified}/{total} attempts produced outputs matching separate SPMF Eclat maps exactly.
+    <p>{verified} completed outputs matched separate SPMF Eclat maps exactly.
+    Correctness failures: {failures}; interrupted attempts: {interrupted}; other incomplete attempts: {incomplete};
+    unverified outputs: {unverified}.
     Development samples do not establish the five-repeat scored gate.
     Source: {html.escape(args.run.name)}.</p><details><summary>Timing data and failures</summary><div class="table">
-    <table><thead><tr><th>Dataset</th><th>Minsup</th><th>Variant</th><th>Median s</th><th>Exact</th><th>Invalid</th>
+    <table><thead><tr><th>Dataset</th><th>Minsup</th><th>Variant</th><th>Median s</th><th>Exact</th>
+    <th>Correctness failures</th><th>Interrupted</th><th>Other incomplete</th><th>Unverified</th>
     </tr></thead><tbody>{cells}</tbody></table></div></details></body></html>"""
     (args.out / "timings.html").write_text(page, encoding="utf-8")
     metadata = dict(python=sys.version, source=str(args.run.resolve()), scope=args.scope, mode=args.mode,
                     packages={d.metadata["Name"]: d.version for d in importlib.metadata.distributions()},
-                    independent_summary_checks=len(records), exact_outputs=verified, total_outputs=total)
+                    independent_summary_checks=len(records), exact_outputs=verified, total_attempts=total,
+                    correctness_failures=failures, interrupted_attempts=interrupted,
+                    other_incomplete_attempts=incomplete, unverified_outputs=unverified)
     (args.out / "plot-environment.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-    print(f"{verified}/{total} exact outputs; wrote {args.out}")
+    print(f"Exact outputs: {verified}; correctness failures: {failures}; interrupted attempts: {interrupted}; wrote {args.out}")
 
 
 if __name__ == "__main__":

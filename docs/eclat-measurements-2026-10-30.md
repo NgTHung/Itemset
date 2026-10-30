@@ -80,3 +80,9 @@ The complete archive contains 694 files (30,496,662 compressed bytes). It is att
 Archive SHA-256: `f13c9d2bff36f76e76c75c45730dbe248c51ddc279239a8a97f84fc0313b2c39`.
 
 The uploaded parts and script were downloaded from Linear, checked against the local hashes, and reassembled into the same archive SHA-256.
+
+## Visualization label correction, 2026-10-30
+
+The first figure used the label `invalid` for the interrupted Retail attempt. That label was a reporting error. The attempt has `status = interrupted`, `correctness_status = not_checked`, and no output file or completion report. All 31 completed baseline runs match SPMF exactly; the complete series has zero observed correctness failures.
+
+The corrected figures and plot summary separate correctness failures, interruptions, other incomplete attempts, and unverified outputs. Timings and raw evidence are unchanged. The original evidence archive retains the first figure for provenance; a separate correction bundle accompanies it in [DAT-17](https://linear.app/nguyen-tuan-hung/issue/DAT-17).
