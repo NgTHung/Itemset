@@ -5,7 +5,7 @@ const ROOT = dirname(dirname(@__DIR__))
 include(joinpath(ROOT, "experiments", "Experiments.jl"))
 include(joinpath(@__DIR__, "MarketBasket.jl"))
 using .Experiments: load_manifest, prepare_dataset, code_revision
-using .MarketBasket: association_rules, top_rules, top_rule_groups, rule_ranks, rule_labels,
+using .MarketBasket: association_rules, top_rules, top_rule_groups, group_ranks, rule_labels,
                      write_rules, split_by_date, measure_rule, confidence, lift, AssociationRule
 
 const USAGE = """
@@ -82,16 +82,17 @@ function main(args)
     write_rules(joinpath(out, "top_groups.tsv"), groups, labels)
 
     # Thresholds never change a rule's measures; they decide whether it passes and
-    # which rules it is ranked against, so the grid records presence and rank.
+    # which rules it is ranked against. A group is present while any of its splits
+    # passes, and its rank is that of its best passing split, not of the base rule.
     sensitivity = map(Iterators.product(MINSUP_GRID, MINCONF_GRID)) do (minsup, minconf)
         cell_patterns = mined(cache, :all, transactions, minsup)
         cell = association_rules(cell_patterns, n; minconf)
-        ranks = rule_ranks(cell)
+        by_group = group_ranks(cell)
         top_keys = Set((r.antecedent, r.consequent) for r in top_rules(cell, TOP).rules)
-        group_ranks = [get(ranks, (g.antecedent, g.consequent), "-") for g in groups]
+        ranks = [get(by_group, group_key(g), "-") for g in groups]
         (minsup, support_threshold(minsup, n), minconf, length(cell_patterns), length(cell),
          count(r -> (r.antecedent, r.consequent) in top_keys, top.rules),
-         count(!=("-"), group_ranks), join(group_ranks, ' '))
+         count(!=("-"), ranks), join(ranks, ' '))
     end
     write_tsv(joinpath(out, "sensitivity.tsv"),
         ("minsup", "minsup_count", "minconf", "itemsets", "rules", "top_rules_in_top10",

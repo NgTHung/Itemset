@@ -39,6 +39,36 @@ two keys make the order total.
 rank_key(rule::AssociationRule) =
     (-lift(rule), -confidence(rule), -rule.support, rule.antecedent, rule.consequent)
 
+"""Sort `rules` into `rank_key` order, building each key once instead of at every comparison."""
+ranked(rules::AbstractVector{AssociationRule}) = rules[sortperm(rank_key.(rules))]
+
+"""Throw `ArgumentError` unless `rules` are in `rank_key` order, which the views below assume."""
+function check_ranked(rules::AbstractVector{AssociationRule})
+    issorted(rank_key.(rules)) || throw(ArgumentError("rules must be in rank_key order"))
+    return nothing
+end
+
+"""The product group X ∪ Y of `rule` as a canonical itemset."""
+group_key(rule::AssociationRule) = Tuple(sort!([rule.antecedent..., rule.consequent...]))
+
+"""
+    decimal_fraction(x) -> Rational{BigInt}
+
+The exact value of the shortest decimal text Julia prints for `x`, which is the
+number its author wrote. `0.1` becomes `1//10` although the nearest `Float64`
+is slightly above it, so a rule whose confidence is exactly one tenth still
+meets `minconf = 0.1`. Throws `ArgumentError` for NaN and infinities.
+"""
+function decimal_fraction(x::AbstractFloat)
+    isfinite(x) || throw(ArgumentError("expected a finite number, got $x"))
+    text = string(x)
+    mantissa, exponent = occursin('e', text) ? split(text, 'e') : (text, "0")
+    whole, fraction = occursin('.', mantissa) ? split(mantissa, '.') : (mantissa, "")
+    digits = parse(BigInt, whole * fraction)
+    scale = length(fraction) - parse(Int, exponent)
+    return scale >= 0 ? digits // BigInt(10)^scale : (digits * BigInt(10)^(-scale)) // one(BigInt)
+end
+
 function subset_support(patterns::AbstractDict, itemset::Itemset)
     support = get(patterns, itemset, nothing)
     # mine returns every subset of a frequent itemset, so a gap means the map
@@ -64,6 +94,7 @@ function association_rules(patterns::AbstractDict, transactions::Integer; mincon
     minconf isa AbstractFloat && isfinite(minconf) && 0 < minconf <= 1 ||
         throw(ArgumentError("minconf must be a floating-point fraction in (0, 1], got $(repr(minconf))"))
     transactions >= 0 || throw(ArgumentError("transaction count must be nonnegative, got $transactions"))
+    threshold = decimal_fraction(minconf)
     rules = AssociationRule[]
     for (itemset, support) in patterns
         support <= transactions ||
@@ -76,14 +107,14 @@ function association_rules(patterns::AbstractDict, transactions::Integer; mincon
             antecedent = Tuple(itemset[i] for i in 1:k if isodd(mask >> (i - 1)))
             consequent = Tuple(itemset[i] for i in 1:k if iseven(mask >> (i - 1)))
             antecedent_support = subset_support(patterns, antecedent)
-            # confidence ≥ minconf exactly when support ≥ ⌈minconf · support(X)⌉,
-            # which support_threshold computes on the decimal value of minconf.
-            support >= support_threshold(minconf, antecedent_support) || continue
+            # confidence ≥ minconf ⇔ support · denominator ≥ numerator · support(X); the
+            # integer products in BigInt cannot round or overflow.
+            support * denominator(threshold) >= numerator(threshold) * antecedent_support || continue
             push!(rules, AssociationRule(antecedent, consequent, support, antecedent_support,
                                          subset_support(patterns, consequent), transactions))
         end
     end
-    return sort!(rules; by=rank_key)
+    return ranked(rules)
 end
 
 """
@@ -96,7 +127,7 @@ means the cut falls inside a tie, so the table states it. Throws
 """
 function top_rules(rules::AbstractVector{AssociationRule}, k::Integer)
     k >= 1 || throw(ArgumentError("k must be at least 1, got $k"))
-    issorted(rules; by=rank_key) || throw(ArgumentError("rules must be in rank_key order"))
+    check_ranked(rules)
     k >= length(rules) && return (rules=collect(rules), ties_beyond=0)
     cutoff = lift(rules[k])
     return (rules=rules[1:k], ties_beyond=count(r -> lift(r) == cutoff, @view rules[k+1:end]))
@@ -108,14 +139,17 @@ end
 The highest-ranked rule of each distinct product group X ∪ Y, for the first `k`
 groups. One frequent itemset yields up to 2^m - 2 rules with similar lift, so
 this view shows `k` different patterns instead of one pattern's splits.
+`rules` must be in `rank_key` order, as `top_rules` requires; otherwise
+`ArgumentError`.
 """
 function top_rule_groups(rules::AbstractVector{AssociationRule}, k::Integer)
     k >= 1 || throw(ArgumentError("k must be at least 1, got $k"))
+    check_ranked(rules)
     seen = Set{Itemset}()
     groups = AssociationRule[]
     for rule in rules
         length(groups) == k && break
-        group = Tuple(sort!([rule.antecedent..., rule.consequent...]))
+        group = group_key(rule)
         group in seen && continue
         push!(seen, group)
         push!(groups, rule)
@@ -144,9 +178,22 @@ function measure_rule(rule::AssociationRule, transactions::AbstractVector{<:Abst
     return AssociationRule(rule.antecedent, rule.consequent, both, antecedent, consequent, length(transactions))
 end
 
-"""Map each rule's `(antecedent, consequent)` to its 1-based rank in `rules`."""
-rule_ranks(rules::AbstractVector{AssociationRule}) =
-    Dict((r.antecedent, r.consequent) => rank for (rank, r) in enumerate(rules))
+"""
+    group_ranks(rules) -> Dict{Itemset,Int}
+
+Map each product group X ∪ Y to the 1-based rank of its best rule in `rules`,
+which must be in `rank_key` order (`ArgumentError` otherwise). A group is
+present exactly when some split of it passes the rules' thresholds, so a group
+whose single best split fails minconf still counts if another split passes.
+"""
+function group_ranks(rules::AbstractVector{AssociationRule})
+    check_ranked(rules)
+    ranks = Dict{Itemset,Int}()
+    for (rank, rule) in enumerate(rules)
+        get!(ranks, group_key(rule), rank)
+    end
+    return ranks
+end
 
 """Both sides of `rule` as text, joining multi-item sides with ` + `."""
 rule_labels(rule::AssociationRule, labels::AbstractVector) =
@@ -157,22 +204,16 @@ rule_labels(rule::AssociationRule, labels::AbstractVector) =
     write_rules(path, rules, labels)
 
 Write `rules` as a TSV, one row per rule in the given order with its rank,
-labels, IDs, support count, and measures to four decimals. Validates every
-label before opening `path`, so an ID without a label or a label with a tab or
-line break throws `ArgumentError` and leaves an existing file untouched.
+labels, IDs, support count, and measures to four decimals. An ID without a
+label or a label with a tab or line break throws `ArgumentError` before `path`
+is opened, so an existing file stays untouched.
 """
 function write_rules(path::AbstractString, rules::AbstractVector{AssociationRule}, labels::AbstractVector)
     rows = map(enumerate(rules)) do (rank, rule)
         left, right = rule_labels(rule, labels)
-        occursin(r"[\t\r\n]", left * right) &&
-            throw(ArgumentError("rule $rank has a label with a tab or line break"))
-        join((rank, left, right, join(rule.antecedent, ' '), join(rule.consequent, ' '), rule.support,
-              @sprintf("%.4f", Float64(relative_support(rule))), @sprintf("%.4f", Float64(confidence(rule))),
-              @sprintf("%.4f", Float64(lift(rule)))), '\t')
+        (rank, left, right, join(rule.antecedent, ' '), join(rule.consequent, ' '), rule.support,
+         format_measure(relative_support(rule)), format_measure(confidence(rule)), format_measure(lift(rule)))
     end
-    open(path, "w") do io
-        println(io, "rank\tantecedent\tconsequent\tantecedent_ids\tconsequent_ids\tsupport\trelative_support\tconfidence\tlift")
-        foreach(row -> println(io, row), rows)
-    end
-    return nothing
+    write_tsv(path, ("rank", "antecedent", "consequent", "antecedent_ids", "consequent_ids", "support",
+                     "relative_support", "confidence", "lift"), rows)
 end

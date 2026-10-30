@@ -85,6 +85,45 @@ end
         end
     end
 
+    @testset "A group stays present while any of its rules passes" begin
+        # The best rule of group {1,2,3} is 1 => 2 + 3 (confidence 3/4, lift 21/16).
+        # At minconf 0.76 it fails, yet 1 + 3 => 2 (confidence 1) still passes.
+        transactions = [[2], [2], [1, 2], [1, 2, 3], [1, 2, 3], [2, 3], [1, 2, 3]]
+        patterns = mine(transactions; minsup=1)
+        at(minconf) = MarketBasket.association_rules(patterns, 7; minconf)
+        @test MarketBasket.group_ranks(at(0.7))[(1, 2, 3)] == 1
+        @test rule_pairs(at(0.7))[1] == ((1,), (2, 3))
+        @test ((1,), (2, 3)) ∉ rule_pairs(at(0.76))
+        @test MarketBasket.group_ranks(at(0.76)) == Dict((1, 2) => 1, (2, 3) => 2, (1, 2, 3) => 3)
+    end
+
+    @testset "minconf is the exact decimal fraction" begin
+        @test MarketBasket.decimal_fraction(0.1) == 1 // 10
+        @test MarketBasket.decimal_fraction(1.0) == 1 // 1
+        @test MarketBasket.decimal_fraction(0.75) == 3 // 4
+        @test MarketBasket.decimal_fraction(1.0e-5) == 1 // 100000
+        @test MarketBasket.decimal_fraction(0.1 + 0.2) == 30000000000000004 // 100000000000000000
+        @test MarketBasket.decimal_fraction(0.3f0) == 3 // 10
+        @test_throws ArgumentError MarketBasket.decimal_fraction(NaN)
+        # Confidence 3/10 meets 0.3 exactly, and misses 0.1 + 0.2, whose
+        # shortest decimal text 0.30000000000000004 is above 3/10.
+        patterns = SupportMap((1,)=>10, (2,)=>5, (1, 2)=>3)
+        @test rule_pairs(MarketBasket.association_rules(patterns, 10; minconf=0.3)) == [((2,), (1,)), ((1,), (2,))]
+        @test rule_pairs(MarketBasket.association_rules(patterns, 10; minconf=0.1 + 0.2)) == [((2,), (1,))]
+        # The real baskets hold a rule with confidence 231/770 = 3/10. Rounding
+        # ceil(0.3 * 770) up to 232 would drop it at minconf 0.3.
+        real_case = SupportMap((1,)=>770, (2,)=>300, (1, 2)=>231)
+        @test ((1,), (2,)) in rule_pairs(MarketBasket.association_rules(real_case, 1000; minconf=0.3))
+        @test ((1,), (2,)) ∉ rule_pairs(MarketBasket.association_rules(real_case, 1000; minconf=0.31))
+    end
+
+    @testset "Unranked rules are rejected everywhere" begin
+        rules = MarketBasket.association_rules(grocery, 5; minconf=0.5)
+        @test_throws ArgumentError MarketBasket.top_rules(reverse(rules), 2)
+        @test_throws ArgumentError MarketBasket.top_rule_groups(reverse(rules), 2)
+        @test MarketBasket.top_rule_groups(rules, 2) == rules[[1, 3]]
+    end
+
     @testset "Invalid input" begin
         for bad in (0.0, 1.5, NaN, -0.2)
             @test_throws ArgumentError MarketBasket.association_rules(grocery, 5; minconf=bad)
@@ -116,9 +155,12 @@ end
 
     @testset "Analysis helpers" begin
         rules = MarketBasket.association_rules(grocery, 5; minconf=0.5)
-        ranks = MarketBasket.rule_ranks(rules)
-        @test ranks[((2,), (3,))] == 2 && ranks[((2,), (4,))] == 4
-        @test !haskey(ranks, ((3,), (4,)))
+        @test MarketBasket.group_ranks(rules) == Dict((2, 3) => 1, (2, 4) => 3)
+        @test_throws ArgumentError MarketBasket.group_ranks(reverse(rules))
+        @test MarketBasket.group_key(MarketBasket.AssociationRule((3,), (1, 2), 1, 1, 1, 1)) == (1, 2, 3)
+        @test MarketBasket.format_measure(3 // 4) == "0.7500"
+        @test MarketBasket.format_measure(2 // 3) == "0.6667"
+        @test MarketBasket.format_measure(21 // 16) == "1.3125"
         basket = MarketBasket.prepare_baskets(MarketBasket.read_receipts(joinpath(TOY_DIR, RECEIPT_CASE.file)))
         early, late = MarketBasket.split_by_date(basket, "2010-12-02")
         @test early == RECEIPT_CASE.transactions[1:2] && late == RECEIPT_CASE.transactions[3:3]
