@@ -3,7 +3,7 @@ module SemeionPilot
 using Random
 using SHA: sha256
 using TOML: TOML
-using ItemsetMining: DEFAULT_SEED, item_frequencies
+using ItemsetMining: DEFAULT_SEED, item_frequencies, mine, support_threshold, write_itemsets
 
 const Patch = NTuple{16,UInt8}
 
@@ -352,5 +352,7 @@ end
 
 include("encoding.jl")
 include("encoding_artifacts.jl")
+include("mining.jl")
+include("mining_visuals.jl")
 
 end
