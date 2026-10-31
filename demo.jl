@@ -56,7 +56,7 @@ function main(args)
     input !== nothing && output !== nothing && threshold !== nothing ||
         throw(ArgumentError("input, --output, and a support threshold are required"))
     abspath(input) != abspath(output) || throw(ArgumentError("input and output must differ"))
-    patterns = mine(read_transactions(input); minsup=threshold, variant=variant)
+    patterns = mine_packed(read_transactions(input); minsup=threshold, variant=variant)
     write_itemsets(output, patterns)
     return 0
 end

@@ -28,8 +28,8 @@ end
 @testset "Bottom-Up search is type-stable" begin
     class = ItemsetMining.to_class([[1, 2, 3], [1, 2], [2, 3]])
     prefix = Int[]
-    patterns = @inferred ItemsetMining.bottom_up!(class, prefix, 2, SupportMap())
-    @test patterns == SupportMap((1,)=>2, (2,)=>3, (3,)=>2, (1, 2)=>2, (2, 3)=>2)
+    patterns = @inferred ItemsetMining.bottom_up!(class, prefix, 2, FrequentItemsets())
+    @test support_map(patterns) == SupportMap((1,)=>2, (2,)=>3, (3,)=>2, (1, 2)=>2, (2, 3)=>2)
     # The prefix is a shared stack, so every search must leave it as it found it.
     @test isempty(prefix)
 end

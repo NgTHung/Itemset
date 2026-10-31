@@ -68,9 +68,18 @@ Every stochastic step, such as fitting a k-means codebook or sampling a benchmar
 
 Callers depend only on this function and its output, never on tidsets or other internal types, so the optimized variant can change its data structures freely.
 
+## Mine packed
+
+A tuple key per itemset costs more than mining on dense data, where millions of itemsets each share one support count. `mine_packed(transactions; minsup, variant=:baseline)` returns the same itemsets and supports as `mine` in a `FrequentItemsets` value, and throws for the same input. The CLI and the benchmark writer use it, and `mine` converts it once with `support_map`.
+
+- `FrequentItemsets` stores every itemset back to back in one `items` vector. Itemset `k` is `items[offsets[k]:offsets[k+1]-1]` with support `supports[k]`.
+- Iteration yields `itemset => support` pairs, where `itemset` is a view into `items`. Each itemset is ascending, and each appears once.
+- The order of itemsets is unspecified, so a variant may emit them in its own search order. `write_itemsets` restores the fixed file order.
+- `support_map(packed)` returns the `SupportMap` that `mine` returns.
+
 ## Write output
 
-`write_itemsets(path, patterns)` writes one itemset per line in SPMF format. Lines are in numeric lexicographic key order: IDs compare as numbers, and a key precedes its extensions.
+`write_itemsets(path, patterns)` writes one itemset per line in SPMF format. `patterns` is a `SupportMap` or a `FrequentItemsets`, and both forms of the same result give byte-identical files. Lines are in numeric lexicographic key order: IDs compare as numbers, and a key precedes its extensions.
 
 ```text
 1 #SUP: 2
@@ -80,7 +89,7 @@ Callers depend only on this function and its output, never on tidsets or other i
 10 #SUP: 1
 ```
 
-The fixed order makes output files byte-comparable across variants and runs. SPMF writes its output in mining order, so a comparator parses both files into maps instead of comparing bytes. It validates every key and support before it opens the output, so an invalid map never produces partial output or truncates an existing file. An empty map writes an empty file.
+The fixed order makes output files byte-comparable across variants and runs. SPMF writes its output in mining order, so a comparator parses both files into maps instead of comparing bytes. It validates every key and support before it opens the output, so an invalid map never produces partial output or truncates an existing file. A `FrequentItemsets` that repeats an itemset also throws, because a map cannot hold the repeat. An empty map writes an empty file.
 
 ## Read output
 
