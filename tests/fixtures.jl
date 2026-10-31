@@ -74,6 +74,7 @@ const RECEIPT_CASE = (
         (name="non-product codes", removed=2, rows=7, invoices=3),        # POST, M
     ],
     invoices = ["1001", "1002", "1006"],
+    dates = ["2010-12-01 08:26:00", "2010-12-01 09:00:00", "2010-12-04 13:00:00"],
     # 85123a and 85123A are one product; IDs follow sorted stock codes.
     codes = ["22728", "71053", "85099B", "85123A"],
     descriptions = ["ALARM CLOCK BAKELIKE PINK", "WHITE METAL LANTERN",

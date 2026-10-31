@@ -1,18 +1,19 @@
 \section{Thực nghiệm và đánh giá}
 \subsection{Dữ liệu và giao thức chung}
 \label{sec:protocol}
-Nhóm thực nghiệm trên bốn cơ sở dữ liệu chuẩn (benchmark, bộ dữ liệu dùng để so
-sánh thuật toán) của cộng đồng FIM: Chess, Mushroom, Retail và T10I4D100K, đều có
-nguồn gốc từ kho FIMI~\cite{fimi}. Bảng~\ref{tab:datasets} liệt kê các thống kê
+Nhóm thực nghiệm trên năm cơ sở dữ liệu chuẩn (benchmark, bộ dữ liệu dùng để so
+sánh thuật toán) của cộng đồng FIM: Chess, Mushroom, Retail, T10I4D100K và
+Accidents, đều có nguồn gốc từ kho FIMI~\cite{fimi}. Bảng~\ref{tab:datasets} liệt kê các thống kê
 do nhóm tự tính từ chính các tệp dữ liệu, trong đó $N$ là số giao dịch, $|I|$ là
 số item phân biệt, $\bar{w}$ là độ dài giao dịch trung bình và mật độ
 $d = \bar{w} / |I|$ là tỉ lệ item trung bình có mặt trong một giao dịch. Chess và
 Mushroom là dữ liệu dày đặc (dense, $d \ge 0{,}19$), còn Retail và T10I4D100K là
-dữ liệu thưa (sparse, $d \le 0{,}012$).
+dữ liệu thưa (sparse, $d \le 0{,}012$). Accidents nằm giữa hai nhóm với
+$d = 0{,}072$, nhưng lớn nhất cả về số giao dịch lẫn độ dài giao dịch.
 
 \begin{table}[t]
 \centering
-\caption{Thống kê bốn benchmark, tính từ tệp đã kiểm tra SHA-256}
+\caption{Thống kê năm benchmark, tính từ tệp đã kiểm tra SHA-256}
 \label{tab:datasets}
 \begin{tabular}{lrrrrr}
 \hline
@@ -22,6 +23,7 @@ Chess & 3\,196 & 75 & 37,00 & 37 & 0,493 \\
 Mushroom & 8\,124 & 119 & 23,00 & 23 & 0,193 \\
 Retail & 88\,162 & 16\,470 & 10,31 & 76 & 0,0006 \\
 T10I4D100K & 100\,000 & 870 & 10,10 & 29 & 0,0116 \\
+Accidents & 340\,183 & 468 & 33,81 & 51 & 0,072 \\
 \hline
 \end{tabular}
 \end{table}
@@ -30,7 +32,9 @@ Mỗi tệp được định danh bằng mã băm SHA-256 thay vì bằng tên, 
 thể ứng với nhiều phiên bản khác nhau. Bản \texttt{mushrooms.txt} trên SPMF có
 8\,416 giao dịch, khác với bản 8\,124 giao dịch của FIMI mà đề bài và đa số bài
 báo sử dụng, nên nhóm dùng bản của FIMI. Retail là các hóa đơn ẩn danh của một cửa
-hàng bán lẻ ở Bỉ~\cite{brijs1999}. Retail và T10I4D100K của FIMI
+hàng bán lẻ ở Bỉ~\cite{brijs1999}, còn Accidents là hồ sơ tai nạn giao thông có
+người bị thương ở vùng Flanders, Bỉ~\cite{geurts2003}; bản Chess và Accidents trên
+SPMF giống hệt bản của FIMI từng byte. Retail và T10I4D100K của FIMI
 chứa item 0 trong khi SPMF chỉ nhận item nguyên dương, nên nhóm dùng bản của SPMF,
 trong đó mọi mã item được cộng thêm 1. Phép đổi tên này giữ nguyên support của
 mọi itemset. Kịch bản \texttt{experiments/prepare\_benchmarks.jl} tải lại dữ liệu,

@@ -7,6 +7,7 @@ using .Experiments: load_manifest, prepare_dataset, dataset_stats, mean_width
 const USAGE = """
 Usage:
   julia --project=. applications/market_basket/prepare.jl [OUT_DIR]
+  julia --project=. applications/market_basket/prepare.jl -h
 
 Download and verify Online Retail II into data/raw/, clean it into one basket
 per invoice, and write baskets.txt, items.tsv, and cleaning.tsv to OUT_DIR,
@@ -14,13 +15,12 @@ by default data/raw/market_basket/.
 """
 
 function main(args)
-    if args == ["--help"]
+    if MarketBasket.is_help(args)
         println(USAGE)
         return 0
     end
-    length(args) <= 1 || throw(ArgumentError("expected at most one output folder\n$USAGE"))
     raw_dir = joinpath(ROOT, "data", "raw")
-    out = isempty(args) ? joinpath(raw_dir, "market_basket") : only(args)
+    out = MarketBasket.output_folder(args, joinpath(raw_dir, "market_basket"), USAGE)
     entry = load_manifest(joinpath(raw_dir, "manifest.toml"))["online_retail_ii"]
     csv = prepare_dataset(entry, raw_dir)
     basket = MarketBasket.prepare_baskets(MarketBasket.read_receipts(csv))

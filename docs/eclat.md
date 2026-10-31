@@ -20,7 +20,7 @@ The paper counts the frequent 2-itemsets from the horizontal database with a tri
 
 Every class that `bottom_up!` receives satisfies these four properties.
 
-1. Each tid-list is ascending with no repeats. `to_class` adds tids in database order, and `intersect` keeps the order of its first argument.
+1. Each tid-list is ascending with no repeats. `to_class` adds tids in database order, and `intersect_tidlists` merges two ascending lists into an ascending result.
 2. Members are in ascending item order, and each item is greater than every item of the prefix.
 3. Each member is frequent: its tid-list has at least `minsup` tids.
 4. The tid-list of member b is exactly t(P ∪ {b}).
@@ -42,7 +42,7 @@ Complete output. Take a frequent itemset X = {x1 < ... < xk}. Every subset of X 
 Let N be the transaction count, L the total number of items over all transactions, m the number of distinct items, and C the number of joins.
 
 - The vertical index takes O(L) expected time for the dictionary, O(m log m) for the sort, and O(L) memory.
-- One join intersects two tid-lists in expected O(|t(P ∪ {a})| + |t(P ∪ {b})|) time, which is at most O(N). Base `intersect` builds a hash set and allocates a new vector on each call.
+- One join merges two tid-lists in O(|t(P ∪ {a})| + |t(P ∪ {b})|) time, which is at most O(N), and allocates only the resulting tid-list.
 - A class with k members makes k(k - 1)/2 joins, so C is the sum of that count over all searched classes, and the total time is O(L + m log m + C N).
 - The search is depth-first, so memory holds only the classes on the current path: at most one class per level, each with at most m members of up to N tids.
 
