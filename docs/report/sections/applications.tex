@@ -74,6 +74,16 @@ tâm, đồng thời được gán vào đúng từ và đạt ngưỡng khoản
 \texttt{digits.svg} và \texttt{visual\_words.svg}; đường
 dẫn và lệnh tái tạo nằm trong bản ghi thực nghiệm của kho mã nguồn.
 
+Tổng số lần hiện diện từ trong các transaction là 5.767; độ rộng trung bình
+là 3,6202 từ/ảnh. Mật độ giao dịch (transaction density) được tính bằng
+\(D=M/(NV)=0{,}150842\), trong đó \(M=5.767\) là tổng số lần hiện diện,
+\(N=1.593\) là số ảnh kể cả ảnh rỗng và \(V=24\) là kích thước từ điển.
+Các đại lượng này đếm mỗi từ một lần trong một ảnh. Tệp
+\texttt{manifest.toml} ghi seed, tham số, revision mã nguồn và mã băm
+SHA-256 của dữ liệu cùng từng artifact để kiểm tra tái lập. Codebook dùng
+toàn bộ dữ liệu cho phân tích mô tả; nhóm không suy luận khả năng tổng quát
+hóa trên ảnh chưa quan sát từ phép khớp này.
+
 \begin{table}[ht]
 \centering
 \caption{Số tập từ thị giác phổ biến trên Semeion với Eclat cơ bản}

@@ -3,6 +3,14 @@
 Images that share a visual pattern often share a set of local features, such as textures or edges. This workstream encodes each image as the set of visual words it contains, mines those sets with `ItemsetMining.mine`, and shows which word combinations recur across images. The [Semeion pilot record](../../docs/semeion-pilot-2026-10-24.md) gives the dataset checksum, settings, and measured output.
 ## Encoding
 
+Run the frozen encoding without mining from the repository root:
+
+```sh
+julia --startup-file=no --project=. scripts/encode_images.jl data/raw/semeion/semeion.data results/raw/semeion-encoding
+```
+
+`SemeionPilot.prepare_encoding` fits the codebook with a private seed-42 RNG and returns image IDs, labels, codebook columns, word sets, and accepted source patches together. `write_encoding` validates their alignment and publishes a staged output directory. `manifest.toml` records source and artifact SHA-256 hashes, Julia and Git versions, command arguments, settings, image frequencies and width/density statistics. `widths.tsv` gives the exact width distribution; empty word fields in `transactions.tsv` retain empty images. Existing output paths are rejected. The notebook uses the same functions.
+
 Select one real, publicly accessible image dataset and keep the raw files in [data/raw](../../data/raw/README.md). Explain and record:
 
 - the local descriptor and how it is extracted,
