@@ -11,7 +11,18 @@ Throws `ArgumentError` for an unknown `variant`, invalid `minsup`, or an invalid
 transaction, whose 1-based index the message names. Throws `ErrorException` for
 a variant without an implementation.
 """
-function mine(transactions; minsup::Real, variant::Symbol=:baseline)
+mine(transactions; minsup::Real, variant::Symbol=:baseline) =
+    support_map(mine_packed(transactions; minsup, variant))
+
+"""
+    mine_packed(transactions; minsup, variant=:baseline) -> FrequentItemsets
+
+Return the same itemsets and supports as `mine`, packed into flat arrays instead
+of a tuple-keyed map, and throw for the same input. Each itemset is ascending;
+the order of itemsets is unspecified. Writers and benchmarks use this form, so
+they never build a key per itemset.
+"""
+function mine_packed(transactions; minsup::Real, variant::Symbol=:baseline)
     variant in (:baseline, :optimized) ||
         throw(ArgumentError("variant must be :baseline or :optimized"))
     database = canonical_database(transactions)
@@ -20,7 +31,7 @@ function mine(transactions; minsup::Real, variant::Symbol=:baseline)
     variant == :baseline || throw(ErrorException("Eclat $variant is not implemented"))
     class = to_class(database)
     class = filter!(p -> length(last(p)) >= sup_req, class)
-    return bottom_up!(class, Int[], sup_req, SupportMap())
+    return bottom_up!(class, Int[], sup_req, FrequentItemsets())
 end
 
 """
@@ -66,12 +77,11 @@ Each member is the last item of `prefix ∪ {item}` with that itemset's tid-list
 and every member is already frequent. `prefix` is one stack shared by the whole
 search, so its type stays concrete at every depth; each call restores it.
 """
-function bottom_up!(class::Vector{Pair{Int, Vector{Int}}}, prefix::Vector{Int}, minsup::Int, res::SupportMap)
+function bottom_up!(class::Vector{Pair{Int, Vector{Int}}}, prefix::Vector{Int}, minsup::Int, res::FrequentItemsets)
     for i in eachindex(class)
         (a, a_set) = class[i]
         push!(prefix, a)
-        # The public SupportMap keys are tuples, so the key is built only here.
-        res[Tuple(prefix)] = length(a_set)
+        push_itemset!(res, prefix, length(a_set))
         cur_pass = Pair{Int, Vector{Int}}[]
         for j in i+1:lastindex(class)
             (b, b_set) = class[j]
