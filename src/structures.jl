@@ -19,10 +19,25 @@ so a flat vector or a bare label would otherwise pass as several transactions.
 is_item_collection(value) =
     !(value isa Union{Number,AbstractChar,AbstractString}) && applicable(iterate, value)
 
+"""True when `items` is strictly ascending and nonnegative, as `canonical_transaction` returns."""
+function is_canonical(items::Vector{Int})
+    isempty(items) && return true
+    first(items) >= 0 || return false
+    for i in 2:length(items)
+        items[i-1] < items[i] || return false
+    end
+    return true
+end
+
 """Canonicalize every transaction. Empty transactions stay, because they count in N."""
 function canonical_database(transactions)
     database = Vector{Vector{Int}}()
     for (index, transaction) in enumerate(transactions)
+        # read_transactions already returns canonical vectors, so they are checked, not copied.
+        if transaction isa Vector{Int} && is_canonical(transaction)
+            push!(database, transaction)
+            continue
+        end
         is_item_collection(transaction) ||
             throw(ArgumentError("transaction $index must be a collection of item IDs, got $(repr(transaction))"))
         try

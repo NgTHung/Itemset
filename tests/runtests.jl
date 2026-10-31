@@ -162,6 +162,8 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         @test read(path, String) == "keep\n"
     end
     include("eclat.jl")
+    include("frequent_itemsets.jl")
+    include("transaction_reader.jl")
     @testset "Invalid output and unfinished miner" begin
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((2,1)=>2))
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((1,)=>0))
