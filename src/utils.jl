@@ -127,12 +127,14 @@ so an invalid map never touches an existing file.
 """
 function write_itemsets(io::IO, patterns::AbstractDict)
     check_itemsets(patterns)
-    print_itemsets(io, patterns)
+    packed = sorted_packed(patterns)
+    print_packed(io, packed, collect(1:length(packed)))
 end
 
 function write_itemsets(path::AbstractString, patterns::AbstractDict)
     check_itemsets(patterns)
-    open(io -> print_itemsets(io, patterns), path, "w")
+    packed = sorted_packed(patterns)
+    open(io -> print_packed(io, packed, collect(1:length(packed))), path, "w")
 end
 
 function check_itemsets(patterns::AbstractDict)
@@ -145,20 +147,11 @@ function check_itemsets(patterns::AbstractDict)
     return nothing
 end
 
-function print_itemsets(io::IO, patterns::AbstractDict)
+"""Pack validated, canonical keys in write order, so both result forms share one writer."""
+function sorted_packed(patterns::AbstractDict)
+    packed = FrequentItemsets()
     for (items, support) in sort!(collect(patterns); by=first)
-        print_itemset(io, items, support)
+        push_itemset!(packed, items, support)
     end
-    return nothing
-end
-
-# A function barrier: SupportMap keys are abstract tuples, so dispatch on the
-# concrete key once per line and print its items without building a string.
-function print_itemset(io::IO, items, support)
-    for (position, item) in enumerate(items)
-        position == 1 || print(io, ' ')
-        print(io, item)
-    end
-    print(io, " #SUP: ", support, '\n')
-    return nothing
+    return packed
 end

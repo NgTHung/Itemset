@@ -79,7 +79,7 @@ A tuple key per itemset costs more than mining on dense data, where millions of 
 
 ## Write output
 
-`write_itemsets(path, patterns)` writes one itemset per line in SPMF format. Lines are in numeric lexicographic key order: IDs compare as numbers, and a key precedes its extensions.
+`write_itemsets(path, patterns)` writes one itemset per line in SPMF format. `patterns` is a `SupportMap` or a `FrequentItemsets`, and both forms of the same result give byte-identical files. Lines are in numeric lexicographic key order: IDs compare as numbers, and a key precedes its extensions.
 
 ```text
 1 #SUP: 2
@@ -89,7 +89,7 @@ A tuple key per itemset costs more than mining on dense data, where millions of 
 10 #SUP: 1
 ```
 
-The fixed order makes output files byte-comparable across variants and runs. SPMF writes its output in mining order, so a comparator parses both files into maps instead of comparing bytes. It validates every key and support before it opens the output, so an invalid map never produces partial output or truncates an existing file. An empty map writes an empty file.
+The fixed order makes output files byte-comparable across variants and runs. SPMF writes its output in mining order, so a comparator parses both files into maps instead of comparing bytes. It validates every key and support before it opens the output, so an invalid map never produces partial output or truncates an existing file. A `FrequentItemsets` that repeats an itemset also throws, because a map cannot hold the repeat. An empty map writes an empty file.
 
 ## Read output
 

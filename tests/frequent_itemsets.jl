@@ -37,3 +37,34 @@
         @test @inferred(mine_packed([[1, 2], [2]]; minsup=1, variant)) isa FrequentItemsets
     end
 end
+
+# The line format the writer must reproduce byte for byte, in numeric lexicographic order.
+reference_lines(pairs) = join(("$(join(k, ' ')) #SUP: $v\n" for (k, v) in sort!([collect(k) => v for (k, v) in pairs]; by=first)))
+
+@testset "Writing packed itemsets" begin
+    for case in MINING_CASES
+        transactions = read_transactions(joinpath(TOY_DIR, case.name * ".txt"))
+        packed = mine_packed(transactions; minsup=case.minsup)
+        @test sprint(write_itemsets, packed) == sprint(write_itemsets, case.expected) ==
+              reference_lines(case.expected)
+    end
+    # Unsorted input, multi-digit IDs, item 0, and a line longer than any buffer chunk.
+    long = collect(0:20_000)
+    packed = FrequentItemsets([10, 2, 0, 1, 10, 1, long...], [1, 2, 3, 4, 6, 7, 7 + length(long)],
+                              [1, 7, 3, 12, 5, typemax(Int)])
+    @test sprint(write_itemsets, packed) == reference_lines(packed)
+    rng = Xoshiro(DEFAULT_SEED)
+    many = mine_packed([rand(rng, 0:30, rand(rng, 0:12)) for _ in 1:400]; minsup=2)
+    @test length(many) > 5_000
+    @test sprint(write_itemsets, many) == reference_lines(many)
+    @test sprint(write_itemsets, FrequentItemsets()) == ""
+    for (items, offsets, supports) in (([2, 1], [1, 3], [1]), ([1, 1], [1, 3], [1]), (Int[], [1, 1], [1]),
+                                       ([-1], [1, 2], [1]), ([1], [1, 2], [0]), ([1, 1], [1, 2, 3], [1, 2]))
+        bad = FrequentItemsets(items, offsets, supports)
+        @test_throws ArgumentError write_itemsets(IOBuffer(), bad)
+        path = tempname()
+        write(path, "keep\n")
+        @test_throws ArgumentError write_itemsets(path, bad)
+        @test read(path, String) == "keep\n"
+    end
+end
