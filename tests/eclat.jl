@@ -8,6 +8,32 @@ const MINED_VARIANTS = (:baseline,)
     @test ItemsetMining.to_class([[2], [2]]) == [2 => [1, 2]]
 end
 
+@testset "Tid-list intersection" begin
+    intersect_tidlists = ItemsetMining.intersect_tidlists
+    @test intersect_tidlists(Int[], Int[]) == Int[]
+    @test intersect_tidlists([1, 2], Int[]) == Int[]
+    @test intersect_tidlists([1, 3, 5], [2, 4, 6]) == Int[]
+    @test intersect_tidlists([1, 2, 3], [1, 2, 3]) == [1, 2, 3]
+    @test intersect_tidlists([1, 4, 7, 9], [2, 4, 9, 12]) == [4, 9]
+    @test intersect_tidlists([5], [1, 2, 3, 4, 5]) == [5]
+    rng = Xoshiro(DEFAULT_SEED)
+    for _ in 1:200
+        a = sort!(unique(rand(rng, 1:40, rand(rng, 0:25))))
+        b = sort!(unique(rand(rng, 1:40, rand(rng, 0:25))))
+        @test intersect_tidlists(a, b) == intersect(a, b)
+    end
+    @test @inferred(intersect_tidlists([1, 2], [2, 3])) isa Vector{Int}
+end
+
+@testset "Bottom-Up search is type-stable" begin
+    class = ItemsetMining.to_class([[1, 2, 3], [1, 2], [2, 3]])
+    prefix = Int[]
+    patterns = @inferred ItemsetMining.bottom_up!(class, prefix, 2, SupportMap())
+    @test patterns == SupportMap((1,)=>2, (2,)=>3, (3,)=>2, (1, 2)=>2, (2, 3)=>2)
+    # The prefix is a shared stack, so every search must leave it as it found it.
+    @test isempty(prefix)
+end
+
 @testset "Eclat $variant" for variant in MINED_VARIANTS
     @testset "Toy fixtures" begin
         for case in MINING_CASES

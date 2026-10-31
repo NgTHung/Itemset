@@ -146,8 +146,19 @@ function check_itemsets(patterns::AbstractDict)
 end
 
 function print_itemsets(io::IO, patterns::AbstractDict)
-    for items in sort!(collect(keys(patterns)))
-        println(io, join(items, ' '), " #SUP: ", patterns[items])
+    for (items, support) in sort!(collect(patterns); by=first)
+        print_itemset(io, items, support)
     end
+    return nothing
+end
+
+# A function barrier: SupportMap keys are abstract tuples, so dispatch on the
+# concrete key once per line and print its items without building a string.
+function print_itemset(io::IO, items, support)
+    for (position, item) in enumerate(items)
+        position == 1 || print(io, ' ')
+        print(io, item)
+    end
+    print(io, " #SUP: ", support, '\n')
     return nothing
 end
