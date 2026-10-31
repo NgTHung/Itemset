@@ -5,11 +5,16 @@ Duplicates within a transaction collapse; duplicate transactions remain distinct
 For intentionally empty transactions, use the in-memory API instead of blank lines.
 """
 function read_transactions(io::IO)
+    bytes = read(io)
     transactions = Vector{Vector{Int}}()
-    for (line_number, line) in enumerate(eachline(io))
-        value = strip(line)
-        is_spmf_metadata(value) && continue
-        push!(transactions, canonical_transaction(parse_item_ids(value, line_number)))
+    line_number = 0
+    start = 1
+    while start <= length(bytes)
+        stop = something(findnext(==(UInt8(0x0a)), bytes, start), length(bytes) + 1)
+        line_number += 1
+        items = parse_transaction_line(view(bytes, start:stop-1), line_number)
+        items === nothing || push!(transactions, items)
+        start = stop + 1
     end
     return transactions
 end
@@ -17,6 +22,57 @@ end
 read_transactions(path::AbstractString) = open(read_transactions, path)
 
 is_spmf_metadata(line::AbstractString) = isempty(line) || startswith(line, ('#', '%', '@'))
+
+is_ascii_space(byte::UInt8) = byte == UInt8(' ') || 0x09 <= byte <= 0x0d
+
+"""
+Parse one line's bytes into a canonical transaction, or `nothing` for a blank or
+metadata line. Tokens and errors match `parse_item_ids` on the stripped line.
+"""
+function parse_transaction_line(line::AbstractVector{UInt8}, line_number::Int)
+    # Bytes above 0x7f can be Unicode spaces or digits, which only the string parser handles.
+    if any(>(0x7f), line)
+        value = strip(String(line))
+        is_spmf_metadata(value) && return nothing
+        return canonical_transaction(parse_item_ids(value, line_number))
+    end
+    items = Int[]
+    i, n = 1, length(line)
+    while i <= n && is_ascii_space(line[i])
+        i += 1
+    end
+    i > n && return nothing
+    line[i] in codeunits("#%@") && return nothing
+    while i <= n
+        j = i
+        while j <= n && !is_ascii_space(line[j])
+            j += 1
+        end
+        push!(items, parse_item_id(view(line, i:j-1), line_number))
+        i = j
+        while i <= n && is_ascii_space(line[i])
+            i += 1
+        end
+    end
+    return unique!(sort!(items))
+end
+
+"""Parse one ASCII token. Plain digits take a fast path; anything else goes through `tryparse`."""
+function parse_item_id(token::AbstractVector{UInt8}, line_number::Int)
+    # 18 digits stay below typemax(Int), so the fast path cannot overflow.
+    if length(token) <= 18 && all(byte -> UInt8('0') <= byte <= UInt8('9'), token)
+        value = 0
+        for byte in token
+            value = 10value + (byte - UInt8('0'))
+        end
+        return value
+    end
+    text = String(copy(token))
+    item = tryparse(Int, text)
+    (item === nothing || item < 0) &&
+        throw(ArgumentError("line $line_number: invalid item ID $(repr(text))"))
+    return item
+end
 
 function parse_item_ids(text::AbstractString, line_number::Integer)
     items = Int[]
