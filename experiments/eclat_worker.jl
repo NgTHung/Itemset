@@ -22,7 +22,7 @@ function warm_up(variant::Symbol)
         println(io, "1 2\n1 2\n2 3")
         close(io)
         transactions = read_transactions(path)
-        write_itemsets(devnull, mine(transactions; minsup=0.5, variant))
+        write_itemsets(devnull, mine_packed(transactions; minsup=0.5, variant))
     finally
         rm(path; force=true)
     end
@@ -32,7 +32,7 @@ end
 function measured_phases(input, output, minsup, variant)
     read_result = @timed read_transactions(input)
     transactions = read_result.value
-    mined = @timed mine(transactions; minsup, variant)
+    mined = @timed mine_packed(transactions; minsup, variant)
     patterns = mined.value
     written = @timed write_itemsets(output, patterns)
     report = Dict{String,Any}("transactions" => length(transactions),
