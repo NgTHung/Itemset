@@ -116,7 +116,7 @@ def main():
     ax.set_xlabel(f"{args.mode.capitalize()} {args.scope} seconds (log scale), median and IQR")
     ax.grid(axis="x", which="both", alpha=0.18)
     ax.spines[["top", "right"]].set_visible(False)
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, 1.09), ncol=len(variants), frameon=False, fontsize=9)
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=len(variants), frameon=False, fontsize=9)
     fig.tight_layout()
     for suffix in ("png", "svg"):
         fig.savefig(args.out / f"timings.{suffix}", dpi=300, bbox_inches="tight")
@@ -128,6 +128,10 @@ def main():
     interrupted = sum(r["interrupted_samples"] for r in records)
     incomplete = sum(r["other_incomplete_samples"] for r in records)
     unverified = sum(r["unverified_samples"] for r in records)
+    fewest = min(r["exact_samples"] for r in records)
+    # The scored gate needs five exact repeats per point; fewer marks a development screen.
+    scored_note = (f"Every point has at least {fewest} exact samples per contender." if fewest >= 5 else
+                   "Development samples do not establish the five-repeat scored gate.")
     svg = (args.out / "timings.svg").read_text(encoding="utf-8")
     svg = svg[svg.index("<svg"):]
     cells = "".join("<tr>" + "".join(f"<td>{html.escape(str(r[k]))}</td>" for k in
@@ -135,14 +139,14 @@ def main():
                      "correctness_failures", "interrupted_samples", "other_incomplete_samples", "unverified_samples"))
                     + "</tr>" for r in records)
     page = f"""<!doctype html><html><head><meta charset="utf-8"><style>
-    svg{{width:100%;height:500px}}p{{color:var(--muted-foreground)}}
+    svg{{width:100%;height:auto}}p{{color:var(--muted-foreground)}}
     details{{margin-top:12px}}.table{{overflow-x:auto}}table{{border-collapse:collapse;font-size:12px}}
     th,td{{padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}}
     </style></head><body>{svg}
     <p>{verified} completed outputs matched separate SPMF Eclat maps exactly.
     Correctness failures: {failures}; interrupted attempts: {interrupted}; other incomplete attempts: {incomplete};
     unverified outputs: {unverified}.
-    Development samples do not establish the five-repeat scored gate.
+    {scored_note}
     Source: {html.escape(args.run.name)}.</p><details><summary>Timing data and failures</summary><div class="table">
     <table><thead><tr><th>Dataset</th><th>Minsup</th><th>Variant</th><th>Median s</th><th>Exact</th>
     <th>Correctness failures</th><th>Interrupted</th><th>Other incomplete</th><th>Unverified</th>
