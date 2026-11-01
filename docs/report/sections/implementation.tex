@@ -137,3 +137,54 @@ khóa và tính ổn định kiểu (type stability). Bộ đếm vét cạn ch�
 phép so sánh với SPMF được trình bày trong chương thực nghiệm.
 
 Bổ sung kỹ thuật tối ưu đã cài đặt kèm bằng chứng đo so với bản cơ bản.
+
+\subsubsection{Mốc đo của bản cơ bản}
+Mọi kỹ thuật tối ưu được so với một mốc đo (baseline measurement) cố định. Nhóm chạy bản
+cơ bản, Eclat của SPMF và PrePost+ của SPMF~\cite{spmf2016} trên đủ 33 ngưỡng của năm
+CSDL Chess, Mushroom, Retail, T10I4D100K và Accidents. Mỗi chương trình chạy năm lần ở
+mỗi ngưỡng trong chế độ nguội (cold), tức mỗi lần là một tiến trình mới, nên có tổng cộng
+495 lần chạy. Toàn bộ đợt đo diễn ra liên tục trên một máy Linux (Intel Core i7-11800H,
+7{,}4 GiB RAM) với Julia 1.13.2 một luồng và SPMF 2.66 trên Java Temurin 25.0.4.1, giới
+hạn heap 4 GiB, xung nhịp CPU cố định 2{,}3 GHz. Cả 495 đầu ra đều khớp hoàn toàn với
+một lần chạy Eclat của SPMF độc lập; không lần chạy nào lỗi hoặc vượt giới hạn 300 s. Độ
+trải tứ phân vị (interquartile range, IQR) của bản cơ bản không vượt quá 3\% trung vị ở
+mọi ngưỡng, nên một chênh lệch lớn hơn mức này giữa hai phiên bản có thể quy cho thay đổi
+mã nguồn.
+
+Bản cơ bản giao hai tid-list bằng một lượt trộn (merge) trên hai danh sách đã sắp xếp,
+với chi phí $O(|t(P \cup \{a\})| + |t(P \cup \{b\})|)$. Tiền tố nằm trong một mảng dùng
+chung cho mọi mức của tìm kiếm. Kết quả được lưu thành ba mảng phẳng: item, vị trí bắt
+đầu của mỗi itemset và độ hỗ trợ. Tệp được đọc và ghi trực tiếp theo byte.
+Bảng~\ref{tab:baseline} cho kết quả ở ngưỡng thấp nhất của mỗi CSDL.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{Trung vị thời gian tiến trình nguội (giây) ở ngưỡng thấp nhất của mỗi CSDL,
+năm lần chạy mỗi ô}
+\label{tab:baseline}
+\begin{tabular}{lrrrrr}
+\hline
+Dữ liệu / minsup & Itemset & Bản cơ bản & Eclat & PrePost+ & \texttt{mine} \\
+\hline
+Chess / 0{,}6 & 254\,944 & 5{,}85 & 15{,}98 & 0{,}59 & 51\% \\
+Mushroom / 0{,}1 & 574\,431 & 8{,}74 & 7{,}44 & 0{,}68 & 67\% \\
+Retail / 0{,}001 & 7\,589 & 14{,}89 & 1{,}53 & 3{,}51 & 81\% \\
+T10I4D100K / 0{,}00025 & 96\,959 & 13{,}08 & 8{,}02 & 4{,}31 & 78\% \\
+Accidents / 0{,}65 & 1\,093 & 9{,}55 & 26{,}87 & 2{,}37 & 64\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Bản cơ bản nhanh hơn Eclat của SPMF ở mọi ngưỡng của Accidents và ở Chess từ 0{,}7 trở
+xuống, nhưng chậm hơn PrePost+ từ 2{,}2 đến 12{,}8 lần trên cả 33 ngưỡng. Thời gian
+chạy có hai điểm nghẽn. Cột \texttt{mine} là tỉ lệ thời gian tiến trình nằm trong lời
+gọi khai thác: lời gọi này chiếm 51\% đến 81\% thời gian ở
+ngưỡng thấp nhất và cấp phát 3{,}3 đến 5{,}7 GiB, chủ yếu cho tid-list mới của mỗi phép
+giao. Điểm nghẽn thứ hai là chi phí cố định: ngoài ba pha đọc, khai thác và ghi, mỗi
+tiến trình Julia mất thêm 2{,}77 đến 2{,}88 s. Khởi động Julia chỉ chiếm 0{,}17 s; phần
+còn lại là biên dịch JIT. Ở ngưỡng cao, chi phí cố định này chiếm gần hết thời gian chạy,
+trong khi PrePost+ hoàn tất mọi ngưỡng của Chess và Mushroom trong 0{,}40 đến 0{,}68 s.
+Vì vậy, bước tối ưu tiếp theo là loại bỏ phần biên dịch bằng tiền biên dịch
+(precompilation), sau đó mới đến một biểu diễn tidset nhanh hơn cho phép giao.
