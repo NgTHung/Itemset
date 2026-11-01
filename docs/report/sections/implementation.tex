@@ -188,3 +188,52 @@ còn lại là biên dịch JIT. Ở ngưỡng cao, chi phí cố định này c
 trong khi PrePost+ hoàn tất mọi ngưỡng của Chess và Mushroom trong 0{,}40 đến 0{,}68 s.
 Vì vậy, bước tối ưu tiếp theo là loại bỏ phần biên dịch bằng tiền biên dịch
 (precompilation), sau đó mới đến một biểu diễn tidset nhanh hơn cho phép giao.
+
+\subsubsection{Tiền biên dịch}
+Nhóm chạy các hàm công khai \texttt{read\_transactions}, \texttt{mine\_packed},
+\texttt{mine} và \texttt{write\_itemsets} trên một CSDL nhỏ trong lúc Julia dựng package
+image, để mã máy của chúng được lưu kèm gói và không phải biên dịch lại ở mỗi tiến trình.
+Một phép kiểm thử chạy các hàm này trong tiến trình mới với \texttt{--trace-compile} và
+yêu cầu không có phương thức nào của gói phải biên dịch khi chạy.
+
+Để đo riêng tác động này, nhóm chạy hai đợt liên tiếp trên cùng máy với cùng cấu hình mốc
+đo, mỗi đợt 165 lần chạy trên 33 ngưỡng. Hai đợt đo trực tiếp tiến trình \texttt{demo.jl},
+tức chương trình người dùng chạy, nên mã đo không được biên dịch cùng tiến trình. Cả 330
+đầu ra đều khớp hoàn toàn với Eclat của SPMF, và IQR không vượt quá 4{,}1\% trung vị.
+Thời gian của PrePost+ lấy từ mốc đo ở mục trước, nên tỉ số
+$R = T_\text{sau} / T_\text{PrePost+}$, với $T_\text{sau}$ là thời gian sau tiền biên
+dịch và $T_\text{PrePost+}$ là thời gian của PrePost+, chỉ là ước lượng giữa hai phiên đo.
+Bảng~\ref{tab:precompile} cho kết quả ở ngưỡng cao nhất và thấp nhất của mỗi CSDL.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Trung vị thời gian tiến trình nguội (giây) của \texttt{demo.jl} trước và sau tiền
+biên dịch, năm lần chạy mỗi ô}
+\label{tab:precompile}
+\begin{tabular}{lrrrr}
+\hline
+Dữ liệu / minsup & Trước & Sau & PrePost+ & $R$ \\
+\hline
+Chess / 0{,}9 & 2{,}36 & 0{,}33 & 0{,}40 & 0{,}82 \\
+Chess / 0{,}6 & 5{,}42 & 3{,}12 & 0{,}59 & 5{,}26 \\
+Mushroom / 0{,}5 & 2{,}34 & 0{,}32 & 0{,}43 & 0{,}76 \\
+Mushroom / 0{,}1 & 8{,}26 & 6{,}49 & 0{,}68 & 9{,}52 \\
+Retail / 0{,}01 & 2{,}54 & 0{,}54 & 0{,}76 & 0{,}70 \\
+Retail / 0{,}001 & 14{,}90 & 12{,}22 & 3{,}51 & 3{,}48 \\
+T10I4D100K / 0{,}01 & 5{,}10 & 2{,}79 & 1{,}41 & 1{,}97 \\
+T10I4D100K / 0{,}00025 & 12{,}72 & 10{,}51 & 4{,}31 & 2{,}44 \\
+Accidents / 0{,}95 & 3{,}31 & 1{,}30 & 1{,}68 & 0{,}77 \\
+Accidents / 0{,}65 & 9{,}03 & 6{,}99 & 2{,}37 & 2{,}95 \\
+\hline
+\end{tabular}
+\end{table}
+
+Tiền biên dịch rút ngắn mỗi tiến trình từ 1{,}77 đến 2{,}67 s (trung vị 2{,}04 s), tức
+thời gian còn lại bằng 14\% đến 83\% trước đó. Bộ nhớ đỉnh giảm 3\% đến 18\%, còn thời
+gian nạp gói chỉ tăng từ 0{,}164 lên 0{,}176 s. Bản cơ bản đạt $R \le 1$ ở 11 trên 33
+ngưỡng, chủ yếu ở các ngưỡng cao. Trung bình nhân của $R$ theo CSDL vẫn lớn hơn 1: Accidents
+1{,}25, Retail 1{,}31, Mushroom 1{,}60, Chess 1{,}71 và T10I4D100K 2{,}78. Ở ngưỡng thấp,
+phần thời gian còn lại chủ yếu là khai thác, nên bước tiếp theo là một biểu diễn tidset
+nhanh hơn cho phép giao.
