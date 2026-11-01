@@ -38,10 +38,11 @@ Julia compiles a method on its first call, and Java pays JVM startup on every pr
 | `process`, cold mode | all | Spawn to exit, including startup, compilation, input, and output, with no benchmark warmup | `cold-process` or `cold-jvm` |
 | `read`, `mine`, `write`, cold mode | Julia | First calls; process timing also captures compilation outside these calls | `cold-call` |
 | `process`, warm mode | Julia | Entire worker, including untimed warmup, for diagnosis | `warm-worker` |
+| `process`, CLI mode | all | Spawn to exit of the measured checkout's `demo.jl`, with no measurement code in the process | `cold-process` or `cold-jvm` |
 | `read`, `mine`, `write`, warm mode | Julia | Calls after toy compilation and one full run of the same input to devnull, followed by GC | `dataset-warmup` |
 | `spmf_total` | SPMF references | SPMF's own "Total time" line | `cold-jvm` |
 
-Compare cold `process` rows for end-to-end cost. Cold refers to a fresh process, not a flushed filesystem cache. Warm `mine` measures application latency, including the complete `SupportMap`; it is separate from SPMF's internal time. Every Julia phase records allocations and GC time. Process RSS is repeated on phase rows and is not a phase-specific peak.
+Compare CLI `process` rows for end-to-end cost. The worker's own reporting code compiles in every cold process, about 0.4 s that no user run pays, so cold mode serves the phase breakdown. Cold refers to a fresh process, not a flushed filesystem cache. Warm `mine` measures application latency, including the complete `SupportMap`; it is separate from SPMF's internal time. Every Julia phase records allocations and GC time. Process RSS is repeated on phase rows and is not a phase-specific peak.
 
 Repeats run in separate processes, interleaved across variants. `runs.csv` preserves each sample and repeat identity. `summary.csv` reports medians, linearly interpolated IQRs, sorted samples, maximum process RSS, median allocations and GC time, and failure counts. It excludes failed or unverified samples from statistics without removing their counts. `gate_eligible` requires five exact samples and no failures; it does not establish the speed or memory targets. Development screens with three repeats cannot pass the scored gate.
 

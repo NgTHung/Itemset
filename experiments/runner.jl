@@ -91,7 +91,7 @@ function run_attempt(attempt::Attempt, config::RunConfig, input::String, dir::St
         "peak_rss_bytes" => measured["peak_rss_bytes"] < 0 ? "" : string(measured["peak_rss_bytes"]),
         "memory_tool" => measured["memory_tool"], "status" => measured["status"],
         "warmup_policy" => attempt.variant in REFERENCE_VARIANTS ? "cold-jvm" :
-                           config.mode == :cold ? "cold-process" : "warm-worker"))
+                           config.mode == :warm ? "warm-worker" : "cold-process"))
     rows = if measured["status"] == "timeout"
         [merge(process, Dict("error" => "killed after $(config.timeout_seconds) s"))]
     elseif measured["status"] == "error"
@@ -142,6 +142,8 @@ function completed_rows(attempt::Attempt, process, paths)
         return [common, merge(common, Dict("timing_scope" => "spmf_total",
                                            "elapsed_seconds" => string(stats.total_seconds)))]
     end
+    # The CLI reports no phases; the exact-map comparison checks its output instead.
+    get(process, "mode", "") == "cli" && return [common]
     report = TOML.parsefile(paths["worker.toml"])
     report["transactions"] == n ||
         throw(ArgumentError("worker read $(report["transactions"]) transactions, expected $n"))

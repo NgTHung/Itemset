@@ -59,7 +59,7 @@ function parse_run_config(table::AbstractDict)
     threads = get_field("julia_threads", Integer, 1)
     threads >= 1 || throw(ArgumentError("run config: julia_threads must be at least 1, got $threads"))
     mode = Symbol(get_field("mode", String, "cold"))
-    mode in (:cold, :warm) || throw(ArgumentError("run config: invalid mode $mode"))
+    mode in (:cold, :warm, :cli) || throw(ArgumentError("run config: invalid mode $mode"))
     mode == :warm && any(in(REFERENCE_VARIANTS), variants) &&
         throw(ArgumentError("run config: warm mode accepts only Julia variants, got $variants"))
     stage = get_field("stage", String, "B0")
@@ -138,8 +138,14 @@ function measured_command(attempt::Attempt, config::RunConfig, input::String, ou
         algorithm = attempt.variant == :spmf ? "Eclat" : "PrePost+"
         return `$(config.java) $(config.java_options) -jar $(config.spmf_jar) run $algorithm $input $output $(attempt.minsup)`
     end
-    return `$(Base.julia_cmd()) --startup-file=no --threads=$(config.julia_threads) --project=$(config.project)
-            $WORKER_SCRIPT --variant $(attempt.variant) --minsup $(attempt.minsup)
+    julia = `$(Base.julia_cmd()) --startup-file=no --threads=$(config.julia_threads) --project=$(config.project)`
+    if config.mode == :cli
+        # The measured revision's own CLI is the program a user runs, the counterpart of
+        # the SPMF command line, so no measurement code runs or compiles inside it.
+        return `$julia $(joinpath(config.project, "demo.jl")) --minsup $(attempt.minsup)
+                --variant $(attempt.variant) --output $output $input`
+    end
+    return `$julia $WORKER_SCRIPT --variant $(attempt.variant) --minsup $(attempt.minsup)
             --output $output --report $report --mode $(config.mode) $input`
 end
 

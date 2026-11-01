@@ -20,6 +20,7 @@
         @test config.mode == :cold && config.stage == "B0"
         @test !config.skip_after_timeout
         @test toy_config(; mode="warm").mode == :warm
+        @test toy_config(; mode="cli", variants=["baseline", "prepost"]).mode == :cli
         @test_throws ArgumentError toy_config(; mode="hot")
         @test_throws ArgumentError toy_config(; mode="warm", variants=["prepost"])
         @test_throws ArgumentError toy_config(; stage="")
@@ -28,6 +29,11 @@
             attempt = last(Experiments.plan_attempts(config, manifest))
             command = string(Experiments.measured_command(attempt, config, "in", "out", "report"))
             @test occursin("PrePost+", command)
+            cli = toy_config(; mode="cli")
+            command = string(Experiments.measured_command(first(Experiments.plan_attempts(cli, manifest)),
+                                                          cli, "in", "out", "report"))
+            @test occursin(joinpath(cli.project, "demo.jl"), command)
+            @test !occursin("eclat_worker", command) && !occursin("report", command)
         end
     end
 
@@ -63,7 +69,7 @@
         @test result["gate_eligible"] == "false"
     end
 
-    @testset "Cold and warm workers verify after timing" begin
+    @testset "Workers and the CLI verify after timing" begin
         mktempdir() do dir
             manifest, data = toy_benchmark(dir)
             reference = joinpath(dir, "reference.txt")
@@ -80,6 +86,17 @@
                 @test all(r -> parse(Int, r["allocated_bytes"]) > 0, rows[2:end])
                 @test isfile(joinpath(dir, mode, "comparison.toml"))
             end
+            config = toy_config(; mode="cli", verify_outputs=true)
+            attempt = only(Experiments.plan_attempts(config, manifest))
+            base = Dict(field => "" for field in Experiments.RESULT_FIELDS)
+            merge!(base, Dict("mode"=>"cli", "correctness_status"=>"not_checked"))
+            rows = Experiments.run_attempt(attempt, config, joinpath(data, "baskets.txt"),
+                joinpath(dir, "cli"), base; reference=() -> reference)
+            row = only(rows)
+            @test row["timing_scope"] == "process" && row["warmup_policy"] == "cold-process"
+            @test row["status"] == "ok" && row["correctness_status"] == "exact"
+            @test row["output_count"] == "6"
+            @test !isfile(joinpath(dir, "cli", "worker.toml"))
             write(reference, "1 #SUP: 999\n")
             config = toy_config(; verify_outputs=true)
             attempt = only(Experiments.plan_attempts(config, manifest))
