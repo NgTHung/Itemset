@@ -118,7 +118,7 @@ One earlier sweep on Accidents (minsup 0.65 to 0.3, same machine) gave the switc
 5. Mine sparse data with the baseline's sorted-list merge, plus pair counting at the root and early stop.
 6. Choose the representation per class from tidset length and N, never from the dataset name.
 7. Use diffsets only through a switch inside the search, never from the root. Pure diffsets lost or tied on every dense point. The bitset-to-diffset switch wins on Accidents (1.1 to 2.1 times) and is neutral on Chess and Mushroom. The list-to-diffset switch ranges from 18% faster to 5% slower on Retail and T10I4D100K. Both switches are the last step of the representation policy, and each is kept only if the scored points confirm its gain.
-8. Keep the baseline unchanged as the control. Every stage compares `:optimized` against it and against SPMF on complete maps.
+8. Keep the baseline unchanged as the control. Precompilation lives in the shared package, so Stages 3 to 5 use the [precompiled baseline](bbq-precompile-runtime-2026-11-01.md) as their control. Every stage compares `:optimized` against it and against SPMF on complete maps.
 
 ## Speed target
 
