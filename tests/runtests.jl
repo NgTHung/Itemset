@@ -175,6 +175,7 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         @test_throws ErrorException mine([[1]]; minsup=1, variant=:optimized)
     end
     include("cli.jl")
+    include("precompile.jl")
     include("benchmark_data.jl")
     include("harness.jl")
     include("market_basket.jl")
