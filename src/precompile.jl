@@ -14,4 +14,7 @@ if ccall(:jl_generating_output, Cint, ()) == 1
         end
         rm(dir; recursive=true)
     end
+    # Julia 1.12 keeps this one-line method inferred but without native code after the
+    # call above, so the image needs an explicit request to compile it.
+    precompile(read_transactions, (String,))
 end
