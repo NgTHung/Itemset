@@ -10,5 +10,6 @@ include("frequent_itemsets.jl")
 include("encoding.jl")
 include("utils.jl")
 include("algorithm/eclat.jl")
+include("precompile.jl")
 
 end
