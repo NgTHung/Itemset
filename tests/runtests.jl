@@ -163,6 +163,7 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         @test read(path, String) == "keep\n"
     end
     include("eclat.jl")
+    include("tidsets.jl")
     include("frequent_itemsets.jl")
     include("transaction_reader.jl")
     @testset "Invalid output and unfinished miner" begin
@@ -173,7 +174,6 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         write_itemsets(io, SupportMap((10,)=>1, (2,)=>1, (1, 10)=>1, (1, 2)=>1))
         @test String(take!(io)) == "1 2 #SUP: 1\n1 10 #SUP: 1\n2 #SUP: 1\n10 #SUP: 1\n"
         @test_throws ArgumentError mine([[1]]; minsup=1, variant=:unknown)
-        @test_throws ErrorException mine([[1]]; minsup=1, variant=:optimized)
     end
     include("cli.jl")
     include("precompile.jl")

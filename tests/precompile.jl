@@ -6,9 +6,9 @@
     using ItemsetMining
     input, output = ARGS
     transactions = read_transactions(input)
-    for minsup in (0.5, 2)
-        write_itemsets(output, mine_packed(transactions; minsup, variant=:baseline))
-        write_itemsets(output, mine(transactions; minsup, variant=:baseline))
+    for minsup in (0.5, 2), variant in (:baseline, :optimized)
+        write_itemsets(output, mine_packed(transactions; minsup, variant))
+        write_itemsets(output, mine(transactions; minsup, variant))
     end
     """
     mktempdir() do dir

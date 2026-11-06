@@ -8,8 +8,7 @@ There is no length cap and no closed or maximal substitution, because callers
 compare complete maps. See `docs/interface.md` for the full contract.
 
 Throws `ArgumentError` for an unknown `variant`, invalid `minsup`, or an invalid
-transaction, whose 1-based index the message names. Throws `ErrorException` for
-a variant without an implementation.
+transaction, whose 1-based index the message names.
 """
 mine(transactions; minsup::Real, variant::Symbol=:baseline) =
     support_map(mine_packed(transactions; minsup, variant))
@@ -27,8 +26,7 @@ function mine_packed(transactions; minsup::Real, variant::Symbol=:baseline)
         throw(ArgumentError("variant must be :baseline or :optimized"))
     database = canonical_database(transactions)
     sup_req = support_threshold(minsup, length(database))
-    # Raise instead of running the baseline, so a benchmark never mislabels it.
-    variant == :baseline || throw(ErrorException("Eclat $variant is not implemented"))
+    variant == :optimized && return mine_bitsets(database, sup_req)
     class = to_class(database)
     class = filter!(p -> length(last(p)) >= sup_req, class)
     return bottom_up!(class, Int[], sup_req, FrequentItemsets())

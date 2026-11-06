@@ -237,3 +237,53 @@ ngưỡng, chủ yếu ở các ngưỡng cao. Trung bình nhân của $R$ theo 
 1{,}25, Retail 1{,}31, Mushroom 1{,}60, Chess 1{,}71 và T10I4D100K 2{,}78. Ở ngưỡng thấp,
 phần thời gian còn lại chủ yếu là khai thác, nên bước tiếp theo là một biểu diễn tidset
 nhanh hơn cho phép giao.
+
+\subsubsection{Tidset dạng bitset}
+Biến thể tối ưu (\texttt{:optimized}) giữ nguyên thủ tục Bottom-Up của bản cơ bản nhưng
+lưu mỗi tidset dưới dạng bitset (chuỗi bit, mỗi bit ứng với một giao dịch) gồm
+$\lceil N/64 \rceil$ từ 64 bit, với $N$ là số giao dịch. Phép giao hai tidset là phép AND
+từng từ, và độ hỗ trợ là số bit 1 đếm bằng \texttt{count\_ones} trong cùng vòng lặp. Các
+item được duyệt theo độ hỗ trợ tăng dần, nên các lớp tương đương gần gốc nhỏ hơn. Bitset
+của các phép giao không phổ biến được dùng lại, nên các phép giao này không cấp phát bộ
+nhớ. Thứ tự duyệt chỉ đổi cách đánh số item trong chứng minh của bản cơ bản, nên đầu ra
+vẫn chính xác. Biến thể này chạy toàn bộ các kiểm thử mà bản cơ bản chạy, cùng các trường
+hợp biên $N = 0, 1, 63, 64, 65, 127, 128, 129$.
+
+Nhóm đo bản cơ bản, biến thể tối ưu và PrePost+ trong cùng một phiên. Ở mỗi lần lặp của
+mỗi ngưỡng, ba chương trình chạy nối tiếp nhau, nên độ trôi của máy chia đều cho cả ba.
+Phiên gồm 495 lần chạy trên 33 ngưỡng, và cả 495 đầu ra đều khớp hoàn toàn với Eclat của
+SPMF. Ở đây $R = T_\text{tối ưu} / T_\text{PrePost+}$ đo trong cùng phiên, với
+$T_\text{tối ưu}$ là trung vị thời gian tiến trình của biến thể tối ưu.
+Bảng~\ref{tab:bitset} cho kết quả ở ngưỡng cao nhất và thấp nhất của mỗi CSDL.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Trung vị thời gian tiến trình nguội (giây) của \texttt{demo.jl} với bản cơ bản,
+biến thể tối ưu và PrePost+, năm lần chạy mỗi ô, cùng một phiên đo}
+\label{tab:bitset}
+\begin{tabular}{lrrrr}
+\hline
+Dữ liệu / minsup & Cơ bản & Tối ưu & PrePost+ & $R$ \\
+\hline
+Chess / 0{,}9 & 0{,}33 & 0{,}32 & 0{,}40 & 0{,}79 \\
+Chess / 0{,}6 & 3{,}24 & 0{,}54 & 0{,}59 & 0{,}92 \\
+Mushroom / 0{,}5 & 0{,}33 & 0{,}32 & 0{,}44 & 0{,}73 \\
+Mushroom / 0{,}1 & 6{,}28 & 0{,}88 & 0{,}68 & 1{,}29 \\
+Retail / 0{,}01 & 0{,}55 & 0{,}40 & 0{,}78 & 0{,}52 \\
+Retail / 0{,}001 & 12{,}80 & 1{,}90 & 3{,}64 & 0{,}52 \\
+T10I4D100K / 0{,}01 & 2{,}93 & 0{,}47 & 1{,}39 & 0{,}34 \\
+T10I4D100K / 0{,}00025 & 10{,}92 & 1{,}72 & 4{,}33 & 0{,}40 \\
+Accidents / 0{,}95 & 1{,}31 & 1{,}18 & 1{,}69 & 0{,}70 \\
+Accidents / 0{,}65 & 7{,}13 & 1{,}26 & 2{,}35 & 0{,}54 \\
+\hline
+\end{tabular}
+\end{table}
+
+Biến thể tối ưu chỉ cần từ 10\% đến 97\% thời gian của bản cơ bản (trung vị 37\%) và dùng
+ít bộ nhớ đỉnh hơn ở mọi ngưỡng. Nó nhanh hơn PrePost+ ở 32 trên 33 ngưỡng. Trung bình
+nhân của $R$ theo CSDL đều nhỏ hơn 1: T10I4D100K 0{,}36, Retail 0{,}41, Accidents 0{,}61,
+Mushroom 0{,}78 và Chess 0{,}79. Ngưỡng duy nhất có $R > 1$ là Mushroom 0{,}1, nơi chương
+trình phải ghi 574\,431 itemset. Ở các ngưỡng cao, thời gian còn khoảng 0{,}32 s, gần bằng
+chi phí khởi động Julia và nạp gói.

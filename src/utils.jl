@@ -27,14 +27,17 @@ read_transactions(path::AbstractString) = open(read_transactions, path)
 Count each item once per transaction, including duplicate transactions separately.
 Canonicalizes item IDs and throws `ArgumentError` for invalid transactions or IDs.
 """
-function item_frequencies(transactions)
+item_frequencies(transactions) = count_items(canonical_database(transactions))
+
+"""Count each item of a canonical database, whose transactions hold each item once."""
+function count_items(database::Vector{Vector{Int}})
     counts = Dict{Int,Int}()
-    for transaction in canonical_database(transactions)
+    for transaction in database
         for item in transaction
             counts[item] = get(counts, item, 0) + 1
         end
     end
-    counts
+    return counts
 end
 
 is_spmf_metadata(line::AbstractString) = isempty(line) || startswith(line, ('#', '%', '@'))

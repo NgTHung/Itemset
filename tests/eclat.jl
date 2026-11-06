@@ -1,5 +1,5 @@
 # Variants with an implementation; every case below runs against each of them.
-const MINED_VARIANTS = (:baseline,)
+const MINED_VARIANTS = (:baseline, :optimized)
 
 @testset "Eclat vertical index" begin
     @test ItemsetMining.to_class([[1, 3], Int[], [0, 1], [1]]) ==

@@ -8,9 +8,9 @@ if ccall(:jl_generating_output, Cint, ()) == 1
         write(input, "1 2 3\n1 2\n2 3\n")
         transactions = read_transactions(input)
         # A fractional and an absolute minsup reach `mine_packed` as different types.
-        for minsup in (0.5, 2)
-            write_itemsets(output, mine_packed(transactions; minsup, variant=:baseline))
-            write_itemsets(output, mine(transactions; minsup, variant=:baseline))
+        for minsup in (0.5, 2), variant in (:baseline, :optimized)
+            write_itemsets(output, mine_packed(transactions; minsup, variant))
+            write_itemsets(output, mine(transactions; minsup, variant))
         end
         rm(dir; recursive=true)
     end
