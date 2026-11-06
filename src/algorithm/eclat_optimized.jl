@@ -54,18 +54,20 @@ function push_subsets!(result::FrequentItemsets, prefix::Vector{Int}, perfect::V
 end
 
 """
-    join_members!(children, perfect, class, i, minsup, pool) -> Int
+    join_members!(children, perfect, class, i, minsup, pool, pairs=NoPairCounts()) -> Int
 
-Join member `i` of `class` with every later member. A join with the same support
+Join member `i` of `class` with every later member whose pair count in `pairs`
+reaches `minsup`; the other joins cannot be frequent and are skipped. A join with the same support
 as member `i` has the same tidset, so its item goes onto `perfect` and its set
 back to `pool`; a frequent join with lower support becomes a child; the rest go
 back to `pool`. Returns the number of items pushed onto `perfect`.
 """
 function join_members!(children::Vector{BitsetMember}, perfect::Vector{Int}, class::Vector{BitsetMember},
-                       i::Int, minsup::Int, pool::Vector{Vector{UInt64}})
+                       i::Int, minsup::Int, pool::Vector{Vector{UInt64}}, pairs=NoPairCounts())
     a = class[i]
     added = 0
     for j in i+1:lastindex(class)
+        may_be_frequent(pairs, i, j, minsup) || continue
         b = class[j]
         words = isempty(pool) ? similar(a.words) : pop!(pool)
         # t(PXY) = t(PX) ∩ t(PY), so the support needs no database scan.
@@ -84,7 +86,7 @@ function join_members!(children::Vector{BitsetMember}, perfect::Vector{Int}, cla
 end
 
 """
-    bitset_search!(class, prefix, perfect, minsup, result, pool) -> result
+    bitset_search!(class, prefix, perfect, minsup, result, pool, pairs=NoPairCounts()) -> result
 
 Bottom-Up search of one class (Zaki 2000, Sec. 4.2) over bitset tidsets, in the
 class's item order, with perfect-extension pruning (`docs/eclat-optimized.md`).
@@ -93,16 +95,17 @@ ascending without a sort. `perfect` holds the perfect extensions found on the
 path, which every itemset below may add without changing its support. Each call
 restores both. `pool` holds spare bitsets: a join writes into one, a child keeps
 it, and a child class returns its sets once its search ends, so a failed join
-allocates nothing.
+allocates nothing. `pairs` holds pair counts over the ranks of `class` and
+applies to this class only.
 """
 function bitset_search!(class::Vector{BitsetMember}, prefix::Vector{Int}, perfect::Vector{Int}, minsup::Int,
-                        result::FrequentItemsets, pool::Vector{Vector{UInt64}})
+                        result::FrequentItemsets, pool::Vector{Vector{UInt64}}, pairs=NoPairCounts())
     for i in eachindex(class)
         a = class[i]
         position = searchsortedfirst(prefix, a.item)
         insert!(prefix, position, a.item)
         children = BitsetMember[]
-        added = join_members!(children, perfect, class, i, minsup, pool)
+        added = join_members!(children, perfect, class, i, minsup, pool, pairs)
         push_subsets!(result, prefix, perfect, a.support)
         if !isempty(children)
             bitset_search!(children, prefix, perfect, minsup, result, pool)
@@ -115,6 +118,17 @@ function bitset_search!(class::Vector{BitsetMember}, prefix::Vector{Int}, perfec
     return result
 end
 
-"""Mine a canonical database with bitset tidsets; see `mine_packed`."""
-mine_bitsets(database::Vector{Vector{Int}}, minsup::Int) =
-    bitset_search!(bitset_class(database, minsup), Int[], Int[], minsup, FrequentItemsets(), Vector{UInt64}[])
+"""
+    mine_bitsets(database, minsup; use_pair_counts=nothing) -> FrequentItemsets
+
+Mine a canonical database with bitset tidsets; see `mine_packed`. With
+`use_pair_counts=nothing`, `pair_filter` decides from the database whether to count
+root pairs first; `true` or `false` forces the choice, for tests.
+"""
+function mine_bitsets(database::Vector{Vector{Int}}, minsup::Int; use_pair_counts::Union{Nothing,Bool}=nothing)
+    class = bitset_class(database, minsup)
+    items = [member.item for member in class]
+    pairs = use_pair_counts === nothing ? pair_filter(database, items) :
+            use_pair_counts ? count_pairs(database, items) : NoPairCounts()
+    return bitset_search!(class, Int[], Int[], minsup, FrequentItemsets(), Vector{UInt64}[], pairs)
+end
