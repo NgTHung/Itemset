@@ -10,7 +10,7 @@ Usage:
 
 Run the experiment in CONFIG and write runs.csv with its raw evidence to DIR,
 by default results/raw/<name>-<UTC time>. --project measures the ItemsetMining
-of another checkout; --java selects the Java used for SPMF. Both override CONFIG
+of another checkout in a config with one revision; --java selects the Java used for SPMF. Both override CONFIG
 and are recorded in DIR/config.toml.
 """
 

@@ -43,7 +43,7 @@ function prepare_reference(attempt::Attempt, config::RunConfig, input::String, d
     output, report, out, err = joinpath.(dir, ("output.txt", "measure.toml", "stdout.txt", "stderr.txt"))
     if !isfile(report)
         reference = Attempt(; id="reference", entry=attempt.entry, minsup=attempt.minsup,
-                            minsup_count=attempt.minsup_count, variant=:spmf, repeat=0)
+                            minsup_count=attempt.minsup_count, variant=:spmf, repeat=0, stage="", project="")
         command = measured_command(reference, config, input, output, "")
         write(joinpath(dir, "command.txt"), string(command), "\n")
         run(`$(Base.julia_cmd()) --startup-file=no $MEASURE_SCRIPT --timeout $(config.timeout_seconds)
