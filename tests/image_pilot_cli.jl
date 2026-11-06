@@ -45,5 +45,12 @@ end
         @test read(input, String) == "corrupted"
         @test ImagePilotCLI.main([input, bad_output]; entry, fetch, vocabulary_size=1) == bad_output
         @test read(input, String) == row
+        encoded = joinpath(dir, "encoding-only")
+        @test ImagePilotCLI.encoding_main([input, encoded]; entry, fetch, vocabulary_size=1) == encoded
+        manifest = ImagePilotCLI.SemeionPilot.TOML.parsefile(joinpath(encoded, "manifest.toml"))
+        @test manifest["settings"]["vocabulary_size"] == 1
+        @test manifest["source_sha256"] == entry.sha256
+        @test !isfile(joinpath(encoded, "patterns-0.2.txt"))
+        @test_throws ArgumentError ImagePilotCLI.encoding_main([input, encoded]; entry, fetch, vocabulary_size=1)
     end
 end

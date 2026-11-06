@@ -1,6 +1,9 @@
 module SemeionPilot
 
 using Random
+using SHA: sha256
+using TOML: TOML
+using ItemsetMining: DEFAULT_SEED, item_frequencies, mine, support_threshold, write_itemsets
 
 const Patch = NTuple{16,UInt8}
 
@@ -346,5 +349,10 @@ function write_supporting_images_svg(path, images, transactions, itemset; limit:
     write(path, String(take!(io)))
     path
 end
+
+include("encoding.jl")
+include("encoding_artifacts.jl")
+include("mining.jl")
+include("mining_visuals.jl")
 
 end
