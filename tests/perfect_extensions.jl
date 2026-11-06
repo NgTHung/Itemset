@@ -106,8 +106,8 @@ end
         database = [[1, 2, 3, 4], [1, 2, 4], [2, 3], [1, 3, 4], [1, 2, 3, 4]]
         class = ItemsetMining.bitset_class(database, 2)
         prefix, perfect = Int[], Int[]
-        result = @inferred ItemsetMining.bitset_search!(class, prefix, perfect, 2,
-                                                        FrequentItemsets(), Vector{UInt64}[])
+        result = @inferred ItemsetMining.eclat_search!(class, prefix, perfect, 2,
+                                                       FrequentItemsets(), ItemsetMining.SearchState())
         @test isempty(prefix) && isempty(perfect)
         @test support_map(result) == brute_force_supports(database, 2)
         @test length(result) == length(support_map(result))

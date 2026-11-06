@@ -37,3 +37,44 @@ function intersect_bitsets!(dest::Vector{UInt64}, a::Vector{UInt64}, b::Vector{U
     end
     return support
 end
+
+"""
+    intersect_lists!(dest, a, b, minsup) -> Int
+
+Write the common tids of ascending lists `a` and `b` into `dest` and return
+their number when it reaches `minsup`, or -1 when it cannot. The merge stops
+early once the tids found plus the shorter remainder fall below `minsup`; it
+never stops on reaching `minsup`, since the child needs its whole tidset.
+"""
+function intersect_lists!(dest::Vector{Int}, a::Vector{Int}, b::Vector{Int}, minsup::Int)
+    empty!(dest)
+    i, j = 1, 1
+    while i <= length(a) && j <= length(b)
+        length(dest) + min(length(a) - i, length(b) - j) + 1 < minsup && return -1
+        x, y = a[i], b[j]
+        if x == y
+            push!(dest, x)
+            i += 1
+            j += 1
+        elseif x < y
+            i += 1
+        else
+            j += 1
+        end
+    end
+    return length(dest) >= minsup ? length(dest) : -1
+end
+
+"""Write the tids of bitset `words` into `dest` in ascending order: bit `t - 1` is tid `t`."""
+function bitset_tids!(dest::Vector{Int}, words::Vector{UInt64})
+    empty!(dest)
+    for (w, word) in enumerate(words)
+        while word != 0
+            push!(dest, 64 * (w - 1) + trailing_zeros(word) + 1)
+            word &= word - 1
+        end
+    end
+    return dest
+end
+
+bitset_tids(words::Vector{UInt64}) = bitset_tids!(Int[], words)

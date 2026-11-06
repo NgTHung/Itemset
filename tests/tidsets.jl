@@ -44,10 +44,10 @@ end
     @testset "Searches leave parent tidsets and the prefix as they found them" begin
         database = [[1, 2, 3, 4], [1, 2, 4], [2, 3], [1, 3, 4], [1, 2, 3, 4]]
         class = ItemsetMining.bitset_class(database, 2)
-        before = [copy(member.words) for member in class]
+        before = [copy(member.tidset) for member in class]
         prefix = Int[]
-        result = @inferred ItemsetMining.bitset_search!(class, prefix, Int[], 2, FrequentItemsets(), Vector{UInt64}[])
-        @test [member.words for member in class] == before
+        result = @inferred ItemsetMining.eclat_search!(class, prefix, Int[], 2, FrequentItemsets(), ItemsetMining.SearchState())
+        @test [member.tidset for member in class] == before
         @test isempty(prefix)
         @test support_map(result) == brute_force_supports(database, 2)
         @test length(result) == length(support_map(result))

@@ -56,11 +56,11 @@
             min_count = rand(rng, 1:4)
             expected = brute_force_supports(unique.(transactions), min_count)
             for use_pair_counts in (true, false)
-                packed = ItemsetMining.mine_bitsets(database, min_count; use_pair_counts)
+                packed = ItemsetMining.mine_optimized(database, min_count; use_pair_counts)
                 @test support_map(packed) == expected
                 @test length(packed) == length(expected)
             end
         end
-        @test @inferred(ItemsetMining.mine_bitsets([[1, 2], [1, 2]], 1; use_pair_counts=true)) isa FrequentItemsets
+        @test @inferred(ItemsetMining.mine_optimized([[1, 2], [1, 2]], 1; use_pair_counts=true)) isa FrequentItemsets
     end
 end
