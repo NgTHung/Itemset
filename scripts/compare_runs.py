@@ -16,23 +16,30 @@ STYLES = (("#2468a2", "o"), ("#d97716", "s"), ("#25814a", "^"))
 
 
 def read_series(spec):
-    """Return {(dataset, minsup): row fields} for a `LABEL=RUN:VARIANT` spec, refusing inexact samples."""
+    """Return {(dataset, minsup): samples} for a `LABEL=RUN:VARIANT[@STAGE]` spec, refusing inexact samples."""
     label, source = spec.split("=", 1)
     run, variant = source.rsplit(":", 1)
+    variant, _, stage = variant.partition("@")
     samples = {}
+    stages = set()
     with (Path(run) / "runs.csv").open(newline="", encoding="utf-8-sig") as stream:
         for row in csv.DictReader(stream):
-            if row["timing_scope"] == "process" and row["variant"] == variant:
+            if row["timing_scope"] == "process" and row["variant"] == variant and stage in ("", row["stage"]):
+                stages.add(row["stage"])
                 # A comparison figure has no place to show a failure, so a failed sample stops it.
                 if row["status"] != "ok" or row["correctness_status"] != "exact":
                     raise SystemExit(f"{row['attempt_id']} in {run} is {row['status']}/{row['correctness_status']}")
                 samples.setdefault((row["dataset"], row["minsup_relative"]), []).append(float(row["elapsed_seconds"]))
+    if len(stages) > 1:
+        raise SystemExit(f"{variant} in {run} has stages {sorted(stages)}; name one as {variant}@STAGE")
+    if not samples:
+        raise SystemExit(f"{run} has no process rows for {variant}{'@' + stage if stage else ''}")
     return label, samples
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("series", nargs="+", help="LABEL=RUN_DIR:VARIANT, at most three")
+    parser.add_argument("series", nargs="+", help="LABEL=RUN_DIR:VARIANT[@STAGE], at most three")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     if len(args.series) > len(STYLES):

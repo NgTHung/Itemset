@@ -23,14 +23,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run", type=Path)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--mode", choices=("cold", "warm"), default="cold")
+    parser.add_argument("--mode", choices=("cold", "warm", "cli"), default="cold")
     parser.add_argument("--scope", default="process")
+    parser.add_argument("--stage", help="Julia stage to plot when the run measured several revisions")
     args = parser.parse_args()
     with (args.run / "runs.csv").open(newline="", encoding="utf-8-sig") as source:
         rows = [r for r in csv.DictReader(source)
                 if r["mode"] == args.mode and r["timing_scope"] == args.scope]
+    # SPMF rows carry no stage, so they stay next to whichever revision is plotted.
+    stages = sorted({r["stage"] for r in rows if r["stage"]})
+    if args.stage is not None:
+        rows = [r for r in rows if r["stage"] in ("", args.stage)]
+    elif len(stages) > 1:
+        parser.error(f"the run measured stages {stages}; pass --stage or use compare_runs.py")
     if not rows:
-        parser.error("no rows match the requested mode and timing scope")
+        parser.error("no rows match the requested mode, timing scope, and stage")
     with (args.run / "summary.csv").open(newline="", encoding="utf-8-sig") as source:
         summaries = {(r["dataset"], r["minsup_count"], r["variant"], r["stage"], r["mode"], r["timing_scope"]): r
                      for r in csv.DictReader(source)}
