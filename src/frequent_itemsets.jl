@@ -85,27 +85,7 @@ function checked_order(packed::FrequentItemsets)
             throw(ArgumentError("itemset $k must hold ascending nonnegative item IDs, got $(collect(items))"))
         support >= 1 || throw(ArgumentError("itemset $k has support $support; supports must be at least 1"))
     end
-    order = collect(1:length(packed))
-    precedes(a, b) = itemset_isless(packed, a, b)
-    # A depth-first search over ascending items already emits this order, so sorting is usually skipped.
-    issorted(order; lt=precedes) || sort!(order; lt=precedes)
-    for i in 2:length(order)
-        precedes(order[i-1], order[i]) ||
-            throw(ArgumentError("itemset $(collect(itemset_view(packed, order[i]))) appears more than once"))
-    end
-    return order
-end
-
-"""Compare itemsets `a` and `b` as numbers, item by item; a prefix sorts first."""
-function itemset_isless(packed::FrequentItemsets, a::Int, b::Int)
-    offsets, items = packed.offsets, packed.items
-    i, j = offsets[a], offsets[b]
-    while i < offsets[a+1] && j < offsets[b+1]
-        items[i] == items[j] || return items[i] < items[j]
-        i += 1
-        j += 1
-    end
-    return i == offsets[a+1] && j < offsets[b+1]
+    return lexicographic_order(packed)
 end
 
 const SUPPORT_TAG = codeunits(" #SUP: ")

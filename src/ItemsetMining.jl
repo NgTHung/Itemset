@@ -7,6 +7,7 @@ export Itemset, SupportMap, DEFAULT_SEED, canonical_transaction,
 
 include("structures.jl")
 include("frequent_itemsets.jl")
+include("itemset_order.jl")
 include("encoding.jl")
 include("utils.jl")
 include("algorithm/eclat.jl")

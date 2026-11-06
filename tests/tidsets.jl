@@ -46,7 +46,7 @@ end
         class = ItemsetMining.bitset_class(database, 2)
         before = [copy(member.words) for member in class]
         prefix = Int[]
-        result = @inferred ItemsetMining.bitset_search!(class, prefix, 2, FrequentItemsets(), Vector{UInt64}[])
+        result = @inferred ItemsetMining.bitset_search!(class, prefix, Int[], 2, FrequentItemsets(), Vector{UInt64}[])
         @test [member.words for member in class] == before
         @test isempty(prefix)
         @test support_map(result) == brute_force_supports(database, 2)
