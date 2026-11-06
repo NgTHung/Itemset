@@ -166,6 +166,7 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     include("tidsets.jl")
     include("perfect_extensions.jl")
     include("frequent_itemsets.jl")
+    include("itemset_order.jl")
     include("transaction_reader.jl")
     @testset "Invalid output and unfinished miner" begin
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((2,1)=>2))
