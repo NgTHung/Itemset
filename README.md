@@ -40,7 +40,7 @@ Applications that start from labels, such as product names, map them to IDs and 
 
 `variant=:baseline` runs Eclat as the paper describes it. [docs/eclat.md](docs/eclat.md) states its invariants, why it outputs each frequent itemset once with its exact support, and its cost.
 
-`variant=:optimized` returns the same map with bitset tidsets in increasing-support item order. [docs/eclat-optimized.md](docs/eclat-optimized.md) states what changes and why the output stays exact.
+`variant=:optimized` returns the same map with bitset tidsets in increasing-support item order and perfect-extension pruning. [docs/eclat-optimized.md](docs/eclat-optimized.md) states what changes and why the output stays exact.
 
 ## Use the CLI
 

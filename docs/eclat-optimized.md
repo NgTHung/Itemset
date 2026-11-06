@@ -20,7 +20,7 @@ The baseline's proof uses only one property of the item order: it is a strict to
 
 ## Perfect extensions
 
-On dense data many joins return their left input unchanged. On Mushroom at minsup 0.05, the pruned search below reaches 33,819 nodes for 3,755,511 frequent itemsets ([plan](eclat-optimization-plan-2026-10-30.md#future-directions-for-the-report)), so the plain search repeats the same intersections about 100 times over. Perfect-extension pruning stops joining an item once it adds nothing to a tidset, and emits the itemsets it would have produced directly.
+On dense data many joins return their left input unchanged. On Mushroom at minsup 0.05, the pruned search below reaches 33,819 nodes for 3,755,511 frequent itemsets ([plan](eclat-optimization-plan-2026-10-30.md#future-directions-for-the-report)), so most itemsets need no intersection of their own. Perfect-extension pruning stops joining an item once it adds nothing to a tidset, and emits the itemsets it would have produced directly.
 
 ### Definition
 
