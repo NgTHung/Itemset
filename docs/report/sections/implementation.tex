@@ -348,3 +348,21 @@ các ngưỡng stress, trong khi không ngưỡng nào chậm đi quá 2{,}1\%. 
 trung bình nhân của $R$ theo CSDL là T10I4D100K 0{,}35, Retail 0{,}41, Accidents 0{,}61,
 Mushroom 0{,}73 và Chess 0{,}77. Ở Chess 0{,}5 và Mushroom 0{,}05, PrePost+ vẫn nhanh
 hơn, vì phần còn lại chủ yếu là ghi hàng triệu dòng văn bản.
+
+\subsubsection{Tiền biên dịch chương trình dòng lệnh}
+Sau hai bước trên, ở các ngưỡng cao một tiến trình \texttt{demo.jl} vẫn mất khoảng
+0{,}32 s, trong khi khởi động Julia chỉ mất 0{,}17 s. Cờ \texttt{--trace-compile-timing}
+cho thấy mỗi lần chạy vẫn biên dịch hàm \texttt{main} của chính \texttt{demo.jl} trong
+108{,}6 ms, vì mã của tệp script không nằm trong package image. Nhóm chuyển phần xử lý
+dòng lệnh vào gói (\texttt{src/cli.jl}), chạy nó trong workload tiền biên dịch, và để
+\texttt{demo.jl} chỉ còn một lời gọi. Một phép kiểm thử chạy \texttt{demo.jl} trong tiến
+trình mới và yêu cầu không có phương thức nào phải biên dịch.
+
+Trong cùng một phiên đo 495 lần chạy, mọi đầu ra vẫn khớp hoàn toàn với Eclat của SPMF. Mỗi
+tiến trình nhanh hơn từ 0{,}096 đến 0{,}160 s (trung vị 0{,}111 s), tức thời gian còn lại
+bằng 66\% đến 94\% trước đó. Chess 0{,}9 còn 0{,}217 s, trong đó chưa tới 0{,}03 s là đọc,
+khai thác và ghi. Tỉ số $R$ nay nằm trong khoảng 0{,}25 đến 0{,}74 trên cả 33 ngưỡng, với
+trung bình nhân theo CSDL là T10I4D100K 0{,}30, Retail 0{,}33, Mushroom 0{,}51, Chess
+0{,}53 và Accidents 0{,}53. Chi phí cố định còn lại là khởi động runtime của Julia, chỉ có
+thể bỏ đi nếu biên dịch trước toàn bộ chương trình thành tệp thực thi, chẳng hạn bằng
+\texttt{juliac}.
