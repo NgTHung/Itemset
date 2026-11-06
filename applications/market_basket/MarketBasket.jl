@@ -235,12 +235,9 @@ stock code or description with a tab or line break throws `ArgumentError` and
 leaves `dir` without partial output.
 """
 function write_market_basket(dir::AbstractString, basket)
-    baskets_per_item = zeros(Int, length(basket.codes))
-    for transaction in basket.transactions, id in transaction
-        baskets_per_item[id] += 1
-    end
+    baskets_per_item = item_frequencies(basket.transactions)
     items_header = ("id", "stock_code", "description", "baskets")
-    items = [(id, code, basket.descriptions[id], baskets_per_item[id]) for (id, code) in enumerate(basket.codes)]
+    items = [(id, code, basket.descriptions[id], get(baskets_per_item, id, 0)) for (id, code) in enumerate(basket.codes)]
     cleaning_header = ("step", "rows_removed", "rows", "invoices")
     cleaning = [(s.name, s.removed, s.rows, s.invoices) for s in basket.steps]
     check_tsv(items_header, items)

@@ -10,6 +10,8 @@ A database is a vector of transactions, and each transaction is a collection of 
 
 An empty transaction, such as an image with no visual words, is a valid record and counts in N. Dropping it raises every relative support, so an application keeps empty transactions unless its preprocessing notes justify the removal.
 
+`item_frequencies(transactions)` returns a dictionary from item ID to the number of transactions containing it. It uses the same canonicalization and invalid-item checks as the miner; repeated items in one transaction count once, and empty transactions contribute no items. Applications and dataset statistics share this count.
+
 ## Item labels
 
 Applications start from labels, such as product names or visual words, and the miner sees only IDs. Both applications use the same encoding, so a mapping recorded by one is read the same way by the other.

@@ -21,6 +21,22 @@ end
 
 read_transactions(path::AbstractString) = open(read_transactions, path)
 
+"""
+    item_frequencies(transactions) -> Dict{Int,Int}
+
+Count each item once per transaction, including duplicate transactions separately.
+Canonicalizes item IDs and throws `ArgumentError` for invalid transactions or IDs.
+"""
+function item_frequencies(transactions)
+    counts = Dict{Int,Int}()
+    for transaction in canonical_database(transactions)
+        for item in transaction
+            counts[item] = get(counts, item, 0) + 1
+        end
+    end
+    counts
+end
+
 is_spmf_metadata(line::AbstractString) = isempty(line) || startswith(line, ('#', '%', '@'))
 
 is_ascii_space(byte::UInt8) = byte == UInt8(' ') || 0x09 <= byte <= 0x0d

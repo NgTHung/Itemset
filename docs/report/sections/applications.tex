@@ -197,6 +197,85 @@ tiên các sản phẩm ít gặp, vì vậy bảng xếp hạng theo lift cần
 đơn hỗ trợ. Cuối cùng, mô tả sản phẩm là nhãn do cửa hàng nhập, có thể khác nhau
 giữa các mã gần giống nhau.
 \subsection{Khai thác mẫu hình ảnh — Phat}
-Mô tả ảnh thực, descriptors, codebook và ánh xạ visual words thành transaction.
-Trình bày patches, itemset và ảnh hỗ trợ; phân tích độ nhạy và thông tin vị trí/
-số lần xuất hiện bị mất. Kết quả cuối phải dùng Eclat của nhóm.
+Bộ dữ liệu Semeion từ UCI gồm 1.593 ảnh chữ số viết tay nhị phân kích thước
+$16\times16$ pixel, có nhãn từ 0 đến 9~\cite{semeionUCI}. Câu hỏi khảo sát là
+những nét cục bộ nào xuất hiện lặp lại giữa các ảnh. Mỗi ảnh được chia thành
+16 mảnh ảnh (patch) $4\times4$ không chồng lấp. Chúng tôi bỏ mảnh có dưới hai
+pixel nét, rồi dùng k-means với seed 42 để học codebook (từ điển mã) gồm
+24 visual words (từ thị giác). Một từ có mặt trong transaction (giao dịch)
+của ảnh khi khoảng cách Euclid bình phương giữa patch và tâm gần nhất không
+vượt quá 1,0. Mỗi từ chỉ xuất hiện một lần trong transaction, kể cả khi ảnh
+có nhiều patch cùng từ.
+
+Bản mã hóa sinh 18.386 patch từ 1.593 ảnh. Độ rộng transaction nhỏ nhất,
+trung vị và lớn nhất lần lượt là 0, 4 và 8; 11 ảnh không có từ nào. Cả
+24 từ đều được sử dụng. Hình ảnh nguồn theo nhãn và patch quan sát gần mỗi
+tâm, đồng thời được gán vào đúng từ và đạt ngưỡng khoảng cách, được lưu trong
+\texttt{digits.svg} và \texttt{visual\_words.svg}; đường
+dẫn và lệnh tái tạo nằm trong bản ghi thực nghiệm của kho mã nguồn.
+
+Tổng số lần hiện diện từ trong các transaction là 5.767; độ rộng trung bình
+là 3,6202 từ/ảnh. Mật độ giao dịch (transaction density) được tính bằng
+\(D=M/(NV)=0{,}150842\), trong đó \(M=5.767\) là tổng số lần hiện diện,
+\(N=1.593\) là số ảnh kể cả ảnh rỗng và \(V=24\) là kích thước từ điển.
+Các đại lượng này đếm mỗi từ một lần trong một ảnh. Tệp
+\texttt{manifest.toml} ghi seed, tham số, revision mã nguồn và mã băm
+SHA-256 của dữ liệu cùng từng artifact để kiểm tra tái lập. Codebook dùng
+toàn bộ dữ liệu cho phân tích mô tả; nhóm không suy luận khả năng tổng quát
+hóa trên ảnh chưa quan sát từ phép khớp này.
+
+\begin{table}[ht]
+\centering
+\caption{Số tập từ thị giác phổ biến trên Semeion với Eclat cơ bản}
+\label{tab:semeion-pilot}
+\begin{tabular}{r r r}
+\hline
+Minsup & Số ảnh tối thiểu & Số itemset \\
+\hline
+0,20 & 319 & 6 \\
+0,10 & 160 & 18 \\
+0,05 & 80 & 46 \\
+\hline
+\end{tabular}
+\end{table}
+
+Bảng~\ref{tab:semeion-pilot} dùng toàn bộ ảnh và biến thể Eclat cơ bản.
+Từ 13 xuất hiện trong 863 ảnh; patch đại diện của nó là một nét ngang ngắn.
+Cặp từ \{8, 13\} xuất hiện trong 330 ảnh. Đây là mẫu đồng xuất hiện, chưa
+chứng minh khả năng phân biệt nhãn. Phép đổi ảnh thành tập từ cũng làm mất
+vị trí và số lần lặp của patch. Đối chiếu toàn bộ đầu ra với SPMF Eclat cho
+6/6, 18/18 và 46/46 itemset khớp chính xác support tại ba ngưỡng trên.
+Đầu vào SPMF bỏ 11 ảnh rỗng, còn 1.582 giao dịch; nhóm dùng các ngưỡng
+tương ứng cùng số ảnh tối thiểu 319, 160 và 80 để giữ nguyên bài toán.
+Tệp \texttt{supporting\_images.tsv} lưu ID và nhãn của mọi ảnh hỗ trợ
+từng itemset, kèm các montage ảnh nguồn để kiểm tra trước khi diễn giải.
+
+Tập từ \{4, 8, 13\} có support 90 tại minsup 0,05. Bảng~\ref{tab:image-evidence}
+đưa ra ID ảnh nguồn để đối chiếu trực tiếp các mẫu. Trong cùng nhãn chữ số 0,
+ảnh 3 có cả từ 8 và 13, còn ảnh 2 chỉ có từ 13 trong cặp này. Với chữ số 2,
+ảnh 44 có đủ bộ ba, còn ảnh 41 thiếu từ 4. Các patch quan sát cho thấy mảng
+đậm cục bộ của từ 8 và nét ngang của từ 13, nhưng phép đồng xuất hiện không
+xác định quan hệ vị trí giữa các patch trên toàn ảnh. Các so sánh này hỗ trợ
+diễn giải nét cục bộ, chưa chứng minh đặc trưng phân loại chữ số.
+
+\begin{table}[ht]
+\centering
+\caption{ID ảnh minh họa khớp và không khớp các tập từ thị giác}
+\label{tab:image-evidence}
+\begin{tabular}{l r l l}
+\hline
+Tập từ & Support & Khớp & Không khớp \\
+\hline
+\{13\} & 863 & 2, 3, 4 & 1, 5, 7 \\
+\{8,13\} & 330 & 3, 11, 41 & 2, 4, 6 \\
+\{4,8,13\} & 90 & 44, 46, 61 & 41, 42, 43 \\
+\hline
+\end{tabular}
+\end{table}
+
+Các tệp \texttt{examples.tsv} và \texttt{example\_patches.tsv} lưu từ hiện
+diện, từ thiếu và tọa độ patch cho từng ảnh được hiển thị. Bộ đếm theo nhãn
+cho thấy cặp \{8,13\} xuất hiện trong 69/159 ảnh chữ số 3 và 9/161 ảnh chữ
+số 4. Đây là tần suất mô tả trên cùng tập dùng để học codebook. Thời gian,
+ngưỡng support nguyên, revision, mã băm nguồn miner và dung lượng đầu ra
+được lưu trong \texttt{mining\_manifest.toml}; không giới hạn độ dài itemset.

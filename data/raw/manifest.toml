@@ -1,6 +1,17 @@
 # Raw application downloads, identified by SHA-256. These files are not SPMF
 # transaction databases, so entries carry no transaction statistics.
-# `applications/market_basket/prepare.jl` downloads and verifies them.
+# Application preparation scripts download and verify them.
+
+[semeion]
+version = "UCI Semeion Handwritten Digit (dataset 178), original text file"
+file = "semeion.data"
+sha256 = "f43228ae3da5ea6a3c95069d53450b86166770e3b719dcc333182128fe08d4b1"
+origin = "UCI Machine Learning Repository, https://archive.ics.uci.edu/dataset/178/semeion+handwritten+digit"
+terms = "CC BY 4.0; cite the UCI dataset"
+
+[[semeion.sources]]
+url = "https://archive.ics.uci.edu/ml/machine-learning-databases/semeion/semeion.data"
+format = "text"
 
 [online_retail_ii]
 version = "UCI Online Retail II (dataset 502), both yearly sheets as one CSV"
