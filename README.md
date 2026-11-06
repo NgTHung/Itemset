@@ -40,6 +40,8 @@ Applications that start from labels, such as product names, map them to IDs and 
 
 `variant=:baseline` runs Eclat as the paper describes it. [docs/eclat.md](docs/eclat.md) states its invariants, why it outputs each frequent itemset once with its exact support, and its cost.
 
+`variant=:optimized` returns the same map with bitset tidsets in increasing-support item order. [docs/eclat-optimized.md](docs/eclat-optimized.md) states what changes and why the output stays exact.
+
 ## Use the CLI
 
 ```sh
@@ -70,7 +72,7 @@ If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Juli
 
 ## Layout
 
-- `src/`: the package. `structures.jl` holds the types and thresholds, `utils.jl` the SPMF reader and writer, `algorithm/` the Eclat variants, which [docs/eclat.md](docs/eclat.md) explains, and `precompile.jl` the workload that stores compiled mining code in the package image.
+- `src/`: the package. `structures.jl` holds the types and thresholds, `utils.jl` the SPMF reader and writer, `algorithm/` the Eclat variants, which [docs/eclat.md](docs/eclat.md) and [docs/eclat-optimized.md](docs/eclat-optimized.md) explain, and `precompile.jl` the workload that stores compiled mining code in the package image.
 - `demo.jl`: the CLI.
 - `tests/`: the test suite and fixture maps. `test/` holds only the entry-point shim.
 - `data/toy/`: hand-derived fixture databases.
