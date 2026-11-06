@@ -13,6 +13,7 @@ include("utils.jl")
 include("algorithm/eclat.jl")
 include("algorithm/tidsets.jl")
 include("algorithm/eclat_optimized.jl")
+include("cli.jl")
 include("precompile.jl")
 
 end
