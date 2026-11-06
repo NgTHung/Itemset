@@ -12,8 +12,9 @@ end
 const BitsetMember = ClassMember{UInt64}
 const ListMember = ClassMember{Int}
 
-# Children switch to tid lists when their mean support is below this fraction of ⌈N/64⌉.
-const LIST_RATIO = 1 / 6
+# Children switch to tid lists when their mean support is below this fraction of ⌈N/64⌉. A BBQ sweep
+# found 1/16 fastest on T10I4D100K 0.00025 (1.12 s to 0.94 s); 1/8 and above slowed T10I4D100K 0.001.
+const LIST_RATIO = 1 / 16
 
 """
 Spare tidsets of each kind, reused across joins, and the ratio that moves a

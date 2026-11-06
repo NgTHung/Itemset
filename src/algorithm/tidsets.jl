@@ -47,22 +47,21 @@ early once the tids found plus the shorter remainder fall below `minsup`; it
 never stops on reaching `minsup`, since the child needs its whole tidset.
 """
 function intersect_lists!(dest::Vector{Int}, a::Vector{Int}, b::Vector{Int}, minsup::Int)
-    empty!(dest)
-    i, j = 1, 1
-    while i <= length(a) && j <= length(b)
-        length(dest) + min(length(a) - i, length(b) - j) + 1 < minsup && return -1
-        x, y = a[i], b[j]
-        if x == y
-            push!(dest, x)
-            i += 1
-            j += 1
-        elseif x < y
-            i += 1
-        else
-            j += 1
-        end
+    na, nb = length(a), length(b)
+    resize!(dest, min(na, nb))
+    i, j, found = 1, 1, 0
+    # Each step writes a[i] and keeps it only on a match, so the loop has no data-dependent branch.
+    while i <= na && j <= nb
+        found + min(na - i, nb - j) + 1 < minsup && return -1
+        # In bounds: i <= na, j <= nb, and found < min(i, j) <= min(na, nb) = length(dest).
+        @inbounds x, y = a[i], b[j]
+        @inbounds dest[found+1] = x
+        found += x == y
+        i += x <= y
+        j += y <= x
     end
-    return length(dest) >= minsup ? length(dest) : -1
+    resize!(dest, found)
+    return found >= minsup ? found : -1
 end
 
 """Write the tids of bitset `words` into `dest` in ascending order: bit `t - 1` is tid `t`."""
