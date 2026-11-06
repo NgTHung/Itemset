@@ -51,3 +51,7 @@ uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/compa
   "SPMF PrePost+=results/raw/bbq-perfect-extensions-cli-20261106T091449Z:prepost" \
   --out results/figures/bbq-perfect-extensions-cli-20261106
 ```
+
+## Decision
+
+On 2026-11-06 the team kept the stage despite the survival rule. It is exact, it lowers peak RSS by up to 10% and never raises it, and its search nodes are the basis of the compact-results direction in the [plan](eclat-optimization-plan-2026-10-30.md#future-directions-for-the-report). A profile of the same revision then showed that sorting the output for the writer, not the search, takes most of a dense low-threshold run. The [sorted-output record](bbq-sorted-output-runtime-2026-11-06.md) measures the fix.
