@@ -109,3 +109,33 @@ vị trí và số lần lặp của patch. Đối chiếu toàn bộ đầu ra 
 tương ứng cùng số ảnh tối thiểu 319, 160 và 80 để giữ nguyên bài toán.
 Tệp \texttt{supporting\_images.tsv} lưu ID và nhãn của mọi ảnh hỗ trợ
 từng itemset, kèm các montage ảnh nguồn để kiểm tra trước khi diễn giải.
+
+Tập từ \{4, 8, 13\} có support 90 tại minsup 0,05. Bảng~\ref{tab:image-evidence}
+đưa ra ID ảnh nguồn để đối chiếu trực tiếp các mẫu. Trong cùng nhãn chữ số 0,
+ảnh 3 có cả từ 8 và 13, còn ảnh 2 chỉ có từ 13 trong cặp này. Với chữ số 2,
+ảnh 44 có đủ bộ ba, còn ảnh 41 thiếu từ 4. Các patch quan sát cho thấy mảng
+đậm cục bộ của từ 8 và nét ngang của từ 13, nhưng phép đồng xuất hiện không
+xác định quan hệ vị trí giữa các patch trên toàn ảnh. Các so sánh này hỗ trợ
+diễn giải nét cục bộ, chưa chứng minh đặc trưng phân loại chữ số.
+
+\begin{table}[ht]
+\centering
+\caption{ID ảnh minh họa khớp và không khớp các tập từ thị giác}
+\label{tab:image-evidence}
+\begin{tabular}{l r l l}
+\hline
+Tập từ & Support & Khớp & Không khớp \\
+\hline
+\{13\} & 863 & 2, 3, 4 & 1, 5, 7 \\
+\{8,13\} & 330 & 3, 11, 41 & 2, 4, 6 \\
+\{4,8,13\} & 90 & 44, 46, 61 & 41, 42, 43 \\
+\hline
+\end{tabular}
+\end{table}
+
+Các tệp \texttt{examples.tsv} và \texttt{example\_patches.tsv} lưu từ hiện
+diện, từ thiếu và tọa độ patch cho từng ảnh được hiển thị. Bộ đếm theo nhãn
+cho thấy cặp \{8,13\} xuất hiện trong 69/159 ảnh chữ số 3 và 9/161 ảnh chữ
+số 4. Đây là tần suất mô tả trên cùng tập dùng để học codebook. Thời gian,
+ngưỡng support nguyên, revision, mã băm nguồn miner và dung lượng đầu ra
+được lưu trong \texttt{mining\_manifest.toml}; không giới hạn độ dài itemset.

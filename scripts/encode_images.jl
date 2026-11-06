@@ -22,14 +22,19 @@ function prepare_encoding_command(args; entry=semeion_entry(), fetch=Experiments
     (; input, output, encoding, entry)
 end
 
-function write_command_encoding(prepared, args; script="scripts/encode_images.jl")
+function command_provenance(args; script="scripts/encode_images.jl")
     root = dirname(@__DIR__)
     revision = ispath(joinpath(root, ".git")) ? readchomp(`git -C $root rev-parse HEAD`) : "unavailable"
     dirty = revision == "unavailable" || !isempty(readchomp(`git -C $root status --porcelain --untracked-files=no`))
     command = ["julia", "--startup-file=no", "--project=.", script, args...]
+    (; revision, dirty, command)
+end
+
+function write_command_encoding(prepared, args; script="scripts/encode_images.jl")
+    metadata = command_provenance(args; script)
     SemeionPilot.write_encoding(prepared.output, prepared.encoding;
         source_sha=prepared.entry.sha256, source_url=first(prepared.entry.sources).url,
-        revision, dirty, command)
+        metadata...)
     print(read(joinpath(prepared.output, "summary.txt"), String))
     prepared.output
 end

@@ -26,10 +26,12 @@ Image and plotting packages need team approval before they enter `Project.toml`.
 The Semeion runner uses the shared dataset loader and seeded Julia patch encoder. It verifies `semeion.data` against [the raw-data manifest](../../data/raw/manifest.toml), downloads missing data into a staging file, and replaces a corrupt cache only after the replacement verifies. Run from the repository root:
 
 ```sh
-julia --startup-file=no --project=. scripts/image_pilot.jl data/raw/semeion/semeion.data results/raw/semeion-pilot
+julia --startup-file=no --project=. scripts/mine_image_patterns.jl data/raw/semeion/semeion.data results/raw/semeion-patterns
 ```
 
-The output directory must not exist. The runner writes transactions, word frequencies, codebook centers, accepted representative patches, and baseline Eclat results at three support thresholds. `patterns-<minsup>.txt` holds complete itemset/support maps. `supporting_images.tsv` lists every supporting image ID and label for each itemset; `supporting-<minsup>.svg` shows up to ten source images for the longest pattern, breaking ties by support and then item IDs. The [Julia notebook](../../notebooks/demo.ipynb) runs the same verified acquisition and pilot.
+The output directory must not exist. `patterns-<minsup>.txt` holds complete baseline maps at three thresholds; `supporting_images.tsv` lists every supporting source ID and label. `mining_manifest.toml` records revision, miner source hashes, timing boundaries, CPU, threads, output bytes and artifact hashes. Timing covers each `mine` call after one untimed warm-up, excluding encoding and file output. No pattern cap is imposed. `scripts/image_pilot.jl` calls the same runner.
+
+The runner selects the most supported singleton, most supported combination, and longest pattern, resolving ties by support then item IDs. `selected_patterns.tsv` records support and per-digit counts. `examples.tsv` and `example_patches.tsv` trace displayed source images and their actual accepted patches. The SVGs show up to three matches and three nonmatches; comparisons prefer the first match's digit label, then word overlap and source ID. Blue rectangles locate accepted patches in the original image. Missing words are labeled explicitly. The [Julia notebook](../../notebooks/demo.ipynb) displays these comparisons.
 
 ## Deliverables
 
