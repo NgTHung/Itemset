@@ -26,6 +26,7 @@ end
 
 toy_config(; kw...) = Experiments.parse_run_config(merge(Dict{String,Any}(
     "name" => "toy", "variants" => ["baseline"], "repeats" => 1, "timeout_seconds" => 300,
+    "verify_outputs" => false,
     "series" => [Dict("dataset" => "baskets", "minsup" => [0.5])]),
     Dict{String,Any}(string(k) => v for (k, v) in kw)))
 
@@ -141,7 +142,7 @@ toy_config(; kw...) = Experiments.parse_run_config(merge(Dict{String,Any}(
             manifest, data = toy_benchmark(dir)
             # 0.2 s cannot fit Julia startup, so the first attempt times out and
             # the lower threshold, which can only be slower, is skipped.
-            config = toy_config(; timeout_seconds=0.2,
+            config = toy_config(; timeout_seconds=0.2, skip_after_timeout=true,
                 series=[Dict("dataset" => "baskets", "minsup" => [0.5, 0.75])])
             out = joinpath(dir, "run")
             rows = Experiments.run_experiment(config, manifest; data_dir=data, out_dir=out)

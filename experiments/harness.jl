@@ -2,7 +2,8 @@ const REPO_ROOT = dirname(@__DIR__)
 const MEASURE_SCRIPT = joinpath(@__DIR__, "measure.jl")
 const WORKER_SCRIPT = joinpath(@__DIR__, "eclat_worker.jl")
 const RESULT_FIELDS = split(strip(read(joinpath(@__DIR__, "result-fields.txt"), String)), ',')
-const VARIANTS = (:baseline, :optimized, :spmf)
+const VARIANTS = (:baseline, :optimized, :spmf, :prepost)
+const REFERENCE_VARIANTS = (:spmf, :prepost)
 
 Base.@kwdef struct Series
     dataset::String
@@ -27,6 +28,10 @@ Base.@kwdef struct RunConfig
     java_options::Vector{String} = String[]
     spmf_jar::String = joinpath(REPO_ROOT, "tools", "spmf", "spmf.jar")
     spmf_version::String = ""
+    mode::Symbol = :cold
+    stage::String = "B0"
+    verify_outputs::Bool = true
+    skip_after_timeout::Bool = false
     table::Dict{String,Any} = Dict{String,Any}()
 end
 
@@ -53,6 +58,12 @@ function parse_run_config(table::AbstractDict)
     timeout > 0 || throw(ArgumentError("run config: timeout_seconds must be positive, got $timeout"))
     threads = get_field("julia_threads", Integer, 1)
     threads >= 1 || throw(ArgumentError("run config: julia_threads must be at least 1, got $threads"))
+    mode = Symbol(get_field("mode", String, "cold"))
+    mode in (:cold, :warm, :cli) || throw(ArgumentError("run config: invalid mode $mode"))
+    mode == :warm && any(in(REFERENCE_VARIANTS), variants) &&
+        throw(ArgumentError("run config: warm mode accepts only Julia variants, got $variants"))
+    stage = get_field("stage", String, "B0")
+    isempty(strip(stage)) && throw(ArgumentError("run config: stage must not be empty"))
     series = Series[]
     for item in get_field("series", Vector)
         dataset = get(item, "dataset", nothing)
@@ -73,6 +84,8 @@ function parse_run_config(table::AbstractDict)
         java_options=String.(get_field("java_options", Vector, String[])),
         spmf_jar=resolve(get_field("spmf_jar", String, "tools/spmf/spmf.jar")),
         spmf_version=get_field("spmf_version", String, ""),
+        mode, stage, verify_outputs=get_field("verify_outputs", Bool, true),
+        skip_after_timeout=get_field("skip_after_timeout", Bool, false),
         table=Dict{String,Any}(table))
 end
 
@@ -121,12 +134,19 @@ function plan_attempts(config::RunConfig, manifest::AbstractDict{String,DatasetE
 end
 
 function measured_command(attempt::Attempt, config::RunConfig, input::String, output::String, report::String)
-    if attempt.variant == :spmf
-        return `$(config.java) $(config.java_options) -jar $(config.spmf_jar) run Eclat $input $output $(attempt.minsup)`
+    if attempt.variant in REFERENCE_VARIANTS
+        algorithm = attempt.variant == :spmf ? "Eclat" : "PrePost+"
+        return `$(config.java) $(config.java_options) -jar $(config.spmf_jar) run $algorithm $input $output $(attempt.minsup)`
     end
-    return `$(Base.julia_cmd()) --startup-file=no --threads=$(config.julia_threads) --project=$(config.project)
-            $WORKER_SCRIPT --variant $(attempt.variant) --minsup $(attempt.minsup)
-            --output $output --report $report $input`
+    julia = `$(Base.julia_cmd()) --startup-file=no --threads=$(config.julia_threads) --project=$(config.project)`
+    if config.mode == :cli
+        # The measured revision's own CLI is the program a user runs, the counterpart of
+        # the SPMF command line, so no measurement code runs or compiles inside it.
+        return `$julia $(joinpath(config.project, "demo.jl")) --minsup $(attempt.minsup)
+                --variant $(attempt.variant) --output $output $input`
+    end
+    return `$julia $WORKER_SCRIPT --variant $(attempt.variant) --minsup $(attempt.minsup)
+            --output $output --report $report --mode $(config.mode) $input`
 end
 
 """Parse the statistics block SPMF prints after a run."""
@@ -142,8 +162,10 @@ function parse_spmf_stats(text::AbstractString)
 end
 
 """Count itemset lines, skipping SPMF's `@` metadata lines."""
-count_itemset_lines(path::AbstractString) =
-    count(line -> !isempty(line) && !startswith(line, '@'), eachline(path))
+function count_itemset_lines(path::AbstractString)
+    isfile(path) || throw(ArgumentError("missing itemset output at $(repr(path))"))
+    return count(line -> !isempty(line) && !startswith(line, '@'), eachline(path))
+end
 
 function csv_field(value)
     value === missing && return ""
@@ -192,7 +214,7 @@ function capture_environment(config::RunConfig)
         "java_version" => "",
         "reference_version" => "",
     )
-    if :spmf in config.variants
+    if config.verify_outputs || any(in(REFERENCE_VARIANTS), config.variants)
         isfile(config.spmf_jar) || throw(ArgumentError("SPMF JAR not found at $(config.spmf_jar); see tools/spmf/README.md"))
         env["java_version"] = try
             java_version(config.java)
@@ -203,4 +225,24 @@ function capture_environment(config::RunConfig)
         env["reference_version"] = strip("SPMF $(config.spmf_version) jar-sha256=$(env["spmf_jar_sha256"])")
     end
     return env
+end
+
+"""Archive source checksums and the worktree patch so dirty revisions remain attributable."""
+function archive_sources(config::RunConfig, out_dir::AbstractString)
+    checksums = Dict{String,Any}()
+    for (name, root, subdirs) in (("package", config.project, ["src"]),
+                                  ("harness", REPO_ROOT, ["experiments", "tools/spmf"]))
+        paths = [joinpath(root, p) for p in ("Project.toml", "Manifest.toml")]
+        for subdir in subdirs, (dir, _, files) in walkdir(joinpath(root, subdir)), file in files
+            endswith(file, ".jl") && push!(paths, joinpath(dir, file))
+        end
+        checksums[name] = Dict(relpath(p, root) => file_sha256(p) for p in paths if isfile(p))
+        try
+            patch = read(`git -C $root diff HEAD --binary`, String)
+            write(joinpath(out_dir, name * "-worktree.patch"), patch)
+        catch err
+            checksums[name * "_patch_error"] = sprint(showerror, err)
+        end
+    end
+    open(io -> TOML.print(io, checksums), joinpath(out_dir, "source-checksums.toml"), "w")
 end

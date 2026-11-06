@@ -137,3 +137,103 @@ khóa và tính ổn định kiểu (type stability). Bộ đếm vét cạn ch�
 phép so sánh với SPMF được trình bày trong chương thực nghiệm.
 
 Bổ sung kỹ thuật tối ưu đã cài đặt kèm bằng chứng đo so với bản cơ bản.
+
+\subsubsection{Mốc đo của bản cơ bản}
+Mọi kỹ thuật tối ưu được so với một mốc đo (baseline measurement) cố định. Nhóm chạy bản
+cơ bản, Eclat của SPMF và PrePost+ của SPMF~\cite{spmf2016} trên đủ 33 ngưỡng của năm
+CSDL Chess, Mushroom, Retail, T10I4D100K và Accidents. Mỗi chương trình chạy năm lần ở
+mỗi ngưỡng trong chế độ nguội (cold), tức mỗi lần là một tiến trình mới, nên có tổng cộng
+495 lần chạy. Toàn bộ đợt đo diễn ra liên tục trên một máy Linux (Intel Core i7-11800H,
+7{,}4 GiB RAM) với Julia 1.13.2 một luồng và SPMF 2.66 trên Java Temurin 25.0.4.1, giới
+hạn heap 4 GiB, xung nhịp CPU cố định 2{,}3 GHz. Cả 495 đầu ra đều khớp hoàn toàn với
+một lần chạy Eclat của SPMF độc lập; không lần chạy nào lỗi hoặc vượt giới hạn 300 s. Độ
+trải tứ phân vị (interquartile range, IQR) của bản cơ bản không vượt quá 3\% trung vị ở
+mọi ngưỡng, nên một chênh lệch lớn hơn mức này giữa hai phiên bản có thể quy cho thay đổi
+mã nguồn.
+
+Bản cơ bản giao hai tid-list bằng một lượt trộn (merge) trên hai danh sách đã sắp xếp,
+với chi phí $O(|t(P \cup \{a\})| + |t(P \cup \{b\})|)$. Tiền tố nằm trong một mảng dùng
+chung cho mọi mức của tìm kiếm. Kết quả được lưu thành ba mảng phẳng: item, vị trí bắt
+đầu của mỗi itemset và độ hỗ trợ. Tệp được đọc và ghi trực tiếp theo byte.
+Bảng~\ref{tab:baseline} cho kết quả ở ngưỡng thấp nhất của mỗi CSDL.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{Trung vị thời gian tiến trình nguội (giây) ở ngưỡng thấp nhất của mỗi CSDL,
+năm lần chạy mỗi ô}
+\label{tab:baseline}
+\begin{tabular}{lrrrrr}
+\hline
+Dữ liệu / minsup & Itemset & Bản cơ bản & Eclat & PrePost+ & \texttt{mine} \\
+\hline
+Chess / 0{,}6 & 254\,944 & 5{,}85 & 15{,}98 & 0{,}59 & 51\% \\
+Mushroom / 0{,}1 & 574\,431 & 8{,}74 & 7{,}44 & 0{,}68 & 67\% \\
+Retail / 0{,}001 & 7\,589 & 14{,}89 & 1{,}53 & 3{,}51 & 81\% \\
+T10I4D100K / 0{,}00025 & 96\,959 & 13{,}08 & 8{,}02 & 4{,}31 & 78\% \\
+Accidents / 0{,}65 & 1\,093 & 9{,}55 & 26{,}87 & 2{,}37 & 64\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Bản cơ bản nhanh hơn Eclat của SPMF ở mọi ngưỡng của Accidents và ở Chess từ 0{,}7 trở
+xuống, nhưng chậm hơn PrePost+ từ 2{,}2 đến 12{,}8 lần trên cả 33 ngưỡng. Thời gian
+chạy có hai điểm nghẽn. Cột \texttt{mine} là tỉ lệ thời gian tiến trình nằm trong lời
+gọi khai thác: lời gọi này chiếm 51\% đến 81\% thời gian ở
+ngưỡng thấp nhất và cấp phát 3{,}3 đến 5{,}7 GiB, chủ yếu cho tid-list mới của mỗi phép
+giao. Điểm nghẽn thứ hai là chi phí cố định: ngoài ba pha đọc, khai thác và ghi, mỗi
+tiến trình Julia mất thêm 2{,}77 đến 2{,}88 s. Khởi động Julia chỉ chiếm 0{,}17 s; phần
+còn lại là biên dịch JIT. Ở ngưỡng cao, chi phí cố định này chiếm gần hết thời gian chạy,
+trong khi PrePost+ hoàn tất mọi ngưỡng của Chess và Mushroom trong 0{,}40 đến 0{,}68 s.
+Vì vậy, bước tối ưu tiếp theo là loại bỏ phần biên dịch bằng tiền biên dịch
+(precompilation), sau đó mới đến một biểu diễn tidset nhanh hơn cho phép giao.
+
+\subsubsection{Tiền biên dịch}
+Nhóm chạy các hàm công khai \texttt{read\_transactions}, \texttt{mine\_packed},
+\texttt{mine} và \texttt{write\_itemsets} trên một CSDL nhỏ trong lúc Julia dựng package
+image, để mã máy của chúng được lưu kèm gói và không phải biên dịch lại ở mỗi tiến trình.
+Một phép kiểm thử chạy các hàm này trong tiến trình mới với \texttt{--trace-compile} và
+yêu cầu không có phương thức nào của gói phải biên dịch khi chạy.
+
+Để đo riêng tác động này, nhóm chạy hai đợt liên tiếp trên cùng máy với cùng cấu hình mốc
+đo, mỗi đợt 165 lần chạy trên 33 ngưỡng. Hai đợt đo trực tiếp tiến trình \texttt{demo.jl},
+tức chương trình người dùng chạy, nên mã đo không được biên dịch cùng tiến trình. Cả 330
+đầu ra đều khớp hoàn toàn với Eclat của SPMF, và IQR không vượt quá 4{,}1\% trung vị.
+Thời gian của PrePost+ lấy từ mốc đo ở mục trước, nên tỉ số
+$R = T_\text{sau} / T_\text{PrePost+}$, với $T_\text{sau}$ là thời gian sau tiền biên
+dịch và $T_\text{PrePost+}$ là thời gian của PrePost+, chỉ là ước lượng giữa hai phiên đo.
+Bảng~\ref{tab:precompile} cho kết quả ở ngưỡng cao nhất và thấp nhất của mỗi CSDL.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Trung vị thời gian tiến trình nguội (giây) của \texttt{demo.jl} trước và sau tiền
+biên dịch, năm lần chạy mỗi ô}
+\label{tab:precompile}
+\begin{tabular}{lrrrr}
+\hline
+Dữ liệu / minsup & Trước & Sau & PrePost+ & $R$ \\
+\hline
+Chess / 0{,}9 & 2{,}36 & 0{,}33 & 0{,}40 & 0{,}82 \\
+Chess / 0{,}6 & 5{,}42 & 3{,}12 & 0{,}59 & 5{,}26 \\
+Mushroom / 0{,}5 & 2{,}34 & 0{,}32 & 0{,}43 & 0{,}76 \\
+Mushroom / 0{,}1 & 8{,}26 & 6{,}49 & 0{,}68 & 9{,}52 \\
+Retail / 0{,}01 & 2{,}54 & 0{,}54 & 0{,}76 & 0{,}70 \\
+Retail / 0{,}001 & 14{,}90 & 12{,}22 & 3{,}51 & 3{,}48 \\
+T10I4D100K / 0{,}01 & 5{,}10 & 2{,}79 & 1{,}41 & 1{,}97 \\
+T10I4D100K / 0{,}00025 & 12{,}72 & 10{,}51 & 4{,}31 & 2{,}44 \\
+Accidents / 0{,}95 & 3{,}31 & 1{,}30 & 1{,}68 & 0{,}77 \\
+Accidents / 0{,}65 & 9{,}03 & 6{,}99 & 2{,}37 & 2{,}95 \\
+\hline
+\end{tabular}
+\end{table}
+
+Tiền biên dịch rút ngắn mỗi tiến trình từ 1{,}77 đến 2{,}67 s (trung vị 2{,}04 s), tức
+thời gian còn lại bằng 14\% đến 83\% trước đó. Bộ nhớ đỉnh giảm 3\% đến 18\%, còn thời
+gian nạp gói chỉ tăng từ 0{,}164 lên 0{,}176 s. Bản cơ bản đạt $R \le 1$ ở 11 trên 33
+ngưỡng, chủ yếu ở các ngưỡng cao. Trung bình nhân của $R$ theo CSDL vẫn lớn hơn 1: Accidents
+1{,}25, Retail 1{,}31, Mushroom 1{,}60, Chess 1{,}71 và T10I4D100K 2{,}78. Ở ngưỡng thấp,
+phần thời gian còn lại chủ yếu là khai thác, nên bước tiếp theo là một biểu diễn tidset
+nhanh hơn cho phép giao.

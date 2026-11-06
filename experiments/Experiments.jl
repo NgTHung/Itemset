@@ -13,6 +13,8 @@ using TOML: TOML
 
 include("datasets.jl")
 include("harness.jl")
+include("references.jl")
+include("summary.jl")
 include("runner.jl")
 
 end
