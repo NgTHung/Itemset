@@ -56,7 +56,7 @@ Suppose a node N on the path a₁, a₂, ..., aₖ emits Z. At the node N_j reac
 
 ## Root pair counts
 
-On sparse data almost every root join fails: on Retail at minsup 0.001, 2,237,000 of 2,239,786 root joins fall below the threshold, and each reads 1,378 words. Zaki (2000, Sec. 4.2) counts the 2-itemsets from the horizontal database instead. `count_pairs` does this in one pass: for each transaction it ranks the frequent items it holds and adds one to the slot of every pair in a triangular table of m(m − 1)/2 counts. The root search then joins members i and j only when their pair count reaches minsup.
+On sparse data almost every root join fails: on Retail at minsup 0.001, 99.9% of 2,239,786 root joins fall below the threshold, and each reads 1,378 words. Zaki (2000, Sec. 4.2) counts the 2-itemsets from the horizontal database instead. `count_pairs` does this in one pass: for each transaction it ranks the frequent items it holds and adds one to the slot of every pair in a triangular table of m(m − 1)/2 counts. The root search then joins members i and j only when their pair count reaches minsup.
 
 The skip is exact. At the root the prefix is empty, so the join of members i and j has tidset t({a_i, a_j}), whose size is the pair count. A pair below minsup would fail its join anyway, and every pair at or above it is joined as before, so the classes, and the proofs above, are unchanged. Classes below the root join without counts.
 
