@@ -70,7 +70,7 @@ If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Juli
 
 ## Layout
 
-- `src/`: the package. `structures.jl` holds the types and thresholds, `utils.jl` the SPMF reader and writer, `algorithm/` the Eclat variants, which [docs/eclat.md](docs/eclat.md) explains.
+- `src/`: the package. `structures.jl` holds the types and thresholds, `utils.jl` the SPMF reader and writer, `algorithm/` the Eclat variants, which [docs/eclat.md](docs/eclat.md) explains, and `precompile.jl` the workload that stores compiled mining code in the package image.
 - `demo.jl`: the CLI.
 - `tests/`: the test suite and fixture maps. `test/` holds only the entry-point shim.
 - `data/toy/`: hand-derived fixture databases.

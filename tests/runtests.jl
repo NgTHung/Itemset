@@ -163,6 +163,8 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         @test read(path, String) == "keep\n"
     end
     include("eclat.jl")
+    include("frequent_itemsets.jl")
+    include("transaction_reader.jl")
     @testset "Invalid output and unfinished miner" begin
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((2,1)=>2))
         @test_throws ArgumentError write_itemsets(IOBuffer(), Dict((1,)=>0))
@@ -174,6 +176,7 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         @test_throws ErrorException mine([[1]]; minsup=1, variant=:optimized)
     end
     include("cli.jl")
+    include("precompile.jl")
     include("benchmark_data.jl")
     include("image_patterns.jl")
     include("image_encoding.jl")
@@ -181,4 +184,6 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     include("image_pilot_cli.jl")
     include("harness.jl")
     include("market_basket.jl")
+    include("market_basket_rules.jl")
+    include("market_basket_scripts.jl")
 end
