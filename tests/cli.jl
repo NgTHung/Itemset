@@ -1,4 +1,4 @@
-include(joinpath(dirname(@__DIR__), "demo.jl"))
+main(args) = ItemsetMining.cli_main(args)
 
 threshold_flag(minsup) = minsup isa Integer ? "--min-count" : "--minsup"
 
