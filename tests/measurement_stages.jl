@@ -17,7 +17,7 @@
 
     @testset "Modes, stages, and required points" begin
         config = toy_config(; variants=["baseline", "spmf", "prepost"], mode="cold", stage="B0")
-        @test config.mode == :cold && config.stage == "B0"
+        @test config.mode == :cold && only(config.revisions).stage == "B0"
         @test !config.skip_after_timeout
         @test toy_config(; mode="warm").mode == :warm
         @test toy_config(; mode="cli", variants=["baseline", "prepost"]).mode == :cli
@@ -32,7 +32,7 @@
             cli = toy_config(; mode="cli")
             command = string(Experiments.measured_command(first(Experiments.plan_attempts(cli, manifest)),
                                                           cli, "in", "out", "report"))
-            @test occursin(joinpath(cli.project, "demo.jl"), command)
+            @test occursin(joinpath(only(cli.revisions).project, "demo.jl"), command)
             @test !occursin("eclat_worker", command) && !occursin("report", command)
         end
     end

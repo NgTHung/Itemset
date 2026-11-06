@@ -2,7 +2,7 @@
 name = "runtime"
 variants = ["baseline", "spmf", "prepost"]
 mode = "cold"
-stage = "B0"
+stage = "baseline"
 repeats = 5
 timeout_seconds = 300
 keep_outputs = true

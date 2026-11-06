@@ -1,7 +1,7 @@
 name = "development"
 variants = ["baseline", "spmf", "prepost"]
 mode = "cold"
-stage = "B0"
+stage = "baseline"
 hypothesis = "Establish exact-map controls before changing input, output, or mining code."
 repeats = 3
 timeout_seconds = 300

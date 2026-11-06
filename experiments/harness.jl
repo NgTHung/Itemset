@@ -10,10 +10,16 @@ Base.@kwdef struct Series
     minsup::Vector{Float64}
 end
 
+"""A measured checkout and the stage label its rows carry."""
+struct Revision
+    stage::String
+    project::String
+end
+
 """
 One experiment: which variants run on which thresholds, how often, and with
-which tools. `project` is the checkout whose `ItemsetMining` is measured, so a
-run can time another revision with this repository's harness.
+which tools. Each revision is a checkout whose `ItemsetMining` is measured, so
+one run can time several revisions with this repository's harness.
 """
 Base.@kwdef struct RunConfig
     name::String
@@ -21,7 +27,7 @@ Base.@kwdef struct RunConfig
     repeats::Int
     timeout_seconds::Float64
     series::Vector{Series}
-    project::String = REPO_ROOT
+    revisions::Vector{Revision} = [Revision("baseline", REPO_ROOT)]
     keep_outputs::Bool = false
     julia_threads::Int = 1
     java::String = "java"
@@ -29,7 +35,6 @@ Base.@kwdef struct RunConfig
     spmf_jar::String = joinpath(REPO_ROOT, "tools", "spmf", "spmf.jar")
     spmf_version::String = ""
     mode::Symbol = :cold
-    stage::String = "B0"
     verify_outputs::Bool = true
     skip_after_timeout::Bool = false
     table::Dict{String,Any} = Dict{String,Any}()
@@ -41,7 +46,9 @@ load_run_config(path::AbstractString) = parse_run_config(TOML.parsefile(path))
     parse_run_config(table) -> RunConfig
 
 Validate a run configuration. Relative `project`, `spmf_jar`, and `java` paths
-resolve against the repository root. Throws `ArgumentError` naming the field.
+resolve against the repository root. A config gives either one `stage` and
+`project`, or a `revisions` list of tables with both. Throws `ArgumentError`
+naming the field.
 """
 function parse_run_config(table::AbstractDict)
     get_field(key, type, default=nothing) = begin
@@ -62,8 +69,6 @@ function parse_run_config(table::AbstractDict)
     mode in (:cold, :warm, :cli) || throw(ArgumentError("run config: invalid mode $mode"))
     mode == :warm && any(in(REFERENCE_VARIANTS), variants) &&
         throw(ArgumentError("run config: warm mode accepts only Julia variants, got $variants"))
-    stage = get_field("stage", String, "B0")
-    isempty(strip(stage)) && throw(ArgumentError("run config: stage must not be empty"))
     series = Series[]
     for item in get_field("series", Vector)
         dataset = get(item, "dataset", nothing)
@@ -75,18 +80,46 @@ function parse_run_config(table::AbstractDict)
     end
     isempty(series) && throw(ArgumentError("run config: series is empty"))
     resolve(path) = isabspath(path) ? path : normpath(joinpath(REPO_ROOT, path))
+    revisions = parse_revisions(table, resolve)
     java = get_field("java", String, "java")
     return RunConfig(; name=get_field("name", String), variants, repeats=Int(repeats),
         timeout_seconds=Float64(timeout), series, julia_threads=Int(threads),
-        project=resolve(get_field("project", String, ".")),
+        revisions,
         keep_outputs=get_field("keep_outputs", Bool, false),
         java=occursin(r"[/\\]", java) ? resolve(java) : java,
         java_options=String.(get_field("java_options", Vector, String[])),
         spmf_jar=resolve(get_field("spmf_jar", String, "tools/spmf/spmf.jar")),
         spmf_version=get_field("spmf_version", String, ""),
-        mode, stage, verify_outputs=get_field("verify_outputs", Bool, true),
+        mode, verify_outputs=get_field("verify_outputs", Bool, true),
         skip_after_timeout=get_field("skip_after_timeout", Bool, false),
         table=Dict{String,Any}(table))
+end
+
+function parse_revisions(table::AbstractDict, resolve)
+    entries = if haskey(table, "revisions")
+        (haskey(table, "stage") || haskey(table, "project")) && throw(ArgumentError(
+            "run config: give either revisions or a top-level stage and project, not both"))
+        list = table["revisions"]
+        list isa Vector && !isempty(list) && all(r -> r isa AbstractDict, list) ||
+            throw(ArgumentError("run config: revisions must be a nonempty list of tables, got $(repr(list))"))
+        [(get(r, "stage", nothing), get(r, "project", nothing)) for r in list]
+    else
+        [(get(table, "stage", "baseline"), get(table, "project", "."))]
+    end
+    revisions = Revision[]
+    for (stage, project) in entries
+        # Stages name attempt folders and archive files, so they stay path-safe.
+        stage isa String && occursin(r"^[A-Za-z0-9][A-Za-z0-9._-]*$", stage) || throw(ArgumentError(
+            "run config: stage must be letters, digits, '.', '_' or '-', got $(repr(stage))"))
+        project isa String || throw(ArgumentError("run config: stage $stage needs a project path"))
+        # `"."` resolves with a trailing separator; dropping it gives one spelling per checkout.
+        path = isdirpath(resolve(project)) ? dirname(resolve(project)) : resolve(project)
+        isdir(path) || throw(ArgumentError("run config: project $path is not a folder"))
+        push!(revisions, Revision(stage, path))
+    end
+    allunique(r.stage for r in revisions) ||
+        throw(ArgumentError("run config: revision stages must be distinct, got $([r.stage for r in revisions])"))
+    return revisions
 end
 
 """SPMF's support count: `ceil(minsup * N)` in Float64, measured on SPMF v2.66."""
@@ -103,15 +136,20 @@ Base.@kwdef struct Attempt
     minsup_count::Int
     variant::Symbol
     repeat::Int
+    stage::String
+    project::String
 end
 
 """
     plan_attempts(config, manifest) -> Vector{Attempt}
 
-Order attempts by dataset, then by decreasing minsup, then repeat, then variant.
-Interleaving variants spreads machine drift evenly across them, and decreasing
-minsup lets a timeout skip the lower, slower thresholds. Throws `ArgumentError`
-for an unknown dataset or a threshold SPMF would round to another count.
+Order attempts by dataset, then by decreasing minsup, then repeat, then variant,
+then revision. Interleaving spreads machine drift evenly across contenders, and
+reversing the revision order on every other repeat stops one revision from
+always running first. Decreasing minsup lets a timeout skip the lower, slower
+thresholds. SPMF attempts measure no revision, so they run once per repeat with
+an empty stage. Throws `ArgumentError` for an unknown dataset or a threshold
+SPMF would round to another count.
 """
 function plan_attempts(config::RunConfig, manifest::AbstractDict{String,DatasetEntry})
     attempts = Attempt[]
@@ -124,9 +162,21 @@ function plan_attempts(config::RunConfig, manifest::AbstractDict{String,DatasetE
             threshold_agrees(minsup, n) || throw(ArgumentError(
                 "dataset $(entry.name): minsup $minsup is $(support_threshold(minsup, n)) transactions " *
                 "in decimal but $(float_support_count(minsup, n)) in Float64 as SPMF computes it; choose another value"))
-            for repeat in 1:config.repeats, variant in config.variants
-                push!(attempts, Attempt(; id="$(entry.name)-m$(minsup)-r$(repeat)-$(variant)", entry,
-                    minsup, minsup_count=support_threshold(minsup, n), variant, repeat))
+            for repeat in 1:config.repeats
+                revisions = isodd(repeat) ? config.revisions : reverse(config.revisions)
+                for variant in config.variants
+                    prefix = "$(entry.name)-m$(minsup)-r$(repeat)-"
+                    common = (; entry, minsup, minsup_count=support_threshold(minsup, n), variant, repeat)
+                    if variant in REFERENCE_VARIANTS
+                        push!(attempts, Attempt(; id=prefix * string(variant), stage="", project="", common...))
+                        continue
+                    end
+                    for revision in revisions
+                        label = length(config.revisions) == 1 ? "" : revision.stage * "-"
+                        push!(attempts, Attempt(; id=prefix * label * string(variant),
+                            stage=revision.stage, project=revision.project, common...))
+                    end
+                end
             end
         end
     end
@@ -138,11 +188,11 @@ function measured_command(attempt::Attempt, config::RunConfig, input::String, ou
         algorithm = attempt.variant == :spmf ? "Eclat" : "PrePost+"
         return `$(config.java) $(config.java_options) -jar $(config.spmf_jar) run $algorithm $input $output $(attempt.minsup)`
     end
-    julia = `$(Base.julia_cmd()) --startup-file=no --threads=$(config.julia_threads) --project=$(config.project)`
+    julia = `$(Base.julia_cmd()) --startup-file=no --threads=$(config.julia_threads) --project=$(attempt.project)`
     if config.mode == :cli
         # The measured revision's own CLI is the program a user runs, the counterpart of
         # the SPMF command line, so no measurement code runs or compiles inside it.
-        return `$julia $(joinpath(config.project, "demo.jl")) --minsup $(attempt.minsup)
+        return `$julia $(joinpath(attempt.project, "demo.jl")) --minsup $(attempt.minsup)
                 --variant $(attempt.variant) --output $output $input`
     end
     return `$julia $WORKER_SCRIPT --variant $(attempt.variant) --minsup $(attempt.minsup)
@@ -209,7 +259,7 @@ function capture_environment(config::RunConfig)
         "cpu" => strip(Sys.cpu_info()[1].model),
         "logical_cpus" => Sys.CPU_THREADS,
         "total_memory_bytes" => Int(Sys.total_memory()),
-        "code_revision" => code_revision(config.project),
+        "code_revisions" => Dict(r.stage => code_revision(r.project) for r in config.revisions),
         "harness_revision" => code_revision(REPO_ROOT),
         "java_version" => "",
         "reference_version" => "",
@@ -227,11 +277,27 @@ function capture_environment(config::RunConfig)
     return env
 end
 
+"""
+Load each revision's package once, untimed, so a stale package image is rebuilt
+before timing instead of inside the first attempt. Throws `ArgumentError` naming
+the stage whose checkout cannot load `ItemsetMining`.
+"""
+function load_revisions(config::RunConfig)
+    for revision in config.revisions
+        command = `$(Base.julia_cmd()) --startup-file=no --project=$(revision.project) -e "using ItemsetMining"`
+        log = IOBuffer()
+        success(pipeline(command; stdout=log, stderr=log)) || throw(ArgumentError(
+            "stage $(revision.stage) cannot load ItemsetMining from $(revision.project): " *
+            first_line(String(take!(log)))))
+    end
+end
+
 """Archive source checksums and the worktree patch so dirty revisions remain attributable."""
 function archive_sources(config::RunConfig, out_dir::AbstractString)
     checksums = Dict{String,Any}()
-    for (name, root, subdirs) in (("package", config.project, ["src"]),
-                                  ("harness", REPO_ROOT, ["experiments", "tools/spmf"]))
+    sources = [[("package-$(r.stage)", r.project, ["src"]) for r in config.revisions];
+               ("harness", REPO_ROOT, ["experiments", "tools/spmf"])]
+    for (name, root, subdirs) in sources
         paths = [joinpath(root, p) for p in ("Project.toml", "Manifest.toml")]
         for subdir in subdirs, (dir, _, files) in walkdir(joinpath(root, subdir)), file in files
             endswith(file, ".jl") && push!(paths, joinpath(dir, file))

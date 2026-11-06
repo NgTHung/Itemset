@@ -9,9 +9,25 @@ julia --startup-file=no --project=. experiments/prepare_benchmarks.jl
 julia --startup-file=no --project=. experiments/run.jl experiments/configs/pilot.toml
 ```
 
-A config names the variants (`baseline`, `optimized`, `spmf` for Eclat, `prepost` for PrePost+), mode, stage, thresholds, repeat count, and timeout. `--project PATH` measures another checkout. `--java PATH` selects Java. The run writes to `results/raw/<name>-<UTC time>/`.
+A config names the variants (`baseline`, `optimized`, `spmf` for Eclat, `prepost` for PrePost+), mode, stage, thresholds, repeat count, and timeout. `--project PATH` measures another checkout in a config with one revision. `--java PATH` selects Java. The run writes to `results/raw/<name>-<UTC time>/`.
 
 Use `configs/development.toml` for three repeats at two thresholds on each of the five datasets. Use `configs/runtime.toml` for five repeats over the 33 required points. Each cumulative stage and each micro-optimization gets its own stage label, hypothesis in the config, and run directory. Run the same grid before and after a change, including datasets that the change does not target.
+
+## Compare revisions in one run
+
+Two runs made one after the other share a slow drift in the machine, such as heat or background load, and that drift counts toward their difference. A stage that saves 10% needs both revisions timed in the same run. List them as revisions instead of a top-level `stage` and `project`:
+
+```toml
+[[revisions]]
+stage = "precompile"
+project = "../Itemset-control"
+
+[[revisions]]
+stage = "dense-kernel"
+project = "."
+```
+
+Within each repeat, every revision runs a Julia variant before the next variant starts. The revision order reverses on every other repeat, so neither revision always runs first. SPMF attempts measure no revision; they run once per repeat and their rows have an empty `stage`. Before timing, the runner loads each checkout's package once, so a stale package image is rebuilt untimed. Each row's `stage` and `code_revision` name its revision, and `environment.toml` and `source-checksums.toml` record every checkout. Plot one revision with `scripts/report_measurements.py --stage STAGE`, or several with `scripts/compare_runs.py "LABEL=RUN:VARIANT@STAGE"`.
 
 ## Datasets and thresholds
 
@@ -44,7 +60,7 @@ Julia compiles a method on its first call, and Java pays JVM startup on every pr
 
 Compare CLI `process` rows for end-to-end cost. The worker's own reporting code compiles in every cold process, about 0.4 s that no user run pays, so cold mode serves the phase breakdown. Cold refers to a fresh process, not a flushed filesystem cache. Warm `mine` measures application latency, including the complete `SupportMap`; it is separate from SPMF's internal time. Every Julia phase records allocations and GC time. Process RSS is repeated on phase rows and is not a phase-specific peak.
 
-Repeats run in separate processes, interleaved across variants. `runs.csv` preserves each sample and repeat identity. `summary.csv` reports medians, linearly interpolated IQRs, sorted samples, maximum process RSS, median allocations and GC time, and failure counts. It excludes failed or unverified samples from statistics without removing their counts. `gate_eligible` requires five exact samples and no failures; it does not establish the speed or memory targets. Development screens with three repeats cannot pass the scored gate.
+Repeats run in separate processes, interleaved across variants and revisions. `runs.csv` preserves each sample and repeat identity. `summary.csv` reports medians, linearly interpolated IQRs, sorted samples, maximum process RSS, median allocations and GC time, and failure counts. It excludes failed or unverified samples from statistics without removing their counts. `gate_eligible` requires five exact samples and no failures; it does not establish the speed or memory targets. Development screens with three repeats cannot pass the scored gate.
 
 ## Memory
 

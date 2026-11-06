@@ -11,6 +11,7 @@ skipping; required series attempt every point and repeat.
 function run_experiment(config::RunConfig, manifest::AbstractDict{String,DatasetEntry};
                         data_dir::AbstractString, out_dir::AbstractString)
     attempts = plan_attempts(config, manifest)
+    any(a -> !(a.variant in REFERENCE_VARIANTS), attempts) && load_revisions(config)
     env = capture_environment(config)
     mkpath(joinpath(out_dir, "attempts"))
     open(io -> TOML.print(io, env), joinpath(out_dir, "environment.toml"), "w")
@@ -19,14 +20,14 @@ function run_experiment(config::RunConfig, manifest::AbstractDict{String,Dataset
     inputs = Dict(name => prepare_dataset(manifest[name], data_dir)
                   for name in unique(a.entry.name for a in attempts))
     run_id = basename(normpath(out_dir))
-    timed_out = Dict{Tuple{String,Symbol},Float64}()
+    timed_out = Dict{Tuple{String,String,Symbol},Float64}()
     rows = Dict{String,String}[]
     references = Dict{Tuple{String,Int},String}()
     open(joinpath(out_dir, "runs.csv"), "w") do csv
         println(csv, join(RESULT_FIELDS, ','))
         for attempt in attempts
             base = base_row(attempt, config, env, run_id)
-            key = (attempt.entry.name, attempt.variant)
+            key = (attempt.entry.name, attempt.stage, attempt.variant)
             reference() = get!(references, (attempt.entry.name, attempt.minsup_count)) do
                 prepare_reference(attempt, config, inputs[attempt.entry.name],
                     joinpath(out_dir, "references", "$(attempt.entry.name)-c$(attempt.minsup_count)"))
@@ -63,8 +64,8 @@ function base_row(attempt::Attempt, config::RunConfig, env, run_id)
         "input_sha256" => attempt.entry.sha256, "transactions" => string(stats.transactions),
         "items" => string(stats.items), "mean_width" => string(round(mean_width(stats); digits=4)),
         "minsup_relative" => string(attempt.minsup), "minsup_count" => string(attempt.minsup_count),
-        "code_revision" => spmf ? "" : env["code_revision"], "variant" => string(attempt.variant),
-        "stage" => config.stage, "mode" => string(config.mode), "correctness_status" => "not_checked",
+        "code_revision" => spmf ? "" : env["code_revisions"][attempt.stage], "variant" => string(attempt.variant),
+        "stage" => attempt.stage, "mode" => string(config.mode), "correctness_status" => "not_checked",
         "reference_version" => spmf ? env["reference_version"] : "",
         "julia_version" => env["julia_version"], "java_version" => spmf ? env["java_version"] : "",
         "os" => env["os"], "cpu" => env["cpu"], "threads" => spmf ? "" : string(config.julia_threads),
