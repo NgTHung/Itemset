@@ -287,3 +287,64 @@ nhân của $R$ theo CSDL đều nhỏ hơn 1: T10I4D100K 0{,}36, Retail 0{,}41,
 Mushroom 0{,}78 và Chess 0{,}79. Ngưỡng duy nhất có $R > 1$ là Mushroom 0{,}1, nơi chương
 trình phải ghi 574\,431 itemset. Ở các ngưỡng cao, thời gian còn khoảng 0{,}32 s, gần bằng
 chi phí khởi động Julia và nạp gói.
+
+\subsubsection{Tỉa phần mở rộng hoàn hảo}
+Một item $b$ là phần mở rộng hoàn hảo (perfect extension) của itemset $X$ khi
+$t(X \cup \{b\}) = t(X)$, tức mọi giao dịch chứa $X$ đều chứa $b$. Vì
+$t(X \cup \{b\}) \subseteq t(X)$, điều kiện này tương đương với hai độ hỗ trợ bằng nhau,
+nên chỉ cần so sánh một số đếm. Khi đó mọi itemset $X \cup Y$ trong cây con của $X$ có cùng
+độ hỗ trợ với $X \cup Y \cup S$, với $S$ là tập con bất kỳ của các phần mở rộng hoàn hảo.
+Biến thể tối ưu vì vậy bỏ $b$ khỏi lớp con, không giao tidset của $b$ thêm lần nào, và ghi
+trực tiếp $X$ hợp với mọi tập con $S$ theo thứ tự mã Gray (Gray code), để hai itemset liên
+tiếp chỉ khác nhau một item. Chứng minh độ hỗ trợ chính xác, tính đầy đủ và tính duy nhất
+nằm trong \texttt{docs/eclat-optimized.md}.
+
+Phép tỉa giữ đầu ra chính xác ở cả 540 lần chạy trên 33 ngưỡng bắt buộc và ba ngưỡng
+stress (ngưỡng thấp ngoài lưới bắt buộc, chỉ dùng để kiểm tra giới hạn). Tuy vậy, nó chỉ
+rút ngắn thời gian tối đa 6{,}9\% (Mushroom 0{,}1 và 0{,}05), dưới mức 10\% mà kế hoạch
+yêu cầu. Nhóm vẫn giữ bước này vì nó không làm tăng bộ nhớ đỉnh và là nền cho hướng lưu
+kết quả nén ở mục hướng phát triển.
+
+\subsubsection{Sắp xếp đầu ra bằng radix sort}
+Để phân tích nguyên nhân, nhóm dùng bộ lấy mẫu \texttt{Profile} của Julia (mỗi 1 ms) trên
+Mushroom 0{,}05. Hàm ghi phải xuất itemset theo thứ tự từ điển (lexicographic order) để tệp
+đầu ra của mọi biến thể so sánh được từng byte. Bản cơ bản duyệt item theo mã nên đầu ra
+đã có thứ tự này, nhưng biến thể tối ưu duyệt theo độ hỗ trợ tăng dần nên phải sắp xếp
+lại. Phép sắp xếp bằng so sánh chiếm 64\% thời gian, ghi tệp 25\%, còn khai thác chỉ 11\%.
+
+Nhóm thay phép sắp xếp này bằng radix sort (sắp xếp theo cơ số) trên khóa 128 bit. Các
+bit thấp của khóa chứa chỉ số của itemset. Các bit cao chứa những item đầu tiên, mỗi item
+ghi thành chữ số $\mathit{item} + 1$, item đầu ở vị trí cao nhất và chữ số 0 cho vị trí
+đã hết itemset. So sánh hai khóa như số nguyên vì vậy cho đúng thứ tự từ điển của các item
+đó, với tiền tố đứng trước. Chỉ những itemset trùng mọi item trong khóa mới cần so sánh
+đầy đủ, và cùng lượt đó phát hiện itemset bị lặp. Bảng~\ref{tab:sorted} cho kết quả đo
+trong cùng một phiên, với $R$ định nghĩa như ở Bảng~\ref{tab:bitset}.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Trung vị thời gian tiến trình nguội (giây) của biến thể tối ưu trước và sau khi
+sắp xếp đầu ra bằng radix sort, năm lần chạy mỗi ô, cùng một phiên đo}
+\label{tab:sorted}
+\begin{tabular}{lrrrrr}
+\hline
+Dữ liệu / minsup & Itemset & Trước & Sau & PrePost+ & $R$ \
+\hline
+Chess / 0{,}6 & 254\,944 & 0{,}54 & 0{,}46 & 0{,}58 & 0{,}79 \
+Chess / 0{,}5 & 1\,272\,932 & 1{,}51 & 1{,}00 & 0{,}89 & 1{,}13 \
+Mushroom / 0{,}1 & 574\,431 & 0{,}83 & 0{,}64 & 0{,}71 & 0{,}90 \
+Mushroom / 0{,}05 & 3\,755\,511 & 4{,}06 & 2{,}43 & 1{,}36 & 1{,}78 \
+Retail / 0{,}001 & 7\,589 & 1{,}78 & 1{,}79 & 3{,}52 & 0{,}51 \
+T10I4D100K / 0{,}00025 & 96\,959 & 1{,}74 & 1{,}71 & 4{,}32 & 0{,}40 \
+Accidents / 0{,}65 & 1\,093 & 1{,}29 & 1{,}26 & 2{,}33 & 0{,}54 \
+\hline
+\end{tabular}
+\end{table}
+
+Thời gian giảm 14{,}1\% ở Chess 0{,}6, 22{,}7\% ở Mushroom 0{,}1 và từ 24\% đến 40\% ở
+các ngưỡng stress, trong khi không ngưỡng nào chậm đi quá 2{,}1\%. Bộ nhớ đỉnh tăng tối
+đa 8\% do mảng khóa. Biến thể tối ưu nay nhanh hơn PrePost+ ở cả 33 ngưỡng bắt buộc, với
+trung bình nhân của $R$ theo CSDL là T10I4D100K 0{,}35, Retail 0{,}41, Accidents 0{,}61,
+Mushroom 0{,}73 và Chess 0{,}77. Ở Chess 0{,}5 và Mushroom 0{,}05, PrePost+ vẫn nhanh
+hơn, vì phần còn lại chủ yếu là ghi hàng triệu dòng văn bản.
