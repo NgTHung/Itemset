@@ -1,6 +1,6 @@
 # Eclat optimized variant
 
-The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with three changes that keep its output identical: bitset tidsets, increasing-support item order, and perfect-extension pruning. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl` and `src/algorithm/eclat_optimized.jl`.
+The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with four changes that keep its output identical: bitset tidsets, increasing-support item order, perfect-extension pruning, and root pair counts on sparse data. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl`, `src/algorithm/pair_counts.jl`, and `src/algorithm/eclat_optimized.jl`.
 
 ## Bitset tidsets
 
@@ -53,6 +53,16 @@ Suppose a node N on the path a₁, a₂, ..., aₖ emits Z. At the node N_j reac
 `push_subsets!` emits the 2^|E| itemsets of a node in binary reflected Gray-code order. Step i toggles the perfect item at position trailing_zeros(i) + 1, so each itemset differs from the one before by one item, which `insert!` or `deleteat!` puts in place in the ascending prefix. A node's emissions therefore cost O(2^|E| k) for itemsets of length at most k, the same as copying them into the packed result. The prefix ends with the last perfect item and drops it, so the caller gets its prefix back unchanged. A perfect set of more than 62 items would need more than 2^62 itemsets, which no result vector can hold, so the search throws `OverflowError` instead of looping.
 
 `tests/perfect_extensions.jl` checks universal items, groups of items with equal tidsets, siblings with equal support but different tidsets, perfect extensions found at two depths of one path, and itemsets whose support equals minsup. Each check compares the number of emitted itemsets with the size of the map, so a duplicate cannot hide behind a dictionary overwrite.
+
+## Root pair counts
+
+On sparse data almost every root join fails: on Retail at minsup 0.001, 2,237,000 of 2,239,786 root joins fall below the threshold, and each reads 1,378 words. Zaki (2000, Sec. 4.2) counts the 2-itemsets from the horizontal database instead. `count_pairs` does this in one pass: for each transaction it ranks the frequent items it holds and adds one to the slot of every pair in a triangular table of m(m − 1)/2 counts. The root search then joins members i and j only when their pair count reaches minsup.
+
+The skip is exact. At the root the prefix is empty, so the join of members i and j has tidset t({a_i, a_j}), whose size is the pair count. A pair below minsup would fail its join anyway, and every pair at or above it is joined as before, so the classes, and the proofs above, are unchanged. Classes below the root join without counts.
+
+`pair_filter` counts pairs only when that is cheaper than the root joins. Counting touches at most the sum of |t|(|t| − 1)/2 slots, and the root joins read m(m − 1)/2 bitsets of ⌈N/64⌉ words. A slot update can miss the cache while a join reads words in order, so counting must be ten times cheaper by this measure. Retail and T10I4D100K pass by two orders of magnitude, and Chess, Mushroom, and Accidents fail, because their transactions are long and their frequent items few. The table is sized with an overflow check and capped at 2^28 slots before it is allocated; above the cap the search joins every root pair.
+
+`tests/pair_counts.jl` checks the slot layout, the size check, counts against a direct count, the cost rule on a dense and a sparse database, that a low count skips its join, and 200 seeded databases mined with and without counts against the oracle.
 
 ## Cost
 
