@@ -234,3 +234,7 @@ Raw runs and figures stay in their ignored directories. A checksum-addressed evi
 ## Delivery order and stopping rule
 
 Stage 1 comes first, because no claim counts without it. Stage 2 removes the start-up floor. Stages 3 and 4 close the dense gap, and Stage 5 closes the sparse gap. Stop when the correctness, speed, memory, and assignment gates pass. If the gates are not met, ship the best validated revision, report the measured gap, and decide separately whether further work is worth it.
+
+## Addendum, 2026-11-08: diffset stress points
+
+After Stages 3 to 5, perfect-extension pruning and bitsets leave the search under 0.08 s of warm mining at every Accidents point in the matrix, so no point there can show a diffset gain of 10%. A probe of the sparse-kernel revision on BBQ found that the search takes about 61% of warm Accidents mining at minsup 0.25 and 81% at 0.2, where the optimized CLI took 2.09 s and 3.57 s against 3.79 s and 4.78 s for PrePost+ (one unverified cold run each). The diffset switch is therefore scored on two added stress points, Accidents 0.25 and 0.2, with the 900 s stress timeout, together with the required grid and the existing Chess, Mushroom, and Accidents stress points. They were fixed on this date, before any diffset code ran. The survival rule applies unchanged. The list-to-diffset ablation is not run, because root pair counts leave tid lists on few classes outside T10I4D100K 0.00025.
