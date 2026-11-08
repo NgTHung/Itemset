@@ -45,6 +45,15 @@ reference_lines(pairs) = join(("$(join(k, ' ')) #SUP: $v\n" for (k, v) in sort!(
     @test length(many) > 5_000
     @test sprint(write_itemsets, many) == reference_lines(many)
     @test sprint(write_itemsets, FrequentItemsets()) == ""
+    # Every digit count from 1 to 19, and enough lines to cross many buffer flushes.
+    limit = ItemsetMining.DIGIT_TABLE_LENGTH
+    edges = sort!(unique([0; [10^d + s for d in 0:18 for s in (-1, 0)]; limit-1:limit+1; typemax(Int)]))
+    edge_singles = FrequentItemsets(edges, collect(1:length(edges)+1), max.(edges, 1))
+    @test sprint(write_itemsets, edge_singles) == reference_lines(edge_singles)
+    edge_set = FrequentItemsets(edges, [1, length(edges) + 1], [typemax(Int)])
+    @test sprint(write_itemsets, edge_set) == reference_lines(edge_set)
+    singles = FrequentItemsets(collect(0:99_999), collect(1:100_001), collect(100_000:-1:1))
+    @test sprint(write_itemsets, singles) == reference_lines(singles)
     for (items, offsets, supports) in (([2, 1], [1, 3], [1]), ([1, 1], [1, 3], [1]), (Int[], [1, 1], [1]),
                                        ([-1], [1, 2], [1]), ([1], [1, 2], [0]), ([1, 1], [1, 2, 3], [1, 2]))
         bad = FrequentItemsets(items, offsets, supports)

@@ -87,38 +87,3 @@ function checked_order(packed::FrequentItemsets)
     end
     return lexicographic_order(packed)
 end
-
-const SUPPORT_TAG = codeunits(" #SUP: ")
-const WRITE_CHUNK = 1 << 16
-
-function print_packed(io::IO, packed::FrequentItemsets, order::Vector{Int})
-    buffer = UInt8[]
-    sizehint!(buffer, WRITE_CHUNK)
-    for k in order
-        for position in packed.offsets[k]:packed.offsets[k+1]-1
-            position == packed.offsets[k] || push!(buffer, UInt8(' '))
-            append_digits!(buffer, packed.items[position])
-        end
-        append!(buffer, SUPPORT_TAG)
-        append_digits!(buffer, packed.supports[k])
-        push!(buffer, UInt8('\n'))
-        if length(buffer) >= WRITE_CHUNK
-            write(io, buffer)
-            empty!(buffer)
-        end
-    end
-    write(io, buffer)
-    return nothing
-end
-
-"""Append the decimal digits of a nonnegative `value`, without building a string."""
-function append_digits!(buffer::Vector{UInt8}, value::Int)
-    start = length(buffer) + 1
-    while true
-        push!(buffer, UInt8('0') + UInt8(value % 10))
-        value ÷= 10
-        value == 0 && break
-    end
-    reverse!(buffer, start, length(buffer))
-    return buffer
-end
