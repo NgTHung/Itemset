@@ -77,3 +77,52 @@ function bitset_tids!(dest::Vector{Int}, words::Vector{UInt64})
 end
 
 bitset_tids(words::Vector{UInt64}) = bitset_tids!(Int[], words)
+
+"""
+    difference_lists!(dest, b, a, bound) -> Int
+
+Write the tids of ascending list `b` that are not in ascending list `a` into
+`dest` and return their number, or -1 once it passes `bound`. A diffset join
+passes the most tids its child may lose and stay frequent as `bound`.
+"""
+function difference_lists!(dest::Vector{Int}, b::Vector{Int}, a::Vector{Int}, bound::Int)
+    nb, na = length(b), length(a)
+    resize!(dest, nb)
+    i, j, kept = 1, 1, 0
+    # As in intersect_lists!, each step writes b[i] and keeps it only when a lacks it.
+    while i <= nb && j <= na
+        # In bounds: i <= nb, j <= na, and kept < i <= nb = length(dest).
+        @inbounds x, y = b[i], a[j]
+        @inbounds dest[kept+1] = x
+        kept += x < y
+        i += x <= y
+        j += y <= x
+        kept > bound && return -1
+    end
+    rest = nb - i + 1
+    kept + rest > bound && return -1
+    copyto!(dest, kept + 1, b, i, rest)
+    resize!(dest, kept + rest)
+    return kept + rest
+end
+
+"""
+    bitset_difference!(dest, a, b, bound) -> Int
+
+Write the tids set in bitset `a` but not in `b` into `dest` in ascending order
+and return their number, or -1 once it passes `bound`. Throws
+`DimensionMismatch` unless `a` and `b` have the same length.
+"""
+function bitset_difference!(dest::Vector{Int}, a::Vector{UInt64}, b::Vector{UInt64}, bound::Int)
+    length(a) == length(b) || throw(DimensionMismatch("bitsets have $(length(a)) and $(length(b)) words"))
+    empty!(dest)
+    for w in eachindex(a)
+        word = a[w] & ~b[w]
+        while word != 0
+            length(dest) == bound && return -1
+            push!(dest, 64 * (w - 1) + trailing_zeros(word) + 1)
+            word &= word - 1
+        end
+    end
+    return length(dest)
+end
