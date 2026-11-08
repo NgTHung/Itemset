@@ -12,21 +12,29 @@ end
 const BitsetMember = ClassMember{UInt64}
 const ListMember = ClassMember{Int}
 
-# Children switch to tid lists when their mean support is below this fraction of ⌈N/64⌉. A BBQ sweep
-# found 1/16 fastest on T10I4D100K 0.00025 (1.12 s to 0.94 s); 1/8 and above slowed T10I4D100K 0.001.
-const LIST_RATIO = 1 / 16
+# One tid-list merge step costs about this many bitset-join words. A BBQ sweep of 2 to 16 found 8
+# fastest on T10I4D100K 0.00025 (1.20 s to 0.90 s) with Retail and T10I4D100K 0.001 unchanged; see
+# docs/eclat-optimized.md.
+const LIST_STEP_COST = 8.0
 
 """
-Spare tidsets of each kind, reused across joins, and the ratio that moves a
-class from bitsets to tid lists. One state serves the whole search.
+Spare tidsets of each kind, reused across joins, and the rule that moves a class
+from bitsets to tid lists: `:cost` compares the two with `prefer_lists`, and
+`:always` or `:never` force the choice. One state serves the whole search.
+Throws `ArgumentError` for any other rule.
 """
 struct SearchState
     bitsets::Vector{Vector{UInt64}}
     lists::Vector{Vector{Int}}
-    list_ratio::Float64
-end
+    list_rule::Symbol
+    list_step_cost::Float64
 
-SearchState(list_ratio::Real=LIST_RATIO) = SearchState(Vector{UInt64}[], Vector{Int}[], Float64(list_ratio))
+    function SearchState(list_rule::Symbol=:cost, list_step_cost::Real=LIST_STEP_COST)
+        list_rule in (:cost, :always, :never) ||
+            throw(ArgumentError("list_rule must be :cost, :always, or :never, got $(repr(list_rule))"))
+        return new(Vector{UInt64}[], Vector{Int}[], list_rule, Float64(list_step_cost))
+    end
+end
 
 spare_sets(state::SearchState, ::Type{UInt64}) = state.bitsets
 spare_sets(state::SearchState, ::Type{Int}) = state.lists
@@ -147,7 +155,7 @@ to tid lists first when `prefer_lists` says lists cost less.
 """
 function search_children!(children::Vector{ClassMember{T}}, prefix::Vector{Int}, perfect::Vector{Int},
                           minsup::Int, result::FrequentItemsets, state::SearchState) where {T}
-    if prefer_lists(children, state.list_ratio)
+    if prefer_lists(children, state)
         lists = [ListMember(c.item, c.support, bitset_tids!(spare_list(state), c.tidset)) for c in children]
         foreach(c -> push!(state.bitsets, c.tidset), children)
         return search_children!(lists, prefix, perfect, minsup, result, state)
@@ -160,29 +168,37 @@ end
 spare_list(state::SearchState) = isempty(state.lists) ? Int[] : pop!(state.lists)
 
 """
-Whether a class of bitset members costs less as tid lists. A bitset join reads
-⌈N/64⌉ words whatever the supports, while a list join reads both lists and stops
-early once the threshold is out of reach, so lists win for short tidsets.
+Whether a class of `k` bitset members costs less as tid lists, counting the
+joins of this class only. As bitsets, its `k(k - 1)/2` joins read `W = ⌈N/64⌉`
+words each. As lists, each member first costs one `W`-word scan to convert, and
+the joins then merge `(k - 1)` times the sum of the supports, at
+`list_step_cost` words per step. A class with few members cannot repay the
+conversion, and long tidsets make each merge dearer than a bitset join.
 """
-prefer_lists(children::Vector{BitsetMember}, ratio::Float64) =
-    sum(c -> c.support, children) < ratio * length(children) * length(first(children).tidset)
-prefer_lists(::Vector{ListMember}, ::Float64) = false
+function prefer_lists(children::Vector{BitsetMember}, state::SearchState)
+    state.list_rule === :cost || return state.list_rule === :always
+    k, words = length(children), length(first(children).tidset)
+    list_cost = k * words + state.list_step_cost * (k - 1) * sum(c -> c.support, children)
+    return list_cost < words * k * (k - 1) / 2
+end
+prefer_lists(::Vector{ListMember}, ::SearchState) = false
 
 """
-    mine_optimized(database, minsup; use_pair_counts=nothing, list_ratio=LIST_RATIO) -> FrequentItemsets
+    mine_optimized(database, minsup; use_pair_counts=nothing, list_rule=:cost,
+                   list_step_cost=LIST_STEP_COST) -> FrequentItemsets
 
 Mine a canonical database with the optimized variant; see `mine_packed`. The
-root class holds bitsets, and a child class moves to tid lists when its mean
-support is below `list_ratio` times ⌈N/64⌉. With `use_pair_counts=nothing`,
-`pair_filter` decides from the database whether to count root pairs first.
-`true` or `false` forces that choice, and a `list_ratio` of 0 or `Inf` forces
-bitsets or lists below the root, for tests and sweeps.
+root class holds bitsets, and a child class moves to tid lists when
+`prefer_lists` finds them cheaper. With `use_pair_counts=nothing`, `pair_filter`
+decides from the database whether to count root pairs first. The keywords force
+these choices or change the list cost, for tests and sweeps.
 """
 function mine_optimized(database::Vector{Vector{Int}}, minsup::Int;
-                        use_pair_counts::Union{Nothing,Bool}=nothing, list_ratio::Real=LIST_RATIO)
+                        use_pair_counts::Union{Nothing,Bool}=nothing, list_rule::Symbol=:cost,
+                        list_step_cost::Real=LIST_STEP_COST)
     class = bitset_class(database, minsup)
     items = [member.item for member in class]
     pairs = use_pair_counts === nothing ? pair_filter(database, items) :
             use_pair_counts ? count_pairs(database, items) : NoPairCounts()
-    return eclat_search!(class, Int[], Int[], minsup, FrequentItemsets(), SearchState(list_ratio), pairs)
+    return eclat_search!(class, Int[], Int[], minsup, FrequentItemsets(), SearchState(list_rule, list_step_cost), pairs)
 end

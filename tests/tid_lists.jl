@@ -29,13 +29,19 @@
         @test @inferred(ItemsetMining.bitset_tids(words)) == members
     end
 
-    @testset "Children switch to lists when their mean support is short against N/64" begin
+    @testset "Children switch to lists only when their joins outweigh the conversion" begin
         prefer_lists = ItemsetMining.prefer_lists
         BitsetMember = ItemsetMining.BitsetMember
-        children = [BitsetMember(1, 10, zeros(UInt64, 100)), BitsetMember(2, 30, zeros(UInt64, 100))]
-        @test prefer_lists(children, 0.25)
-        @test !prefer_lists(children, 0.15)
-        @test !prefer_lists(children, 0.0)
+        class(k, support) = [BitsetMember(c, support, zeros(UInt64, 100)) for c in 1:k]
+        state(rule=:cost) = ItemsetMining.SearchState(rule, 8.0)
+        # 20 children with short tidsets: 190 joins of 100 words against 20 conversions and short merges.
+        @test prefer_lists(class(20, 2), state())
+        # Two children: one join cannot repay two conversions.
+        @test !prefer_lists(class(2, 1), state())
+        # Long tidsets make each merge dearer than a bitset join.
+        @test !prefer_lists(class(20, 90), state())
+        @test prefer_lists(class(2, 90), state(:always))
+        @test !prefer_lists(class(20, 2), state(:never))
     end
 end
 
@@ -56,15 +62,14 @@ end
         @test length(result) == length(support_map(result))
     end
 
-    @testset "Mining matches the oracle with lists $label" for (label, ratio) in
-            (("never", 0.0), ("below the root", Inf))
+    @testset "Mining matches the oracle with lists $rule" for rule in (:never, :always, :cost)
         rng = Xoshiro(DEFAULT_SEED)
         for _ in 1:200
             transactions = [rand(rng, 0:11, rand(rng, 0:7)) for _ in 1:rand(rng, 0:40)]
             database = ItemsetMining.canonical_database(transactions)
             min_count = rand(rng, 1:4)
             expected = brute_force_supports(unique.(transactions), min_count)
-            packed = ItemsetMining.mine_optimized(database, min_count; list_ratio=ratio)
+            packed = ItemsetMining.mine_optimized(database, min_count; list_rule=rule)
             @test support_map(packed) == expected
             @test length(packed) == length(expected)
         end
@@ -73,7 +78,7 @@ end
     @testset "Perfect extensions are found inside list classes" begin
         # Items 2 and 3 always occur together, so below the root one is perfect for the other.
         transactions = [[1, 2, 3], [1, 2, 3], [1, 4], [2, 3, 4], [1, 2, 3, 4]]
-        packed = ItemsetMining.mine_optimized(ItemsetMining.canonical_database(transactions), 1; list_ratio=Inf)
+        packed = ItemsetMining.mine_optimized(ItemsetMining.canonical_database(transactions), 1; list_rule=:always)
         @test support_map(packed) == brute_force_supports(transactions, 1)
         @test length(packed) == length(support_map(packed))
     end
