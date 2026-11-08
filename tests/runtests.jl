@@ -167,7 +167,6 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     include("perfect_extensions.jl")
     include("pair_counts.jl")
     include("tid_lists.jl")
-    include("diffsets.jl")
     include("frequent_itemsets.jl")
     include("itemset_order.jl")
     include("transaction_reader.jl")

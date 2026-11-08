@@ -1,6 +1,6 @@
 # Eclat optimized variant
 
-The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with six changes that keep its output identical: bitset tidsets, increasing-support item order, perfect-extension pruning, root pair counts on sparse data, tid lists for classes with short tidsets, and diffsets deep in dense searches. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl`, `src/algorithm/pair_counts.jl`, and `src/algorithm/eclat_optimized.jl`.
+The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with five changes that keep its output identical: bitset tidsets, increasing-support item order, perfect-extension pruning, root pair counts on sparse data, and tid lists for classes with short tidsets. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl`, `src/algorithm/pair_counts.jl`, and `src/algorithm/eclat_optimized.jl`.
 
 ## Bitset tidsets
 
@@ -77,36 +77,6 @@ The switch keeps every invariant. `bitset_tids!` lists exactly the set bits, so 
 A warm sweep on BBQ of `LIST_STEP_COST` from 2 to 16 set it to 8. At 8, T10I4D100K 0.00025 mining drops from 1.20 s to 0.90 s, and Retail 0.00025, Retail 0.001, and T10I4D100K 0.001 stay within 1% of bitsets only. Smaller costs switch too many classes and slow T10I4D100K 0.0005 by up to 46%.
 
 `tests/tid_lists.jl` checks the merge against `intersect` on 500 random pairs, including the -1 contract, the bitset-to-list conversion across word boundaries, the switch rule, a list search that leaves its parents, prefix, and perfect stack unchanged, and 600 seeded databases mined with lists never, always, or by the cost rule against the oracle.
-
-## Diffsets in dense searches
-
-On Accidents a bitset join reads 5,316 words, and at minsup 0.2 the joins take about 81% of warm mining. Deep in a dense search, a child's tidset differs from its prefix's by only a few tids. Zaki and Gouda (2003) store that difference instead. For a class with prefix Q, the diffset of member x is d(Qx) = t(Q) \ t(Qx), so support(Qx) = support(Q) − |d(Qx)|.
-
-### Switch and join
-
-When a bitset member a of a class with prefix P is about to build its children, `eclat_search!` gives them diffsets if 2 × (support(Pa) − minsup) is below `DIFF_RATIO` times ⌈N/64⌉. The left side bounds the steps of one diffset join, as shown below, and the right side is the words of one bitset join. The children then form the class with prefix Q = P ∪ {a}:
-
-- At the switch, member b gets d(Qb) = t(Pa) \ t(Pb), computed as the set bits of a AND NOT b.
-- Inside a diffset class, members b and c give d(Qbc) = d(Qc) \ d(Qb), computed by a merge of two ascending lists.
-- In both cases the child's support is support(Qb) − |d|, where Qb is the left member, and the child is frequent exactly when |d| ≤ support(Qb) − minsup.
-
-Diffset classes never switch back, because diffsets only shrink as the search goes deeper.
-
-### Exact support
-
-At the switch, t(Qb) = t(Pa) ∩ t(Pb), so t(Q) \ t(Qb) = t(Pa) \ (t(Pa) ∩ t(Pb)) = t(Pa) \ t(Pb). Inside a diffset class, every tidset of the class lies in t(Q), so t(Qbc) = t(Qb) ∩ t(Qc), and
-
-d(Qbc) = t(Qb) \ t(Qbc) = t(Qb) \ t(Qc) = (t(Q) \ d(Qb)) \ (t(Q) \ d(Qc)) = d(Qc) \ d(Qb).
-
-Here d(Qbc) is the diffset of c in the class with prefix Qb. Its size is support(Qb) − support(Qbc), so the support is exact. A join stops early and rejects once |d| exceeds support(Qb) − minsup, because the support can only fall further.
-
-### Perfect extensions and the proofs above
-
-Item c is a perfect extension of Qb exactly when support(Qbc) = support(Qb), that is, when d(Qbc) is empty. The join loop tests supports as before, so it detects perfect extensions from an empty diffset without a separate test. Every child is frequent or perfect exactly when it would be with bitsets, and it has the same support, so the classes and emitted itemsets are the same. The coverage and uniqueness proofs therefore hold unchanged.
-
-Each child owns its diffset vector, written by the join from its inputs, so a diffset never shares memory with a parent's tidset and the parent stays unchanged.
-
-`tests/diffsets.jl` checks both difference operations against `setdiff` with the early-stop contract, exact supports across the switch, a perfect extension detected from an empty diffset, that children share no memory with their parents and leave them unchanged, the switch rule, and seeded databases mined with diffsets never, always, or by the rule against the oracle.
 
 ## Cost
 
