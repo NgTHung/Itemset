@@ -396,3 +396,17 @@ T10I4D100K 0{,}00025 nhanh thêm 17\% (1{,}46 s còn 1{,}21 s). Không bước n
 khác thay đổi quá 1{,}7\%. Biến thể tối ưu nhanh hơn PrePost+ ở cả 33 ngưỡng với $R$ từ
 0{,}12 đến 0{,}76, và trung bình nhân của $R$ là 0{,}22 trên Retail và 0{,}24 trên
 T10I4D100K.
+
+\subsubsection{Diffset: đã thử và không giữ lại}
+Diffset (Zaki và Gouda, 2003) lưu các tid mà một phần tử thiếu so với tiền tố thay vì các
+tid nó có, nên độ hỗ trợ bằng độ hỗ trợ của tiền tố trừ độ dài diffset. Nhóm cài đặt việc
+chuyển các lớp bitset dày sang diffset, chứng minh đầu ra vẫn chính xác, và mọi kiểm thử
+đều đạt. Tuy vậy, khi quét tỉ số chuyển đổi trên máy BBQ, không giá trị nào nhanh hơn
+bitset: Accidents 0{,}2 chậm đi tới 10\% và T10I4D100K 0{,}00025 chậm đi tới 71\%. Ngay cả
+khi chọn tối ưu cho từng lớp dựa trên kích thước diffset chính xác, số từ cần đọc chỉ giảm
+tối đa 0{,}3\%. Lý do là phép tỉa phần mở rộng hoàn hảo đã loại mọi phần tử có diffset
+rỗng, đúng những chỗ diffset có lợi nhất, còn một bước trộn diffset tốn khoảng 8 lần một
+từ bitset. Diffset cũng không tiết kiệm bộ nhớ đáng kể, vì tidset trong lúc tìm kiếm chiếm
+tối đa 4{,}6 MiB, trong khi bộ nhớ đỉnh nằm ở CSDL đầu vào và tập kết quả. Nhóm vì vậy bỏ
+phần mã này và ghi diffset thành một hướng phát triển cho trường hợp không dùng phép tỉa
+phần mở rộng hoàn hảo.
