@@ -5,6 +5,7 @@ end
 @testset "Image pilot command" begin
     @test_throws ArgumentError ImagePilotCLI.main(String[])
     @test_throws ArgumentError ImagePilotCLI.main(["one", "two", "three"])
+    @test_throws ArgumentError ImagePilotCLI.main(["one", "two", "--minsup", "0.1,0.1"])
     @test ImagePilotCLI.median_width([1, 4]) == 2.5
     @test ImagePilotCLI.median_width([1, 4, 5]) == 4.0
     mktempdir() do dir
@@ -32,6 +33,11 @@ end
             @test occursin("image 1", read(joinpath(output, "supporting-$level.svg"), String))
         end
         @test occursin("0.2\t1\t1\t1\t0", read(joinpath(output, "supporting_images.tsv"), String))
+        sensitivity = joinpath(dir, "sensitivity")
+        @test ImagePilotCLI.main([input, sensitivity, "--vocabulary-size", "1", "--minsup", "0.055,0.06"]; entry, fetch) == sensitivity
+        sensitivity_manifest = TOML.parsefile(joinpath(sensitivity, "mining_manifest.toml"))
+        @test [r["minsup"] for r in sensitivity_manifest["runs"]] == [0.055, 0.06]
+        @test occursin("--vocabulary-size", join(sensitivity_manifest["command"], " "))
         @test_throws ArgumentError ImagePilotCLI.main([input, output]; entry, fetch, vocabulary_size=1)
         @test calls[] == 1
         @test ImagePilotCLI.main([input, joinpath(dir, "cached")]; entry, fetch, vocabulary_size=1) == joinpath(dir, "cached")
