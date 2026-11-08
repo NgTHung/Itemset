@@ -41,13 +41,14 @@ the highest bits. Ended positions stay 0, so comparing keys as integers compares
 those items lexicographically with a prefix first.
 """
 function prefix_key(packed::FrequentItemsets, k::Int, width::Int, per_key::Int)
-    start, stop = packed.offsets[k], packed.offsets[k+1] - 1
+    start = packed.offsets[k]
+    used = min(packed.offsets[k+1] - start, per_key)
     key = UInt128(0)
-    for position in 0:per_key-1
-        digit = start + position <= stop ? UInt128(packed.items[start+position]) + 1 : UInt128(0)
-        key = key << width | digit
+    for position in start:start+used-1
+        key = key << width | (UInt128(packed.items[position]) + 1)
     end
-    return key
+    # One shift fills the ended positions, so a short itemset costs only its own items.
+    return key << (width * (per_key - used))
 end
 
 """
