@@ -366,3 +366,33 @@ trung bình nhân theo CSDL là T10I4D100K 0{,}30, Retail 0{,}33, Mushroom 0{,}5
 0{,}53 và Accidents 0{,}53. Chi phí cố định còn lại là khởi động runtime của Julia, chỉ có
 thể bỏ đi nếu biên dịch trước toàn bộ chương trình thành tệp thực thi, chẳng hạn bằng
 \texttt{juliac}.
+
+\subsubsection{Nhân khai thác cho dữ liệu thưa}
+Trên Retail và T10I4D100K, hầu hết thời gian còn lại nằm trong phép giao bitset, vì mỗi
+phép giao đọc $\lceil N/64 \rceil$ từ dù tidset ngắn. Đếm số phép giao cho thấy hai dạng
+khác nhau. Ở Retail 0{,}001, 99{,}9\% trong 2\,239\,786 phép giao ở lớp gốc thất bại. Ở
+T10I4D100K 0{,}00025, phần lớn phép giao nằm ở độ sâu 2 (2\,256\,822 phép, 99{,}1\% thất
+bại) trên các tidset chỉ khoảng 100 tid.
+
+Bước thứ nhất đếm trước độ hỗ trợ của mọi cặp item phổ biến bằng một mảng tam giác qua một
+lượt duyệt CSDL ngang, như bài báo gốc~\cite{zaki2000}, và lớp gốc chỉ giao những cặp đạt
+ngưỡng. Kích thước mảng được kiểm tra tràn số trước khi cấp phát. Việc đếm chỉ chạy khi chi
+phí ước lượng của nó nhỏ hơn mười lần chi phí các phép giao ở gốc, nên Chess, Mushroom và
+Accidents, với giao dịch dài và ít item phổ biến, vẫn giao như trước.
+
+Bước thứ hai chuyển một lớp con từ bitset sang danh sách tid đã sắp xếp (sorted tid list)
+khi chi phí ước lượng của danh sách nhỏ hơn. Với lớp có $k$ phần tử và $W = \lceil N/64
+\rceil$, chi phí bitset là $W k(k-1)/2$ từ, còn chi phí danh sách là $kW$ để chuyển đổi
+cộng $L (k-1) \sum_i \sigma_i$ cho các phép trộn, trong đó $\sigma_i$ là độ hỗ trợ của
+phần tử thứ $i$ và $L = 8$ là chi phí một bước trộn tính theo số từ, đo trên máy BBQ. Phép
+trộn dừng sớm (early stop) khi số tid đã tìm cộng phần còn lại ngắn hơn không thể đạt
+ngưỡng. Phiên bản đầu chỉ xét độ hỗ trợ trung bình và làm Retail 0{,}00025 chậm đi 12\%,
+vì ở đó chi phí chuyển đổi gần bằng phần tiết kiệm; công thức trên đã khắc phục điều này.
+
+Trong cùng một phiên 700 lần chạy, mọi đầu ra đều khớp hoàn toàn với Eclat của SPMF. Đếm
+cặp làm Retail 0{,}001 nhanh hơn 76\% (1{,}72 s còn 0{,}42 s), T10I4D100K 0{,}001 nhanh hơn
+26\%, và ngưỡng stress Retail 0{,}00025 giảm từ 14{,}55 s còn 0{,}59 s. Danh sách tid làm
+T10I4D100K 0{,}00025 nhanh thêm 17\% (1{,}46 s còn 1{,}21 s). Không bước nào làm ngưỡng
+khác thay đổi quá 1{,}7\%. Biến thể tối ưu nhanh hơn PrePost+ ở cả 33 ngưỡng với $R$ từ
+0{,}12 đến 0{,}76, và trung bình nhân của $R$ là 0{,}22 trên Retail và 0{,}24 trên
+T10I4D100K.
