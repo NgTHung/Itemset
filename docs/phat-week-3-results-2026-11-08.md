@@ -8,7 +8,7 @@ Miner baseline và optimized đều lấy từ `8c043fb9ca7cc4ee18ea191c55161c56
 
 ## Độ đúng của hai biến thể
 
-Ma trận có 33 điểm và một lần chạy mỗi biến thể tại mỗi điểm. Cả 66 lần khớp hoàn toàn với SPMF. Chess, Mushroom và Accidents mỗi bộ có bảy ngưỡng. Retail và T10I4D100K mỗi bộ có sáu ngưỡng. Các dòng đầu ra SPMF từ 17 đến 574.433 itemset. Tổng hợp ghi số khóa tham chiếu, số khóa đầu ra Julia, tử số và mẫu số match rate, số tập thiếu, thừa, lặp và sai support. SPMF chạy riêng cho mỗi điểm và cả hai biến thể dùng cùng reference. [Cấu hình](../experiments/configs/correctness.toml)
+Ma trận có 33 điểm và một lần chạy mỗi biến thể tại mỗi điểm. Cả 66 lần khớp hoàn toàn với SPMF. Chess, Mushroom và Accidents mỗi bộ có bảy ngưỡng. Retail và T10I4D100K mỗi bộ có sáu ngưỡng. Đầu ra SPMF có từ 15 đến 574.431 itemset sau khi bỏ các dòng metadata. Tổng hợp ghi số khóa tham chiếu, số khóa đầu ra Julia, tử số và mẫu số match rate, số tập thiếu, thừa, lặp và sai support. SPMF chạy riêng cho mỗi điểm và cả hai biến thể dùng cùng reference. [Cấu hình](../experiments/configs/correctness.toml)
 
 ## Bộ nhớ đỉnh
 

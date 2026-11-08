@@ -44,7 +44,7 @@ def correctness_rows(run):
                 reference_count = ""
                 if rate is not None:
                     with reference.open("rb") as stream:
-                        reference_count = sum(bool(line.strip()) for line in stream)
+                        reference_count = sum(b"#SUP:" in line for line in stream)
                 union = reference_count + diff["extra"] if rate is not None else ""
                 exact_count = round(rate * union) if rate is not None else ""
                 status = "exact" if row["status"] == "ok" and diff.get("matches") else (
