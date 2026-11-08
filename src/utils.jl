@@ -7,17 +7,24 @@ For intentionally empty transactions, use the in-memory API instead of blank lin
 function read_transactions(io::IO)
     bytes = read(io)
     transactions = Vector{Vector{Int}}()
+    # Parsing into one reused vector and copying it at its final length allocates each
+    # transaction once; growing a fresh vector per line took most of the read time.
+    scratch = Int[]
     line_number = 0
     start = 1
     while start <= length(bytes)
         stop = something(findnext(==(UInt8(0x0a)), bytes, start), length(bytes) + 1)
         line_number += 1
-        items = parse_transaction_line(view(bytes, start:stop-1), line_number)
-        items === nothing || push!(transactions, items)
+        if parse_transaction_line!(scratch, view(bytes, start:stop-1), line_number)
+            push!(transactions, canonical_copy(scratch))
+        end
         start = stop + 1
     end
     return transactions
 end
+
+"""A sorted, deduplicated copy of `items`; files usually list items ascending already, so that case only copies."""
+canonical_copy(items::Vector{Int}) = is_canonical(items) ? copy(items) : unique!(sort(items))
 
 read_transactions(path::AbstractString) = open(read_transactions, path)
 
@@ -45,47 +52,47 @@ is_spmf_metadata(line::AbstractString) = isempty(line) || startswith(line, ('#',
 is_ascii_space(byte::UInt8) = byte == UInt8(' ') || 0x09 <= byte <= 0x0d
 
 """
-Parse one line's bytes into a canonical transaction, or `nothing` for a blank or
-metadata line. Tokens and errors match `parse_item_ids` on the stripped line.
+Replace `items` with the item IDs of one line's bytes, in file order, and return
+`true`, or return `false` for a blank or metadata line. Tokens and errors match
+`parse_item_ids` on the stripped line.
 """
-function parse_transaction_line(line::AbstractVector{UInt8}, line_number::Int)
+function parse_transaction_line!(items::Vector{Int}, line::AbstractVector{UInt8}, line_number::Int)
+    empty!(items)
     # Bytes above 0x7f can be Unicode spaces or digits, which only the string parser handles.
     if any(>(0x7f), line)
         value = strip(String(line))
-        is_spmf_metadata(value) && return nothing
-        return canonical_transaction(parse_item_ids(value, line_number))
+        is_spmf_metadata(value) && return false
+        append!(items, parse_item_ids(value, line_number))
+        return true
     end
-    items = Int[]
     i, n = 1, length(line)
     while i <= n && is_ascii_space(line[i])
         i += 1
     end
-    i > n && return nothing
-    line[i] in codeunits("#%@") && return nothing
+    i > n && return false
+    line[i] in codeunits("#%@") && return false
     while i <= n
         j = i
+        value = 0
+        all_digits = true
         while j <= n && !is_ascii_space(line[j])
+            digit = line[j] - UInt8('0')
+            all_digits &= digit <= 9
+            value = 10value + digit
             j += 1
         end
-        push!(items, parse_item_id(view(line, i:j-1), line_number))
+        # 18 digits stay below typemax(Int), so `value` is exact; other tokens, whose `value` may have wrapped, take the general parser.
+        push!(items, all_digits && j - i <= 18 ? value : parse_item_id(view(line, i:j-1), line_number))
         i = j
         while i <= n && is_ascii_space(line[i])
             i += 1
         end
     end
-    return unique!(sort!(items))
+    return true
 end
 
-"""Parse one ASCII token. Plain digits take a fast path; anything else goes through `tryparse`."""
+"""Parse one ASCII token that is not a plain run of at most 18 digits, such as `+5` or a 19-digit ID."""
 function parse_item_id(token::AbstractVector{UInt8}, line_number::Int)
-    # 18 digits stay below typemax(Int), so the fast path cannot overflow.
-    if length(token) <= 18 && all(byte -> UInt8('0') <= byte <= UInt8('9'), token)
-        value = 0
-        for byte in token
-            value = 10value + (byte - UInt8('0'))
-        end
-        return value
-    end
     text = String(copy(token))
     item = tryparse(Int, text)
     (item === nothing || item < 0) &&
