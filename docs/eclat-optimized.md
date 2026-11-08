@@ -1,6 +1,6 @@
 # Eclat optimized variant
 
-The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with four changes that keep its output identical: bitset tidsets, increasing-support item order, perfect-extension pruning, and root pair counts on sparse data. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl`, `src/algorithm/pair_counts.jl`, and `src/algorithm/eclat_optimized.jl`.
+The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with five changes that keep its output identical: bitset tidsets, increasing-support item order, perfect-extension pruning, root pair counts on sparse data, and tid lists for classes with short tidsets. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl`, `src/algorithm/pair_counts.jl`, and `src/algorithm/eclat_optimized.jl`.
 
 ## Bitset tidsets
 
@@ -63,6 +63,20 @@ The skip is exact. At the root the prefix is empty, so the join of members i and
 `pair_filter` counts pairs only when that is cheaper than the root joins. Counting touches at most the sum of |t|(|t| − 1)/2 slots, and the root joins read m(m − 1)/2 bitsets of ⌈N/64⌉ words. A slot update can miss the cache while a join reads words in order, so counting must be ten times cheaper by this measure. Retail and T10I4D100K pass by two orders of magnitude, and Chess, Mushroom, and Accidents fail, because their transactions are long and their frequent items few. The table is sized with an overflow check and capped at 2^28 slots before it is allocated; above the cap the search joins every root pair.
 
 `tests/pair_counts.jl` checks the slot layout, the size check, counts against a direct count, the cost rule on a dense and a sparse database, that a low count skips its join, and 200 seeded databases mined with and without counts against the oracle.
+
+## Tid lists below the root
+
+A bitset join reads ⌈N/64⌉ words whatever the supports, so it wastes most of its reads when tidsets are short. On T10I4D100K at minsup 0.00025, the search runs 2,256,822 joins at depth 2, 99.1% of them fail, and the children that survive hold about 100 tids against 1,563 words. `search_children!` therefore moves a class of bitset children to ascending tid lists when `prefer_lists` finds lists cheaper. Lists never move back to bitsets, because tidsets only shrink with depth.
+
+`intersect_lists!` merges two ascending lists. Each step writes a[i] into the destination and keeps it only on a match, then advances each cursor by a comparison result, so the loop has no branch that depends on the data. It stops once the tids found plus the shorter remainder cannot reach minsup and returns -1, and it never stops on reaching minsup, because a frequent child needs its whole tidset.
+
+The switch keeps every invariant. `bitset_tids!` lists exactly the set bits, so each member keeps the same tidset in a new form. A join that returns -1 had support below minsup, which the bitset search would also have rejected, and a join that reaches minsup returns its exact support, so frequent children and perfect extensions are the same as with bitsets. The proofs above therefore hold for list classes unchanged.
+
+`prefer_lists` compares the cost of a class's own joins both ways, with W = ⌈N/64⌉. As bitsets, its k members make k(k − 1)/2 joins of W words. As lists, each member first costs one W-word scan to convert, and the joins merge (k − 1) times the sum of the supports, at `LIST_STEP_COST` words per merge step. A rule on mean support alone slowed Retail 0.00025 by 12%, because its switched classes made 2.4 joins per child against 50 on T10I4D100K 0.00025, so the conversions cost about what the joins saved. Counting the conversions keeps classes with few members as bitsets.
+
+A warm sweep on BBQ of `LIST_STEP_COST` from 2 to 16 set it to 8. At 8, T10I4D100K 0.00025 mining drops from 1.20 s to 0.90 s, and Retail 0.00025, Retail 0.001, and T10I4D100K 0.001 stay within 1% of bitsets only. Smaller costs switch too many classes and slow T10I4D100K 0.0005 by up to 46%.
+
+`tests/tid_lists.jl` checks the merge against `intersect` on 500 random pairs, including the -1 contract, the bitset-to-list conversion across word boundaries, the switch rule, a list search that leaves its parents, prefix, and perfect stack unchanged, and 600 seeded databases mined with lists never, always, or by the cost rule against the oracle.
 
 ## Cost
 
