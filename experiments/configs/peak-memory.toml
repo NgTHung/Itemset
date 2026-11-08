@@ -1,0 +1,29 @@
+name = "peak-memory"
+variants = ["baseline", "optimized"]
+mode = "cold"
+repeats = 5
+timeout_seconds = 300
+keep_outputs = false
+verify_outputs = true
+skip_after_timeout = false
+spmf_version = "2.66"
+
+[[series]]
+dataset = "chess"
+minsup = [0.75]
+
+[[series]]
+dataset = "mushroom"
+minsup = [0.25]
+
+[[series]]
+dataset = "retail"
+minsup = [0.0025]
+
+[[series]]
+dataset = "T10I4D100K"
+minsup = [0.001]
+
+[[series]]
+dataset = "accidents"
+minsup = [0.8]
