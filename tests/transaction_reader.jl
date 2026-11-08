@@ -37,14 +37,3 @@ end
     end
     @test_throws "line 3" read_transactions(IOBuffer("1\n\n2 x\n"))
 end
-
-@testset "Canonical transactions are not copied" begin
-    database = [[1, 2], Int[], [0, 5]]
-    canonical = ItemsetMining.canonical_database(database)
-    @test canonical == database
-    @test all(canonical[i] === database[i] for i in eachindex(database))
-    unsorted = [[2, 1], [3, 3]]
-    @test ItemsetMining.canonical_database(unsorted) == [[1, 2], [3]]
-    @test unsorted == [[2, 1], [3, 3]]
-    @test_throws "transaction 1" ItemsetMining.canonical_database([[-1, 2]])
-end

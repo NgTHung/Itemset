@@ -16,7 +16,7 @@ A bitset tidset holds W = ⌈N/64⌉ words of 64 bits, where N is the transactio
 
 The baseline's proof uses only one property of the item order: it is a strict total order, and each class takes the members that follow a in it. Increasing support with ID tie-breaks is such an order, so the four invariants of [eclat.md](eclat.md#invariants) hold with "ascending item order" read as this order and "tid-list" read as bitset. The proofs of exact support, no duplicates, and completeness then carry over unchanged. Property 4 holds because the bits of a AND b are set exactly at the tids in both sets.
 
-`tests/tidsets.jl` checks the boundary cases of N = 0, 1, 63, 64, 65, 127, 128, and 129. It also checks the unused high bits, that parent sets and the prefix are unchanged after a search, and the item order. The variant also runs every fixture, SPMF, seeded oracle, CLI, and package-image test that the baseline runs.
+`tests/eclat_optimized.jl` mines 200 seeded databases against the brute-force oracle. Their sizes include N = 63, 64, 65, 127, 128, and 129, so bitsets cross word boundaries. Each check compares the number of emitted itemsets with the size of the map, so a duplicate cannot hide behind a dictionary overwrite. The file also checks that a search leaves parent sets and the prefix unchanged. The variant also runs every fixture, SPMF, seeded oracle, CLI, and package-image test that the baseline runs.
 
 ## Perfect extensions
 
@@ -52,7 +52,7 @@ Suppose a node N on the path a₁, a₂, ..., aₖ emits Z. At the node N_j reac
 
 `push_subsets!` emits the 2^|E| itemsets of a node in binary reflected Gray-code order. Step i toggles the perfect item at position trailing_zeros(i) + 1, so each itemset differs from the one before by one item, which `insert!` or `deleteat!` puts in place in the ascending prefix. A node's emissions therefore cost O(2^|E| k) for itemsets of length at most k, the same as copying them into the packed result. The prefix ends with the last perfect item and drops it, so the caller gets its prefix back unchanged. A perfect set of more than 62 items would need more than 2^62 itemsets, which no result vector can hold, so the search throws `OverflowError` instead of looping.
 
-`tests/perfect_extensions.jl` checks universal items, groups of items with equal tidsets, siblings with equal support but different tidsets, perfect extensions found at two depths of one path, and itemsets whose support equals minsup. Each check compares the number of emitted itemsets with the size of the map, so a duplicate cannot hide behind a dictionary overwrite.
+Half of the seeded databases in `tests/eclat_optimized.jl` draw whole groups of items that always occur together, so perfect extensions appear at every depth. The file also checks that a perfect set too large for a result throws before any emission.
 
 ## Root pair counts
 
@@ -62,7 +62,7 @@ The skip is exact. At the root the prefix is empty, so the join of members i and
 
 `pair_filter` counts pairs only when that is cheaper than the root joins. Counting touches at most the sum of |t|(|t| − 1)/2 slots, and the root joins read m(m − 1)/2 bitsets of ⌈N/64⌉ words. A slot update can miss the cache while a join reads words in order, so counting must be ten times cheaper by this measure. Retail and T10I4D100K pass by two orders of magnitude, and Chess, Mushroom, and Accidents fail, because their transactions are long and their frequent items few. The table is sized with an overflow check and capped at 2^28 slots before it is allocated; above the cap the search joins every root pair.
 
-`tests/pair_counts.jl` checks the slot layout, the size check, counts against a direct count, the cost rule on a dense and a sparse database, that a low count skips its join, and 200 seeded databases mined with and without counts against the oracle.
+`tests/eclat_optimized.jl` mines every seeded database both with and without pair counts.
 
 ## Tid lists below the root
 
@@ -76,7 +76,7 @@ The switch keeps every invariant. `bitset_tids!` lists exactly the set bits, so 
 
 A warm sweep on BBQ of `LIST_STEP_COST` from 2 to 16 set it to 8. At 8, T10I4D100K 0.00025 mining drops from 1.20 s to 0.90 s, and Retail 0.00025, Retail 0.001, and T10I4D100K 0.001 stay within 1% of bitsets only. Smaller costs switch too many classes and slow T10I4D100K 0.0005 by up to 46%.
 
-`tests/tid_lists.jl` checks the merge against `intersect` on 500 random pairs, including the -1 contract, the bitset-to-list conversion across word boundaries, the switch rule, a list search that leaves its parents, prefix, and perfect stack unchanged, and 600 seeded databases mined with lists never, always, or by the cost rule against the oracle.
+`tests/eclat_optimized.jl` mines every seeded database with lists never, always, or by the cost rule, so the conversion and the merge run across word boundaries. It also checks that a list search leaves its parents, prefix, and perfect stack unchanged.
 
 ## Cost
 
