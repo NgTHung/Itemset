@@ -279,3 +279,43 @@ cho thấy cặp \{8,13\} xuất hiện trong 69/159 ảnh chữ số 3 và 9/16
 số 4. Đây là tần suất mô tả trên cùng tập dùng để học codebook. Thời gian,
 ngưỡng support nguyên, revision, mã băm nguồn miner và dung lượng đầu ra
 được lưu trong \texttt{mining\_manifest.toml}; không giới hạn độ dài itemset.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/semeion-source-contrast.png}
+\caption{Hai ảnh nguồn cùng nhãn chữ số 2 ở ngưỡng 5\%. Các ô vuông đánh dấu
+patch được gán vào từ thị giác tương ứng. Ảnh 44 chứa đủ ba từ. Ảnh 41 thiếu
+từ 4 theo ngưỡng khoảng cách của bộ mã hóa.}
+\label{fig:semeion-contrast}
+\end{figure}
+
+Hình~\ref{fig:semeion-contrast} dùng tọa độ và pixel đã đối chiếu với dữ liệu
+nguồn. Để kiểm tra độ nhạy, nhóm thay đổi kích thước từ điển $K$ và giữ nguyên
+seed, cách cắt patch, số pixel nét tối thiểu, số vòng k-means và ngưỡng khoảng
+cách. Trong mỗi lần đổi minsup, giao dịch và từ điển được giữ cố định.
+Bảng~\ref{tab:semeion-sensitivity} ghi số itemset tìm được trên cùng 1.593 ảnh.
+
+\begin{table}[t]
+\centering
+\caption{Độ nhạy của số itemset khi đổi kích thước từ điển và minsup.}
+\label{tab:semeion-sensitivity}
+\begin{tabular}{r r r r r r r}
+\hline
+$K$ & Ảnh rỗng & 20\% & 10\% & 6\% & 5,5\% & 5\% \\
+\hline
+16 & 99 & 4 & 12 & 19 & 21 & 25 \\
+24 & 11 & 6 & 18 & 35 & 43 & 46 \\
+32 & 2 & 5 & 24 & 45 & 52 & 63 \\
+\hline
+\end{tabular}
+\end{table}
+
+Với $K=24$, từ 13 và cặp \{8,13\} có mặt ở cả năm ngưỡng. Bộ ba
+\{4,8,13\} có support 90, đủ ngưỡng 5,5\% (88 ảnh) và thấp hơn ngưỡng
+6\% (96 ảnh). Khi tăng $K$ từ 16 lên 32, độ rộng trung bình tăng từ 2,27
+lên 4,31 từ/ảnh và số ảnh rỗng giảm. Tại 20\%, số mẫu lớn nhất nằm ở
+$K=24$. Mỗi từ điển được khớp lại nên cùng một ID có thể chỉ hai nét khác
+nhau. Một nét ngang phổ biến trong nhiều nhãn có thể phản ánh cách viết và
+cách đặt lưới trên ảnh nhị phân 16$\times$16. Cách chọn ví dụ cùng nhãn giúp
+kiểm tra kết quả cục bộ. Tần suất thu được mô tả tập ảnh Semeion và từ điển
+được học trên tập này.

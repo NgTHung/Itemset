@@ -61,7 +61,7 @@ biên dịch. Với SPMF, nhóm dùng thêm thời gian do SPMF tự báo cáo. 
 peak RSS (resident set size, lượng bộ nhớ vật lý lớn nhất mà tiến trình chiếm) do
 hệ điều hành đo, vì chỉ đại lượng này so sánh được giữa tiến trình Julia và Java.
 
-Các thực nghiệm chạy trên máy AMD Ryzen 7 H 260 (16 luồng logic, 31,3 GiB RAM),
+Loạt đo thời gian của nhóm chạy trên máy AMD Ryzen 7 H 260 (16 luồng logic, 31,3 GiB RAM),
 Windows 11, Julia 1.13.2 với một luồng, SPMF v2.66~\cite{spmf2016} trên Java
 Temurin 25.0.4.1.
 \subsection{Độ đúng và bộ nhớ}
@@ -82,7 +82,7 @@ cả hai chương trình đều trả về ánh xạ trống. Cơ sở dữ li�
 được chạy ở hai ngưỡng để kiểm tra tập mục vừa nằm trên và dưới ngưỡng. Mỗi
 ngưỡng được chọn sao cho SPMF và phép tính thập phân cho cùng $\sigma$. Đầu ra
 gốc của SPMF và danh sách lần chạy nằm trong \texttt{data/toy/spmf/}, kèm kịch
-bản \texttt{tools/spmf/toy\_reference.jl} để tạo lại; bộ kiểm thử đối chiếu
+bản \texttt{tools/spmf/reference\_outputs.jl} để tạo lại. Bộ kiểm thử đối chiếu
 các đầu ra này với mọi phiên bản Eclat ở mỗi lần chạy. Giao thức nằm trong
 \texttt{tools/spmf/README.md}.
 
@@ -106,6 +106,73 @@ Nested & 4 & 2 & 3/3 \\
 \hline
 \end{tabular}
 \end{table}
+\subsubsection{Đối chiếu trên năm benchmark}
+Nhóm chạy cả bản cơ bản và bản tối ưu từ revision \texttt{8c043fb} trên
+33 cặp dữ liệu và ngưỡng trong cấu hình \texttt{correctness.toml}.
+Hai biến thể dùng chung một đầu ra SPMF Eclat cho từng cặp. Cả 66 phép so sánh
+đều đạt 100\%, với 0 tập mục thiếu, thừa, lặp hoặc sai support.
+Bảng~\ref{tab:bench-exact} ghi số điểm khớp theo biến thể và khoảng số itemset
+trong đầu ra tham chiếu. Kết luận áp dụng cho các tệp và ngưỡng đã chạy.
+
+\begin{table}[t]
+\centering
+\caption{Số điểm benchmark khớp toàn bộ ánh xạ với SPMF Eclat.}
+\label{tab:bench-exact}
+\begin{tabular}{lrrr}
+\hline
+Dữ liệu & Cơ bản & Tối ưu & Khoảng số itemset \\
+\hline
+Chess & 7/7 & 7/7 & 624--254\,946 \\
+Mushroom & 7/7 & 7/7 & 155--574\,433 \\
+Retail & 6/6 & 6/6 & 161--7\,591 \\
+T10I4D100K & 6/6 & 6/6 & 387--96\,961 \\
+Accidents & 7/7 & 7/7 & 17--1\,095 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bộ nhớ đỉnh của tiến trình}
+Loạt đối chiếu và loạt đo bộ nhớ dùng máy AMD Ryzen 5 6600H, Windows 11,
+Julia 1.13.2 với một luồng, và SPMF 2.66 trên Temurin 25.0.4.1. Mỗi bộ dữ liệu
+được đo tại một ngưỡng giữa đã khớp SPMF. Mỗi biến thể chạy trong năm tiến trình
+mới. Windows báo \texttt{PeakWorkingSetSize} qua \texttt{GetProcessMemoryInfo}.
+Phép đo bao gồm khởi động, đọc dữ liệu, khai thác và ghi toàn bộ đầu ra. Phép
+đối chiếu diễn ra sau khi đo. Cả 50 đầu ra đo bộ nhớ đều khớp SPMF.
+
+\begin{table}[t]
+\centering
+\caption{Trung vị peak RSS trên năm lần lặp. RSS được ghi theo MiB.}
+\label{tab:peak-rss}
+\begin{tabular}{lrrrr}
+\hline
+Dữ liệu & $\sigma$ & Cơ bản & Tối ưu & $R$ \\
+\hline
+Chess & 2\,397 & 217,5 & 193,7 & 1,123 \\
+Mushroom & 2\,031 & 216,8 & 188,4 & 1,151 \\
+Retail & 221 & 229,2 & 215,1 & 1,065 \\
+T10I4D100K & 100 & 253,4 & 218,4 & 1,160 \\
+Accidents & 272\,147 & 582,2 & 466,9 & 1,247 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.88\textwidth]{figures/peak-memory.png}
+\caption{Trung vị peak RSS theo bộ dữ liệu và tỷ lệ bộ nhớ giữa hai biến thể.}
+\label{fig:peak-rss}
+\end{figure*}
+
+Trong Bảng~\ref{tab:peak-rss} và Hình~\ref{fig:peak-rss}, $R$ là trung vị RSS
+của bản cơ bản chia cho trung vị RSS của bản tối ưu. Bản tối ưu giảm peak RSS
+ở cả năm điểm đo. Retail giảm 6,1\% và Accidents giảm 19,8\%. Peak RSS lớn nhất
+của năm lần lặp Accidents là 627,6 MiB với bản cơ bản và 467,5 MiB với bản tối
+ưu. Bản tối ưu tái sử dụng bitset cho các giao ở từng mức tìm kiếm. Cách tổ
+chức này có thể giảm bộ nhớ của các danh sách tid trung gian, nhất là khi các
+danh sách chứa nhiều giao dịch. Các phép đo tiến trình không tách riêng phần
+bộ nhớ của tidset khỏi dữ liệu đầu vào, đầu ra và runtime. Vì vậy tỷ lệ $R$
+được dùng để mô tả bộ nhớ toàn tiến trình tại các điểm đo này.
+
 \subsection{Thời gian, số lượng kết quả và khả năng mở rộng}
 Thien viết runtime/độ dài giao dịch; Hung viết output size và tập con lồng nhau
 10\%, 25\%, 50\%, 75\%, 100\%. Dẫn chiếu hình và dữ liệu thô khi có kết quả.
