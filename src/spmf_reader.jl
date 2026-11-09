@@ -52,24 +52,47 @@ function parse_transaction_line!(items::Vector{Int}, line::AbstractVector{UInt8}
     end
     i > n && return false
     line[i] in codeunits("#%@") && return false
+    append_item_tokens!(items, line, i, n, line_number)
+    return true
+end
+
+"""
+Append the item IDs of the ASCII bytes `line[i:n]`, split at ASCII spaces, to
+`items`. Throws `ArgumentError` naming `line_number` for an invalid token, as
+`parse_item_ids` does.
+"""
+function append_item_tokens!(items::Vector{Int}, line::AbstractVector{UInt8}, i::Int, n::Int, line_number::Int)
+    while i <= n && is_ascii_space(line[i])
+        i += 1
+    end
     while i <= n
-        j = i
-        value = 0
-        all_digits = true
-        while j <= n && !is_ascii_space(line[j])
-            digit = line[j] - UInt8('0')
-            all_digits &= digit <= 9
-            value = 10value + digit
-            j += 1
-        end
-        # 18 digits stay below typemax(Int), so `value` is exact; other tokens, whose `value` may have wrapped, take the general parser.
-        push!(items, all_digits && j - i <= 18 ? value : parse_item_id(view(line, i:j-1), line_number))
+        j, value, plain = plain_digits(line, i, n)
+        push!(items, plain ? value : parse_item_id(view(line, i:j-1), line_number))
         i = j
         while i <= n && is_ascii_space(line[i])
             i += 1
         end
     end
-    return true
+    return items
+end
+
+"""
+Scan the token that starts at `line[i]` and ends before the next ASCII space or
+past `n`. Return the index after it, its value, and whether it is a plain run of
+at most 18 digits; only then is the value exact, because 18 digits stay below
+`typemax(Int)` and other tokens may wrap.
+"""
+function plain_digits(line::AbstractVector{UInt8}, i::Int, n::Int)
+    j = i
+    value = 0
+    all_digits = true
+    while j <= n && !is_ascii_space(line[j])
+        digit = line[j] - UInt8('0')
+        all_digits &= digit <= 9
+        value = 10value + digit
+        j += 1
+    end
+    return j, value, all_digits && j - i <= 18
 end
 
 """Parse one ASCII token that is not a plain run of at most 18 digits, such as `+5` or a 19-digit ID."""
@@ -108,22 +131,73 @@ Skips the same metadata lines as `read_transactions`, except a line holding
 repeated item ID, an empty itemset, or a support below 1.
 """
 function read_itemset_records(io::IO)
+    bytes = read(io)
     records = ItemsetRecord[]
-    for (line_number, line) in enumerate(eachline(io))
-        value = strip(line)
-        is_spmf_metadata(value) && !occursin("#SUP:", value) && continue
-        parts = match(r"^(.*?)\s*#SUP:\s*(\S*)$", value)
-        parts === nothing &&
-            throw(ArgumentError("line $line_number: expected 'items #SUP: count', got $(repr(value))"))
-        items = parse_item_ids(parts[1], line_number)
-        isempty(items) && throw(ArgumentError("line $line_number: empty itemset"))
-        allunique(items) || throw(ArgumentError("line $line_number: repeated item ID in $(repr(value))"))
-        support = tryparse(Int, parts[2])
-        (support === nothing || support < 1) &&
-            throw(ArgumentError("line $line_number: invalid support $(repr(parts[2]))"))
-        push!(records, (itemset=Tuple(sort!(items)), support=support, line=line_number))
+    items = Int[]
+    line_number = 0
+    start = 1
+    while start <= length(bytes)
+        stop = something(findnext(==(UInt8(0x0a)), bytes, start), length(bytes) + 1)
+        line_number += 1
+        line = view(bytes, start:stop-1)
+        record = plain_record!(items, line, line_number)
+        if record === nothing
+            # Anything but a plain `items #SUP: count` line, including every invalid one,
+            # goes through the general parser, so skips and error messages stay exact.
+            record = record_from_text(strip(String(line)), line_number)
+        end
+        record === nothing || push!(records, record)
+        start = stop + 1
     end
     return records
 end
 
 read_itemset_records(path::AbstractString) = open(read_itemset_records, path)
+
+const SUPPORT_MARK = codeunits("#SUP:")
+
+"""
+Parse an ASCII line of plain item IDs, `#SUP:`, and one plain positive count
+into a record, or return `nothing` when the line has any other form. Item
+tokens that are not plain digits still parse or throw as in `parse_item_ids`.
+"""
+function plain_record!(items::Vector{Int}, line::AbstractVector{UInt8}, line_number::Int)
+    any(>(0x7f), line) && return nothing
+    mark = findfirst(SUPPORT_MARK, line)
+    mark === nothing && return nothing
+    n = length(line)
+    i = last(mark) + 1
+    while i <= n && is_ascii_space(line[i])
+        i += 1
+    end
+    i <= n || return nothing
+    j, support, plain = plain_digits(line, i, n)
+    plain && support >= 1 || return nothing
+    while j <= n
+        is_ascii_space(line[j]) || return nothing
+        j += 1
+    end
+    empty!(items)
+    append_item_tokens!(items, line, 1, first(mark) - 1, line_number)
+    isempty(items) && return nothing
+    is_canonical(items) || is_canonical(sort!(items)) || return nothing
+    return (itemset=Tuple(items), support=support, line=line_number)
+end
+
+"""
+Parse one stripped line of SPMF itemset output into a record, or return
+`nothing` for a metadata line. Throws `ArgumentError` naming `line_number`.
+"""
+function record_from_text(value::AbstractString, line_number::Int)
+    is_spmf_metadata(value) && !occursin("#SUP:", value) && return nothing
+    parts = match(r"^(.*?)\s*#SUP:\s*(\S*)$", value)
+    parts === nothing &&
+        throw(ArgumentError("line $line_number: expected 'items #SUP: count', got $(repr(value))"))
+    items = parse_item_ids(parts[1], line_number)
+    isempty(items) && throw(ArgumentError("line $line_number: empty itemset"))
+    allunique(items) || throw(ArgumentError("line $line_number: repeated item ID in $(repr(value))"))
+    support = tryparse(Int, parts[2])
+    (support === nothing || support < 1) &&
+        throw(ArgumentError("line $line_number: invalid support $(repr(parts[2]))"))
+    return (itemset=Tuple(sort!(items)), support=support, line=line_number)
+end

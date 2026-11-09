@@ -98,6 +98,7 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     include("frequent_itemsets.jl")
     include("itemset_order.jl")
     include("transaction_reader.jl")
+    include("itemset_record_reader.jl")
     include("cli.jl")
     include("precompile.jl")
     include("benchmark_data.jl")
