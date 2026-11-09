@@ -19,33 +19,42 @@ end
     @testset "A $form search is type-stable and restores its shared state" for (form, class) in
             (("bitset", bitset_class), ("tid-list", list_class))
         before = [copy(m.tidset) for m in class]
-        prefix, perfect = Int[], Int[]
-        nodes = @inferred ItemsetMining.eclat_search!(class, prefix, perfect, 2, ItemsetMining.SearchNodes(),
+        perfect = Int[]
+        nodes = @inferred ItemsetMining.eclat_search!(class, 1, perfect, 2, ItemsetMining.SearchNodes(),
                                                       ItemsetMining.SearchState())
         result = @inferred ItemsetMining.expand_nodes(nodes)
         @test [m.tidset for m in class] == before
-        @test isempty(prefix) && isempty(perfect)
+        @test isempty(perfect)
         @test support_map(result) == brute_force_supports(database, 2)
         @test length(result) == length(support_map(result))
     end
 
-    @testset "Mining allocates its result once, at its final size" begin
+    @testset "Mining allocates little beyond its result" begin
+        result_bytes(packed) = sizeof(packed.items) + sizeof(packed.offsets) + sizeof(packed.supports)
         # Shared groups give nodes with many perfect extensions, so most itemsets come from expansion.
-        transactions = [fill(collect(1:14), 30); fill([1:14; 15; 16], 10); fill([15, 16, 17], 5)]
-        canonical = ItemsetMining.canonical_database(transactions)
-        mine = () -> ItemsetMining.mine_optimized(canonical, 5)
-        packed = mine()
-        @test length(packed) > 50_000
-        result_bytes = sizeof(packed.items) + sizeof(packed.offsets) + sizeof(packed.supports)
-        @test @allocated(mine()) < 1.25 * result_bytes
+        grouped = [fill(collect(1:14), 30); fill([1:14; 15; 16], 10); fill([15, 16, 17], 5)]
+        # Independent items give almost no perfect extensions, so nearly every node is one itemset.
+        rng = Xoshiro(DEFAULT_SEED)
+        independent = [randsubseq(rng, 0:40, 0.5) for _ in 1:300]
+        for (transactions, min_count, limit) in ((grouped, 5, 1.25), (independent, 12, 3.0))
+            canonical = ItemsetMining.canonical_database(transactions)
+            mine = () -> ItemsetMining.mine_optimized(canonical, min_count)
+            packed = mine()
+            @test length(packed) > 50_000
+            @test @allocated(mine()) < limit * result_bytes(packed)
+        end
     end
 
     @testset "More perfect-extension subsets than a result can hold throw before any emission" begin
+        # The 63 perfect items come from two nodes on one path, so only their sum is too large.
         nodes = ItemsetMining.SearchNodes()
-        @test_throws OverflowError ItemsetMining.push_node!(nodes, [100], collect(1:63), 1)
-        @test isempty(nodes.supports)
+        ItemsetMining.push_node!(nodes, 1, 100, collect(1:40), 1)
+        ItemsetMining.push_node!(nodes, 2, 101, collect(41:63), 1)
+        @test_throws OverflowError ItemsetMining.expand_nodes(nodes)
         # 2^62 subsets of two core items need 2^63 item slots, past typemax(Int).
-        ItemsetMining.push_node!(nodes, [1, 2], collect(3:64), 1)
+        nodes = ItemsetMining.SearchNodes()
+        ItemsetMining.push_node!(nodes, 1, 1, Int[], 1)
+        ItemsetMining.push_node!(nodes, 2, 2, collect(3:64), 1)
         @test_throws OverflowError ItemsetMining.expand_nodes(nodes)
     end
 
