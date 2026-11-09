@@ -79,7 +79,8 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         write(path, "keep\n")
         @test_throws "transaction 2" write_transactions(path, [[1], Int[]])
         @test read(path, String) == "keep\n"
-        for bad in (Dict((2, 1)=>2), Dict((1,)=>0), Dict(()=>1))
+        for bad in (Dict((2, 1)=>2), Dict((1,)=>0), Dict(()=>1), Dict((true,)=>1), Dict((-1,)=>1), Dict((1, 1)=>1),
+                    Dict([1, 2]=>1), Dict((1,)=>true), Dict((1,)=>1.0), Dict((1, typemax(UInt))=>1))
             @test_throws ArgumentError write_itemsets(path, bad)
             @test read(path, String) == "keep\n"
         end
@@ -87,6 +88,10 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     @testset "Support map output order is numeric" begin
         @test sprint(write_itemsets, SupportMap((10,)=>1, (2,)=>1, (1, 10)=>1, (1, 2)=>1)) ==
               "1 2 #SUP: 1\n1 10 #SUP: 1\n2 #SUP: 1\n10 #SUP: 1\n"
+        @test sprint(write_itemsets, Dict{Any,Any}((Int32(1), Int32(10))=>Int32(2))) == "1 10 #SUP: 2\n"
+        rng = Xoshiro(DEFAULT_SEED)
+        many = mine_packed([rand(rng, 0:30, rand(rng, 0:12)) for _ in 1:400]; minsup=2)
+        @test sprint(write_itemsets, support_map(many)) == sprint(write_itemsets, many)
     end
     include("eclat.jl")
     include("eclat_optimized.jl")

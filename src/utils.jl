@@ -207,33 +207,31 @@ end
 Write deterministic canonical SPMF output. Validate before opening the output,
 so an invalid map never touches an existing file.
 """
-function write_itemsets(io::IO, patterns::AbstractDict)
-    check_itemsets(patterns)
-    packed = sorted_packed(patterns)
-    print_packed(io, packed, collect(1:length(packed)))
-end
+write_itemsets(io::IO, patterns::AbstractDict) = write_itemsets(io, checked_packed(patterns))
 
-function write_itemsets(path::AbstractString, patterns::AbstractDict)
-    check_itemsets(patterns)
-    packed = sorted_packed(patterns)
-    open(io -> print_packed(io, packed, collect(1:length(packed))), path, "w")
-end
+write_itemsets(path::AbstractString, patterns::AbstractDict) = write_itemsets(path, checked_packed(patterns))
 
-function check_itemsets(patterns::AbstractDict)
+"""
+Validate every key and support, then pack them in iteration order, so the map
+shares the packed writer and its sort. Throws `ArgumentError` naming the first
+invalid key or support.
+"""
+function checked_packed(patterns::AbstractDict)
     for (items, support) in patterns
-        !isempty(items) && Tuple(canonical_transaction(items)) == items ||
-            throw(ArgumentError("itemset keys must be nonempty canonical tuples"))
-        support isa Integer && !(support isa Bool) && support >= 1 ||
-            throw(ArgumentError("supports must be positive integers"))
+        is_canonical_key(items) ||
+            throw(ArgumentError("itemset keys must be nonempty canonical tuples, got $(repr(items))"))
+        support isa Integer && !(support isa Bool) && 1 <= support <= typemax(Int) ||
+            throw(ArgumentError("supports must be positive integers, got $(repr(support)) for $(repr(items))"))
     end
-    return nothing
-end
-
-"""Pack validated, canonical keys in write order, so both result forms share one writer."""
-function sorted_packed(patterns::AbstractDict)
     packed = FrequentItemsets()
-    for (items, support) in sort!(collect(patterns); by=first)
+    sizehint!(packed.offsets, length(patterns) + 1)
+    sizehint!(packed.supports, length(patterns))
+    for (items, support) in patterns
         push_itemset!(packed, items, support)
     end
     return packed
 end
+
+"""True for a nonempty tuple of strictly ascending item IDs, which is what `canonical_transaction` returns as a tuple."""
+is_canonical_key(items) =
+    items isa Tuple && !isempty(items) && all(is_item_id, items) && all(i -> items[i] < items[i+1], 1:length(items)-1)
