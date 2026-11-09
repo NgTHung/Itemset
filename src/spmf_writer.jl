@@ -67,8 +67,8 @@ Write the decimal digits of a nonnegative `value` into `buffer` after position
 `used`, and return the new last position. May write up to 8 bytes past it, which
 the caller's 20-byte reservation per number covers.
 """
-# Inlined so the table path costs no call per number; this took Mushroom 0.05 printing from 0.61 s to 0.50 s on BBQ.
 @inline function put_number!(buffer::Vector{UInt8}, used::Int, table::DigitTable, value::Int)
+    # Inlined so the table path costs no call per number; this took Mushroom 0.05 printing from 0.61 s to 0.50 s on BBQ.
     0 <= value < length(table.words) || return put_digits!(buffer, used, value)
     # The constructor gives both table vectors one length, and the range check above
     # and this one cover every index below.
