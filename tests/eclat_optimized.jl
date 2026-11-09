@@ -58,7 +58,25 @@ end
         @test_throws OverflowError ItemsetMining.expand_nodes(nodes)
     end
 
-    @testset "Every pair-count and tid-list setting matches the oracle" begin
+    @testset "A block-count bound never rejects a frequent join" begin
+        rng = Xoshiro(DEFAULT_SEED)
+        for _ in 1:200
+            n = rand(rng, 1:300)
+            class = [ListMember(m, 1, sort!(randsubseq(rng, 1:n, rand(rng)))) for m in 1:rand(rng, 2:6)]
+            filter!(m -> !isempty(m.tidset), class)
+            length(class) >= 2 || continue
+            bound = ItemsetMining.BlockCounts(Int32[], class, rand(rng, 1:70))
+            for i in eachindex(class), j in i+1:lastindex(class)
+                common = length(intersect(class[i].tidset, class[j].tidset))
+                @test ItemsetMining.may_be_frequent(bound, i, j, common)
+            end
+        end
+        # Tids 1 to 3 and 200 to 202 share no block of 64, so the bound proves the join empty.
+        apart = [ListMember(1, 3, [1, 2, 3]), ListMember(2, 3, [200, 201, 202])]
+        @test !ItemsetMining.may_be_frequent(ItemsetMining.BlockCounts(Int32[], apart, 4), 1, 2, 1)
+    end
+
+    @testset "Every pair-count, tid-list, and block-bound setting matches the oracle" begin
         rng = Xoshiro(DEFAULT_SEED)
         # Sizes around multiples of 64 cross bitset word boundaries.
         sizes = [0:40; 63:65; 127:129]
@@ -67,8 +85,9 @@ end
             canonical = ItemsetMining.canonical_database(transactions)
             min_count = rand(rng, 1:4)
             expected = brute_force_supports(unique.(transactions), min_count)
-            for use_pair_counts in (true, false), list_rule in (:never, :always, :cost)
-                packed = ItemsetMining.mine_optimized(canonical, min_count; use_pair_counts, list_rule)
+            for use_pair_counts in (true, false), list_rule in (:never, :always, :cost),
+                bound_blocks in (0, 4, ItemsetMining.BOUND_BLOCKS)
+                packed = ItemsetMining.mine_optimized(canonical, min_count; use_pair_counts, list_rule, bound_blocks)
                 # A duplicate emission would overwrite its map entry, so the counts must agree too.
                 @test support_map(packed) == expected
                 @test length(packed) == length(expected)

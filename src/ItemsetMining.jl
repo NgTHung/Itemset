@@ -17,6 +17,7 @@ include("algorithm/tidsets.jl")
 include("algorithm/pair_counts.jl")
 include("algorithm/search_nodes.jl")
 include("algorithm/eclat_optimized.jl")
+include("algorithm/block_counts.jl")
 include("cli.jl")
 include("precompile.jl")
 
