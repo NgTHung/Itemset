@@ -20,18 +20,33 @@ end
             (("bitset", bitset_class), ("tid-list", list_class))
         before = [copy(m.tidset) for m in class]
         prefix, perfect = Int[], Int[]
-        result = @inferred ItemsetMining.eclat_search!(class, prefix, perfect, 2, FrequentItemsets(),
-                                                       ItemsetMining.SearchState())
+        nodes = @inferred ItemsetMining.eclat_search!(class, prefix, perfect, 2, ItemsetMining.SearchNodes(),
+                                                      ItemsetMining.SearchState())
+        result = @inferred ItemsetMining.expand_nodes(nodes)
         @test [m.tidset for m in class] == before
         @test isempty(prefix) && isempty(perfect)
         @test support_map(result) == brute_force_supports(database, 2)
         @test length(result) == length(support_map(result))
     end
 
+    @testset "Mining allocates its result once, at its final size" begin
+        # Shared groups give nodes with many perfect extensions, so most itemsets come from expansion.
+        transactions = [fill(collect(1:14), 30); fill([1:14; 15; 16], 10); fill([15, 16, 17], 5)]
+        canonical = ItemsetMining.canonical_database(transactions)
+        mine = () -> ItemsetMining.mine_optimized(canonical, 5)
+        packed = mine()
+        @test length(packed) > 50_000
+        result_bytes = sizeof(packed.items) + sizeof(packed.offsets) + sizeof(packed.supports)
+        @test @allocated(mine()) < 1.25 * result_bytes
+    end
+
     @testset "More perfect-extension subsets than a result can hold throw before any emission" begin
-        result = FrequentItemsets()
-        @test_throws OverflowError ItemsetMining.push_subsets!(result, [100], collect(1:63), 1)
-        @test length(result) == 0
+        nodes = ItemsetMining.SearchNodes()
+        @test_throws OverflowError ItemsetMining.push_node!(nodes, [100], collect(1:63), 1)
+        @test isempty(nodes.supports)
+        # 2^62 subsets of two core items need 2^63 item slots, past typemax(Int).
+        ItemsetMining.push_node!(nodes, [1, 2], collect(3:64), 1)
+        @test_throws OverflowError ItemsetMining.expand_nodes(nodes)
     end
 
     @testset "Every pair-count and tid-list setting matches the oracle" begin

@@ -60,34 +60,6 @@ function bitset_class(database::Vector{Vector{Int}}, minsup::Int)
 end
 
 """
-    push_subsets!(result, prefix, perfect, support) -> result
-
-Append `prefix ∪ S` with `support` for every subset `S` of `perfect`, starting
-with `prefix` alone. `prefix` is ascending and disjoint from `perfect`. Gray-code
-order changes one item per step, so each itemset costs one sorted insert or
-delete, not a rebuild. Both vectors are restored. Throws `OverflowError` for more
-than 62 perfect items, whose 2^63 subsets no result can hold.
-"""
-function push_subsets!(result::FrequentItemsets, prefix::Vector{Int}, perfect::Vector{Int}, support::Int)
-    count = length(perfect)
-    count <= 62 || throw(OverflowError("$count perfect extensions give 2^$count itemsets"))
-    push_itemset!(result, prefix, support)
-    for step in 1:(1 << count) - 1
-        item = perfect[trailing_zeros(step) + 1]
-        position = searchsortedfirst(prefix, item)
-        if position <= length(prefix) && prefix[position] == item
-            deleteat!(prefix, position)
-        else
-            insert!(prefix, position, item)
-        end
-        push_itemset!(result, prefix, support)
-    end
-    # Gray code 2^count - 1 holds only the last perfect item.
-    count == 0 || deleteat!(prefix, searchsortedfirst(prefix, perfect[count]))
-    return result
-end
-
-"""
     join_members!(children, perfect, class, i, minsup, pool, pairs=NoPairCounts()) -> Int
 
 Join member `i` of `class` with every later member whose pair count in `pairs`
@@ -120,19 +92,20 @@ function join_members!(children::Vector{ClassMember{T}}, perfect::Vector{Int}, c
 end
 
 """
-    eclat_search!(class, prefix, perfect, minsup, result, state, pairs=NoPairCounts()) -> result
+    eclat_search!(class, prefix, perfect, minsup, nodes, state, pairs=NoPairCounts()) -> nodes
 
 Bottom-Up search of one class (Zaki 2000, Sec. 4.2), in the class's item order,
 with perfect-extension pruning (`docs/eclat-optimized.md`). `prefix` holds the
 prefix items in ascending order, so every emitted itemset is ascending without a
 sort. `perfect` holds the perfect extensions found on the path, which every
-itemset below may add without changing its support. Each call restores both. A
+itemset below may add without changing its support. Each call restores both, and
+records one node per member in `nodes` for `expand_nodes`. A
 join writes into a spare tidset from `state`, a child keeps it, and a child class
 returns its sets once its search ends, so a failed join allocates nothing.
 `pairs` holds pair counts over the ranks of `class` and applies to this class only.
 """
 function eclat_search!(class::Vector{ClassMember{T}}, prefix::Vector{Int}, perfect::Vector{Int}, minsup::Int,
-                       result::FrequentItemsets, state::SearchState, pairs=NoPairCounts()) where {T}
+                       nodes::SearchNodes, state::SearchState, pairs=NoPairCounts()) where {T}
     pool = spare_sets(state, T)
     for i in eachindex(class)
         a = class[i]
@@ -140,12 +113,12 @@ function eclat_search!(class::Vector{ClassMember{T}}, prefix::Vector{Int}, perfe
         insert!(prefix, position, a.item)
         children = ClassMember{T}[]
         added = join_members!(children, perfect, class, i, minsup, pool, pairs)
-        push_subsets!(result, prefix, perfect, a.support)
-        isempty(children) || search_children!(children, prefix, perfect, minsup, result, state)
+        push_node!(nodes, prefix, perfect, a.support)
+        isempty(children) || search_children!(children, prefix, perfect, minsup, nodes, state)
         resize!(perfect, length(perfect) - added)
         deleteat!(prefix, position)
     end
-    return result
+    return nodes
 end
 
 """
@@ -154,15 +127,15 @@ on the search path refers to them after their search ends. Bitset children move
 to tid lists first when `prefer_lists` says lists cost less.
 """
 function search_children!(children::Vector{ClassMember{T}}, prefix::Vector{Int}, perfect::Vector{Int},
-                          minsup::Int, result::FrequentItemsets, state::SearchState) where {T}
+                          minsup::Int, nodes::SearchNodes, state::SearchState) where {T}
     if prefer_lists(children, state)
         lists = [ListMember(c.item, c.support, bitset_tids!(spare_list(state), c.tidset)) for c in children]
         foreach(c -> push!(state.bitsets, c.tidset), children)
-        return search_children!(lists, prefix, perfect, minsup, result, state)
+        return search_children!(lists, prefix, perfect, minsup, nodes, state)
     end
-    eclat_search!(children, prefix, perfect, minsup, result, state)
+    eclat_search!(children, prefix, perfect, minsup, nodes, state)
     foreach(c -> push!(spare_sets(state, T), c.tidset), children)
-    return result
+    return nodes
 end
 
 spare_list(state::SearchState) = isempty(state.lists) ? Int[] : pop!(state.lists)
@@ -200,5 +173,6 @@ function mine_optimized(database::Vector{Vector{Int}}, minsup::Int;
     items = [member.item for member in class]
     pairs = use_pair_counts === nothing ? pair_filter(database, items) :
             use_pair_counts ? count_pairs(database, items) : NoPairCounts()
-    return eclat_search!(class, Int[], Int[], minsup, FrequentItemsets(), SearchState(list_rule, list_step_cost), pairs)
+    nodes = eclat_search!(class, Int[], Int[], minsup, SearchNodes(), SearchState(list_rule, list_step_cost), pairs)
+    return expand_nodes(nodes)
 end

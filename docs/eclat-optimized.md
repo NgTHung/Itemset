@@ -1,6 +1,6 @@
 # Eclat optimized variant
 
-The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with five changes that keep its output identical: bitset tidsets, increasing-support item order, perfect-extension pruning, root pair counts on sparse data, and tid lists for classes with short tidsets. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl`, `src/algorithm/pair_counts.jl`, and `src/algorithm/eclat_optimized.jl`.
+The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with five changes that keep its output identical: bitset tidsets, increasing-support item order, perfect-extension pruning, root pair counts on sparse data, and tid lists for classes with short tidsets. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl`, `src/algorithm/pair_counts.jl`, `src/algorithm/search_nodes.jl`, and `src/algorithm/eclat_optimized.jl`.
 
 ## Bitset tidsets
 
@@ -50,9 +50,11 @@ Suppose a node N on the path a₁, a₂, ..., aₖ emits Z. At the node N_j reac
 
 ### Emission order
 
-`push_subsets!` emits the 2^|E| itemsets of a node in binary reflected Gray-code order. Step i toggles the perfect item at position trailing_zeros(i) + 1, so each itemset differs from the one before by one item, which `insert!` or `deleteat!` puts in place in the ascending prefix. A node's emissions therefore cost O(2^|E| k) for itemsets of length at most k, the same as copying them into the packed result. The prefix ends with the last perfect item and drops it, so the caller gets its prefix back unchanged. A perfect set of more than 62 items would need more than 2^62 itemsets, which no result vector can hold, so the search throws `OverflowError` instead of looping.
+The search records each node once, as its core C, its perfect set E, and their support, in `SearchNodes`. A node stands for 2^|E| itemsets, so `expand_nodes` sums the itemset and item counts of all nodes, allocates the packed result once at that size, and then writes the itemsets. Growing the result one itemset at a time instead copies it on every doubling: on Mushroom 0.05 it allocated 1,068 MiB for a 306 MiB result, and warm mining took 0.40 s instead of 0.17 s ([BBQ record](bbq-exact-emission-2026-11-09.md)).
 
-Half of the seeded databases in `tests/eclat_optimized.jl` draw whole groups of items that always occur together, so perfect extensions appear at every depth. The file also checks that a perfect set too large for a result throws before any emission.
+`write_subsets!` writes the 2^|E| itemsets of a node in binary reflected Gray-code order. Step i toggles the perfect item at position trailing_zeros(i) + 1, so each itemset differs from the one before by one item, which `insert!` or `deleteat!` puts in place in the ascending itemset. A node's itemsets therefore cost O(2^|E| k) for itemsets of length at most k, the same as copying them into the packed result. A perfect set of more than 62 items would need more than 2^62 itemsets, which no result vector can hold, so `push_node!` throws `OverflowError` instead of looping, and `expand_nodes` throws it when the totals pass `typemax(Int)`.
+
+Half of the seeded databases in `tests/eclat_optimized.jl` draw whole groups of items that always occur together, so perfect extensions appear at every depth. The file also checks that a perfect set too large for a result throws before any emission, and that mining allocates less than 1.25 times the bytes of its result.
 
 ## Root pair counts
 
