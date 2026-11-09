@@ -73,6 +73,13 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
         @test text == "@CONVERTED_FROM_TEXT\n@ITEM=1=beer\n@ITEM=2=bread\n1 2\n2\n"
         @test read_transactions(IOBuffer(text)) == [[1, 2], [2]]
         @test_throws ArgumentError write_transactions(IOBuffer(), [[1]]; labels=["a\nb"])
+        # Digit counts from 1 to 19, a line longer than one write buffer, and many lines.
+        rng = Xoshiro(DEFAULT_SEED)
+        database = [[[0, 9, 10, 99, 1_048_575, 1_048_576, typemax(Int)], collect(0:20_000)];
+                    [rand(rng, 0:2_000_000, rand(rng, 1:12)) for _ in 1:20_000]]
+        text = sprint(write_transactions, database)
+        @test text == join((join(sort!(unique(t)), ' ') * '\n' for t in database))
+        @test read_transactions(IOBuffer(text)) == canonical_transaction.(database)
     end
     @testset "Writers validate before touching a file" begin
         path = tempname()

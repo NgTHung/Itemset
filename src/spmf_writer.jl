@@ -33,9 +33,8 @@ struct DigitTable
 end
 
 """
-Write itemsets `order` as SPMF lines through one fixed buffer. Each line's
-largest possible size is reserved before it is written, so the buffer is
-flushed between lines, and grown only for a line longer than `WRITE_CHUNK`.
+Write itemsets `order` as SPMF lines through one fixed buffer, reserving each
+line's largest possible size before writing it.
 """
 function print_packed(io::IO, packed::FrequentItemsets, order::Vector{Int})
     table = DigitTable(max(maximum(packed.items; init=0), maximum(packed.supports; init=0)))
@@ -43,23 +42,50 @@ function print_packed(io::IO, packed::FrequentItemsets, order::Vector{Int})
     used = 0
     for k in order
         start, stop = packed.offsets[k], packed.offsets[k+1] - 1
-        # An Int has at most 19 digits, so an item and its separator take at most 20 bytes.
-        line_bound = 20 * (stop - start + 1) + length(SUPPORT_TAG) + 20
-        if used + line_bound > length(buffer)
-            write(io, view(buffer, 1:used))
-            used = 0
-            line_bound > length(buffer) && resize!(buffer, line_bound)
-        end
-        for position in start:stop
-            position == start || (buffer[used += 1] = UInt8(' '))
-            used = put_number!(buffer, used, table, packed.items[position])
-        end
+        used = reserve_line!(io, buffer, used, 20 * (stop - start + 1) + length(SUPPORT_TAG) + 20)
+        used = put_items!(buffer, used, table, packed.items, start, stop)
         copyto!(buffer, used + 1, SUPPORT_TAG, 1, length(SUPPORT_TAG))
         used = put_number!(buffer, used + length(SUPPORT_TAG), table, packed.supports[k])
         buffer[used += 1] = UInt8('\n')
     end
     write(io, view(buffer, 1:used))
     return nothing
+end
+
+"""Write each transaction of a canonical database as one SPMF line of item IDs."""
+function print_transaction_lines(io::IO, database::Vector{Vector{Int}})
+    table = DigitTable(maximum(transaction -> maximum(transaction; init=0), database; init=0))
+    buffer = Vector{UInt8}(undef, WRITE_CHUNK)
+    used = 0
+    for transaction in database
+        used = reserve_line!(io, buffer, used, 20 * length(transaction) + 1)
+        used = put_items!(buffer, used, table, transaction, 1, length(transaction))
+        buffer[used += 1] = UInt8('\n')
+    end
+    write(io, view(buffer, 1:used))
+    return nothing
+end
+
+"""
+Make room for a line of at most `bound` bytes after position `used`, and return
+the position to write after. The buffer is flushed to `io` only between lines,
+and grows only for a line longer than all of it. An Int has at most 19 digits,
+so a number and its separator need at most 20 bytes of `bound`.
+"""
+function reserve_line!(io::IO, buffer::Vector{UInt8}, used::Int, bound::Int)
+    used + bound <= length(buffer) && return used
+    write(io, view(buffer, 1:used))
+    bound > length(buffer) && resize!(buffer, bound)
+    return 0
+end
+
+"""Write `items[start:stop]` separated by spaces after position `used`, and return the new last position."""
+function put_items!(buffer::Vector{UInt8}, used::Int, table::DigitTable, items::Vector{Int}, start::Int, stop::Int)
+    for position in start:stop
+        position == start || (buffer[used += 1] = UInt8(' '))
+        used = put_number!(buffer, used, table, items[position])
+    end
+    return used
 end
 
 """

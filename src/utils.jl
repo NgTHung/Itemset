@@ -67,10 +67,7 @@ function print_transactions(io::IO, database, labels)
             println(io, "@ITEM=", id, '=', label)
         end
     end
-    for transaction in database
-        println(io, join(transaction, ' '))
-    end
-    return nothing
+    print_transaction_lines(io, database)
 end
 
 """
