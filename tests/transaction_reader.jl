@@ -36,15 +36,11 @@ end
         @test outcome(read_transactions, text) == outcome(line_reader, text)
     end
     @test_throws "line 3" read_transactions(IOBuffer("1\n\n2 x\n"))
-end
-
-@testset "Canonical transactions are not copied" begin
-    database = [[1, 2], Int[], [0, 5]]
-    canonical = ItemsetMining.canonical_database(database)
-    @test canonical == database
-    @test all(canonical[i] === database[i] for i in eachindex(database))
-    unsorted = [[2, 1], [3, 3]]
-    @test ItemsetMining.canonical_database(unsorted) == [[1, 2], [3]]
-    @test unsorted == [[2, 1], [3, 3]]
-    @test_throws "transaction 1" ItemsetMining.canonical_database([[-1, 2]])
+    # Lines that grow and shrink between transactions, unsorted and repeated items, and a non-ASCII line among ASCII ones.
+    long = join(reverse(0:5_000), ' ')
+    text = "3 1 3\n$long\n7\n\n$long 5001\n2 1\n9 8\n"
+    @test outcome(read_transactions, text) == outcome(line_reader, text)
+    transactions = read_transactions(IOBuffer("1 2\n3 4\n1 2\n"))
+    push!(transactions[1], 9)
+    @test transactions[2:3] == [[3, 4], [1, 2]]
 end

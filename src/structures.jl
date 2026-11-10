@@ -3,10 +3,13 @@ const Itemset = Tuple{Vararg{Int}}
 const SupportMap = Dict{Itemset,Int}
 const DEFAULT_SEED = 42
 
+"""True for a value that converts to a nonnegative `Int` item ID; `Bool` is excluded because `true` would pass as item 1."""
+is_item_id(item) = item isa Integer && !(item isa Bool) && 0 <= item <= typemax(Int)
+
 """Sort and deduplicate one transaction without changing the caller's data."""
 function canonical_transaction(items)
     for item in items
-        item isa Integer && !(item isa Bool) && 0 <= item <= typemax(Int) ||
+        is_item_id(item) ||
             throw(ArgumentError("item IDs must be nonnegative Int values (not Bool), got $(repr(item))"))
     end
     return sort!(unique(Int[item for item in items]))

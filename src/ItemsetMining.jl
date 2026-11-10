@@ -7,11 +7,18 @@ export Itemset, SupportMap, DEFAULT_SEED, canonical_transaction,
 
 include("structures.jl")
 include("frequent_itemsets.jl")
+include("itemset_order.jl")
+include("spmf_writer.jl")
 include("encoding.jl")
+include("spmf_reader.jl")
 include("utils.jl")
 include("algorithm/eclat.jl")
 include("algorithm/tidsets.jl")
+include("algorithm/pair_counts.jl")
+include("algorithm/search_nodes.jl")
 include("algorithm/eclat_optimized.jl")
+include("algorithm/block_counts.jl")
+include("cli.jl")
 include("precompile.jl")
 
 end
