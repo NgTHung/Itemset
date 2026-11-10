@@ -1,6 +1,6 @@
 # Eclat optimized variant
 
-The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with five changes that keep its output identical: bitset tidsets, increasing-support item order, perfect-extension pruning, root pair counts on sparse data, and tid lists for classes with short tidsets. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl`, `src/algorithm/pair_counts.jl`, and `src/algorithm/eclat_optimized.jl`.
+The baseline joins sorted tid-lists in item order, and on dense data most of its time goes to merging long lists and allocating the results. `mine(...; variant=:optimized)` runs the same Bottom-Up search with six changes that keep its output identical: bitset tidsets, increasing-support item order, perfect-extension pruning, root pair counts on sparse data, tid lists for classes with short tidsets, and a block-count bound before tid-list joins. This document states what changes in the [baseline's invariants and proof](eclat.md) and what each join costs. The code is in `src/algorithm/tidsets.jl`, `src/algorithm/pair_counts.jl`, `src/algorithm/search_nodes.jl`, `src/algorithm/block_counts.jl`, and `src/algorithm/eclat_optimized.jl`.
 
 ## Bitset tidsets
 
@@ -50,9 +50,11 @@ Suppose a node N on the path a₁, a₂, ..., aₖ emits Z. At the node N_j reac
 
 ### Emission order
 
-`push_subsets!` emits the 2^|E| itemsets of a node in binary reflected Gray-code order. Step i toggles the perfect item at position trailing_zeros(i) + 1, so each itemset differs from the one before by one item, which `insert!` or `deleteat!` puts in place in the ascending prefix. A node's emissions therefore cost O(2^|E| k) for itemsets of length at most k, the same as copying them into the packed result. The prefix ends with the last perfect item and drops it, so the caller gets its prefix back unchanged. A perfect set of more than 62 items would need more than 2^62 itemsets, which no result vector can hold, so the search throws `OverflowError` instead of looping.
+The search records each node once in `SearchNodes`, as its depth, the item it adds to its parent's core, the perfect extensions its own joins found, and its support. A child inherits its parent's perfect extensions, and the search records nodes in preorder, so expansion rebuilds every C and E from a path stack, and a record costs the same at every depth. A node stands for 2^|E| itemsets, so `expand_nodes` sums the itemset and item counts of all nodes, allocates the packed result once at that size, and then writes the itemsets. Growing the result one itemset at a time instead copies it on every doubling: on Mushroom 0.05 it allocated 1,068 MiB for a 306 MiB result, and warm mining took 0.40 s instead of 0.17 s ([BBQ record](bbq-exact-emission-2026-11-09.md)).
 
-Half of the seeded databases in `tests/eclat_optimized.jl` draw whole groups of items that always occur together, so perfect extensions appear at every depth. The file also checks that a perfect set too large for a result throws before any emission.
+`write_subsets!` writes the 2^|E| itemsets of a node in binary reflected Gray-code order. Step i toggles the perfect item at position trailing_zeros(i) + 1, so each itemset differs from the one before by one item, which `insert!` or `deleteat!` puts in place in the ascending itemset. A node's itemsets therefore cost O(2^|E| k) for itemsets of length at most k, the same as copying them into the packed result. A perfect set of more than 62 items would need more than 2^62 itemsets, which no result vector can hold, so `push_node!` throws `OverflowError` instead of looping, and `expand_nodes` throws it when the totals pass `typemax(Int)`.
+
+Half of the seeded databases in `tests/eclat_optimized.jl` draw whole groups of items that always occur together, so perfect extensions appear at every depth. The file also checks that a perfect set too large for a result throws before any emission, and that mining allocates less than 1.25 times the bytes of its result.
 
 ## Root pair counts
 
@@ -76,7 +78,17 @@ The switch keeps every invariant. `bitset_tids!` lists exactly the set bits, so 
 
 A warm sweep on BBQ of `LIST_STEP_COST` from 2 to 16 set it to 8. At 8, T10I4D100K 0.00025 mining drops from 1.20 s to 0.90 s, and Retail 0.00025, Retail 0.001, and T10I4D100K 0.001 stay within 1% of bitsets only. Smaller costs switch too many classes and slow T10I4D100K 0.0005 by up to 46%.
 
-`tests/eclat_optimized.jl` mines every seeded database with lists never, always, or by the cost rule, so the conversion and the merge run across word boundaries. It also checks that a list search leaves its parents, prefix, and perfect stack unchanged.
+`tests/eclat_optimized.jl` mines every seeded database with lists never, always, or by the cost rule, so the conversion and the merge run across word boundaries. It also checks that a list search leaves its parents and perfect stack unchanged.
+
+## Block-count bound
+
+Early stop still leaves most list merges running to their end. On T10I4D100K at minsup 0.00025, 98.7% of 2,076,972 list joins fail, their two lists hold 126 tids together on average (median 86), and the merges took about 57% of warm mining samples on the Windows laptop. `BlockCounts` rejects most of these joins without a merge. When a list class of two or more members starts its search, `class_filter` splits tids 1 to the class's largest tid into at most `BOUND_BLOCKS` blocks of equal power-of-two width and counts each member's tids per block. A tid in both lists lies in one block, where it is counted once for each, so the joined support is at most the sum over blocks of the smaller count. `join_members!` skips a join whose bound is below minsup, through the same `may_be_frequent` check that applies root pair counts.
+
+The bound is an upper bound on the true support, so a skipped join is infrequent and the search keeps every frequent child and perfect extension; the proofs above hold unchanged. Counting costs one pass over each member's tids and 4 bytes per block per member, reused across classes. With 49 blocks the bound rejects 66.5% of the failing joins on T10I4D100K 0.00025, with 196 blocks 88.3%, and with 782 blocks 97.1%.
+
+A warm sweep on BBQ set `BOUND_BLOCKS` to 256. T10I4D100K 0.00025 mining drops from 0.865 s without the bound to 0.774 s at 64 blocks, 0.668 s at 256, and 0.659 s at 512. Retail 0.00025 drops from 0.238 s to 0.226 s at 256, and T10I4D100K 0.001, Retail 0.001, Accidents 0.3, and Chess 0.5 stay within 1%. Bitset classes take no bound, because a bitset join reads every word whatever its result.
+
+`tests/eclat_optimized.jl` checks on seeded classes that the bound is never below the true support for any block count, that disjoint blocks prove a join empty, and mines every seeded database with the bound off, with 4 blocks, and with `BOUND_BLOCKS`.
 
 ## Cost
 

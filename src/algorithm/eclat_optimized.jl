@@ -18,26 +18,43 @@ const ListMember = ClassMember{Int}
 const LIST_STEP_COST = 8.0
 
 """
-Spare tidsets of each kind, reused across joins, and the rule that moves a class
-from bitsets to tid lists: `:cost` compares the two with `prefer_lists`, and
-`:always` or `:never` force the choice. One state serves the whole search.
-Throws `ArgumentError` for any other rule.
+Spare tidsets and class vectors of each kind, reused across joins and classes,
+and the rule that moves a class from bitsets to tid lists: `:cost` compares the two with `prefer_lists`, and
+`:always` or `:never` force the choice. A tid-list class of two or more members
+filters its joins with `BlockCounts` of at most `bound_blocks` blocks, and 0
+turns the filter off. One state serves the whole search. Throws `ArgumentError`
+for any other rule or a negative `bound_blocks`.
 """
 struct SearchState
     bitsets::Vector{Vector{UInt64}}
     lists::Vector{Vector{Int}}
+    bitset_classes::Vector{Vector{BitsetMember}}
+    list_classes::Vector{Vector{ListMember}}
+    block_counts::Vector{Vector{Int32}}
     list_rule::Symbol
     list_step_cost::Float64
+    bound_blocks::Int
 
-    function SearchState(list_rule::Symbol=:cost, list_step_cost::Real=LIST_STEP_COST)
+    function SearchState(list_rule::Symbol=:cost, list_step_cost::Real=LIST_STEP_COST,
+                         bound_blocks::Int=BOUND_BLOCKS)
         list_rule in (:cost, :always, :never) ||
             throw(ArgumentError("list_rule must be :cost, :always, or :never, got $(repr(list_rule))"))
-        return new(Vector{UInt64}[], Vector{Int}[], list_rule, Float64(list_step_cost))
+        bound_blocks >= 0 || throw(ArgumentError("bound_blocks must be nonnegative, got $bound_blocks"))
+        return new(Vector{UInt64}[], Vector{Int}[], Vector{BitsetMember}[], Vector{ListMember}[], Vector{Int32}[],
+                   list_rule, Float64(list_step_cost), bound_blocks)
     end
 end
 
 spare_sets(state::SearchState, ::Type{UInt64}) = state.bitsets
 spare_sets(state::SearchState, ::Type{Int}) = state.lists
+spare_classes(state::SearchState, ::Type{UInt64}) = state.bitset_classes
+spare_classes(state::SearchState, ::Type{Int}) = state.list_classes
+
+"""An empty class vector for tidsets of type `T`, reused from `state` when one is spare."""
+function spare_class(state::SearchState, ::Type{T}) where {T}
+    spares = spare_classes(state, T)
+    return isempty(spares) ? ClassMember{T}[] : empty!(pop!(spares))
+end
 
 join_tidsets!(dest::Vector{UInt64}, a::Vector{UInt64}, b::Vector{UInt64}, minsup::Int) = intersect_bitsets!(dest, a, b)
 join_tidsets!(dest::Vector{Int}, a::Vector{Int}, b::Vector{Int}, minsup::Int) = intersect_lists!(dest, a, b, minsup)
@@ -57,34 +74,6 @@ function bitset_class(database::Vector{Vector{Int}}, minsup::Int)
     frequent = frequent_items_by_support(database, minsup)
     sets = bitset_tidsets(database, first.(frequent))
     return [BitsetMember(item, support, words) for ((item, support), words) in zip(frequent, sets)]
-end
-
-"""
-    push_subsets!(result, prefix, perfect, support) -> result
-
-Append `prefix ∪ S` with `support` for every subset `S` of `perfect`, starting
-with `prefix` alone. `prefix` is ascending and disjoint from `perfect`. Gray-code
-order changes one item per step, so each itemset costs one sorted insert or
-delete, not a rebuild. Both vectors are restored. Throws `OverflowError` for more
-than 62 perfect items, whose 2^63 subsets no result can hold.
-"""
-function push_subsets!(result::FrequentItemsets, prefix::Vector{Int}, perfect::Vector{Int}, support::Int)
-    count = length(perfect)
-    count <= 62 || throw(OverflowError("$count perfect extensions give 2^$count itemsets"))
-    push_itemset!(result, prefix, support)
-    for step in 1:(1 << count) - 1
-        item = perfect[trailing_zeros(step) + 1]
-        position = searchsortedfirst(prefix, item)
-        if position <= length(prefix) && prefix[position] == item
-            deleteat!(prefix, position)
-        else
-            insert!(prefix, position, item)
-        end
-        push_itemset!(result, prefix, support)
-    end
-    # Gray code 2^count - 1 holds only the last perfect item.
-    count == 0 || deleteat!(prefix, searchsortedfirst(prefix, perfect[count]))
-    return result
 end
 
 """
@@ -120,50 +109,71 @@ function join_members!(children::Vector{ClassMember{T}}, perfect::Vector{Int}, c
 end
 
 """
-    eclat_search!(class, prefix, perfect, minsup, result, state, pairs=NoPairCounts()) -> result
+    eclat_search!(class, depth, perfect, minsup, nodes, state, pairs=NoPairCounts()) -> nodes
 
 Bottom-Up search of one class (Zaki 2000, Sec. 4.2), in the class's item order,
-with perfect-extension pruning (`docs/eclat-optimized.md`). `prefix` holds the
-prefix items in ascending order, so every emitted itemset is ascending without a
-sort. `perfect` holds the perfect extensions found on the path, which every
-itemset below may add without changing its support. Each call restores both. A
-join writes into a spare tidset from `state`, a child keeps it, and a child class
-returns its sets once its search ends, so a failed join allocates nothing.
+with perfect-extension pruning (`docs/eclat-optimized.md`). Each member's
+itemset has `depth` core items, and its node goes into `nodes` with the perfect
+extensions its own joins found, since a child inherits its parent's
+(`SearchNodes`). `perfect` collects them and ends as it started. A join writes
+into a spare tidset from `state`, a child keeps it, and a child class returns
+its sets once its search ends, so a failed join allocates nothing.
 `pairs` holds pair counts over the ranks of `class` and applies to this class only.
 """
-function eclat_search!(class::Vector{ClassMember{T}}, prefix::Vector{Int}, perfect::Vector{Int}, minsup::Int,
-                       result::FrequentItemsets, state::SearchState, pairs=NoPairCounts()) where {T}
+function eclat_search!(class::Vector{ClassMember{T}}, depth::Int, perfect::Vector{Int}, minsup::Int,
+                       nodes::SearchNodes, state::SearchState, pairs=NoPairCounts()) where {T}
     pool = spare_sets(state, T)
     for i in eachindex(class)
         a = class[i]
-        position = searchsortedfirst(prefix, a.item)
-        insert!(prefix, position, a.item)
-        children = ClassMember{T}[]
+        children = spare_class(state, T)
         added = join_members!(children, perfect, class, i, minsup, pool, pairs)
-        push_subsets!(result, prefix, perfect, a.support)
-        isempty(children) || search_children!(children, prefix, perfect, minsup, result, state)
+        push_node!(nodes, depth, a.item, view(perfect, length(perfect)-added+1:length(perfect)), a.support)
         resize!(perfect, length(perfect) - added)
-        deleteat!(prefix, position)
+        isempty(children) || search_children!(children, depth + 1, perfect, minsup, nodes, state)
+        push!(spare_classes(state, T), children)
     end
-    return result
+    return nodes
 end
 
 """
-Search a child class, then return its tidsets to the spare sets, since no class
-on the search path refers to them after their search ends. Bitset children move
+Search a child class at `depth`, then return its tidsets to the spare sets, since
+no class on the search path refers to them after their search ends. Bitset children move
 to tid lists first when `prefer_lists` says lists cost less.
 """
-function search_children!(children::Vector{ClassMember{T}}, prefix::Vector{Int}, perfect::Vector{Int},
-                          minsup::Int, result::FrequentItemsets, state::SearchState) where {T}
+function search_children!(children::Vector{ClassMember{T}}, depth::Int, perfect::Vector{Int},
+                          minsup::Int, nodes::SearchNodes, state::SearchState) where {T}
     if prefer_lists(children, state)
-        lists = [ListMember(c.item, c.support, bitset_tids!(spare_list(state), c.tidset)) for c in children]
-        foreach(c -> push!(state.bitsets, c.tidset), children)
-        return search_children!(lists, prefix, perfect, minsup, result, state)
+        lists = spare_class(state, Int)
+        for c in children
+            push!(lists, ListMember(c.item, c.support, bitset_tids!(spare_list(state), c.tidset)))
+            push!(state.bitsets, c.tidset)
+        end
+        search_children!(lists, depth, perfect, minsup, nodes, state)
+        push!(state.list_classes, lists)
+        return nodes
     end
-    eclat_search!(children, prefix, perfect, minsup, result, state)
+    filter = class_filter(children, state)
+    eclat_search!(children, depth, perfect, minsup, nodes, state, filter)
+    release_filter!(state, filter)
     foreach(c -> push!(spare_sets(state, T), c.tidset), children)
-    return result
+    return nodes
 end
+
+"""
+The join filter of a child class: `BlockCounts` for a tid-list class with joins
+to filter, and no filter for bitset classes, whose joins read every word anyway.
+"""
+class_filter(::Vector{BitsetMember}, ::SearchState) = NoPairCounts()
+
+function class_filter(children::Vector{ListMember}, state::SearchState)
+    (state.bound_blocks == 0 || length(children) < 2) && return NoPairCounts()
+    # Above the Int32 limit the class is merged without the bound rather than rejected.
+    maximum(m -> last(m.tidset), children) <= typemax(Int32) || return NoPairCounts()
+    counts = isempty(state.block_counts) ? Int32[] : pop!(state.block_counts)
+    return BlockCounts(counts, children, state.bound_blocks)
+end
+
+release_filter!(::SearchState, ::NoPairCounts) = nothing
 
 spare_list(state::SearchState) = isempty(state.lists) ? Int[] : pop!(state.lists)
 
@@ -185,20 +195,24 @@ prefer_lists(::Vector{ListMember}, ::SearchState) = false
 
 """
     mine_optimized(database, minsup; use_pair_counts=nothing, list_rule=:cost,
-                   list_step_cost=LIST_STEP_COST) -> FrequentItemsets
+                   list_step_cost=LIST_STEP_COST, bound_blocks=BOUND_BLOCKS) -> FrequentItemsets
 
 Mine a canonical database with the optimized variant; see `mine_packed`. The
 root class holds bitsets, and a child class moves to tid lists when
-`prefer_lists` finds them cheaper. With `use_pair_counts=nothing`, `pair_filter`
-decides from the database whether to count root pairs first. The keywords force
-these choices or change the list cost, for tests and sweeps.
+`prefer_lists` finds them cheaper, where `BlockCounts` filters its joins. With
+`use_pair_counts=nothing`, `pair_filter` decides from the database whether to
+count root pairs first. The keywords force these choices or change the list
+cost or block count, for tests and sweeps; `bound_blocks=0` turns the block
+filter off.
 """
 function mine_optimized(database::Vector{Vector{Int}}, minsup::Int;
                         use_pair_counts::Union{Nothing,Bool}=nothing, list_rule::Symbol=:cost,
-                        list_step_cost::Real=LIST_STEP_COST)
+                        list_step_cost::Real=LIST_STEP_COST, bound_blocks::Int=BOUND_BLOCKS)
     class = bitset_class(database, minsup)
     items = [member.item for member in class]
     pairs = use_pair_counts === nothing ? pair_filter(database, items) :
             use_pair_counts ? count_pairs(database, items) : NoPairCounts()
-    return eclat_search!(class, Int[], Int[], minsup, FrequentItemsets(), SearchState(list_rule, list_step_cost), pairs)
+    state = SearchState(list_rule, list_step_cost, bound_blocks)
+    nodes = eclat_search!(class, 1, Int[], minsup, SearchNodes(), state, pairs)
+    return expand_nodes(nodes)
 end
