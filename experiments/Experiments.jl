@@ -15,6 +15,7 @@ include("datasets.jl")
 include("harness.jl")
 include("references.jl")
 include("summary.jl")
+include("curves.jl")
 include("runner.jl")
 
 end
