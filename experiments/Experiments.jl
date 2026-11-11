@@ -16,6 +16,7 @@ include("harness.jl")
 include("references.jl")
 include("summary.jl")
 include("curves.jl")
+include("join_work.jl")
 include("runner.jl")
 
 end
