@@ -74,4 +74,14 @@ Compare complete itemset and support maps, not only itemset counts, because two 
 
 Scalability runs use seeded nested subsets of 10, 25, 50, 75, and 100 percent of each database at a fixed relative minsup, and plot the actual transaction counts. Width runs hold N, the item universe, and the sampling model fixed while varying transaction width. Output-size plots reuse the counts from the timing runs instead of rerunning.
 
+Width databases come from `scripts/width_experiment.jl`. Each holds 10,000 transactions over 100 items, and every transaction is a uniformly random subset of exactly `w` items, for `w` from 5 to 40 in steps of 5. The generator is a seeded integer SplitMix64, so the files are byte-identical on every platform, and `experiments/configs/width-manifest.toml` records their SHA-256. Width changes the output volume as well, so run two protocols: `width-fixed.toml` holds minsup at 0.05, and `width-matched.toml` gives each width the largest support count that keeps about 5,000 itemsets, from `scripts/width_experiment.jl pilot`. `width-matched-warm.toml` repeats the matched protocol in warm mode for the `mine` scope.
+
+```sh
+julia --startup-file=no --project=. scripts/width_experiment.jl freeze
+julia --startup-file=no --project=. scripts/width_experiment.jl pilot --out results/raw/width-pilot
+julia --startup-file=no --project=. scripts/width_experiment.jl run experiments/configs/width-matched.toml
+```
+
+`scripts/join_work.jl --manifest experiments/configs/width-manifest.toml` counts the baseline's tid-list joins and merged elements at the same points, which explains a runtime change by work instead of by wall time. [docs/width-runtime-2026-11-11.md](../docs/width-runtime-2026-11-11.md) holds the results.
+
 Store figures in [results/figures](../results/figures/README.md), and copy the ones the report uses into the report with their provenance.
