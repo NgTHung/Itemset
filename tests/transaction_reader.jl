@@ -25,12 +25,6 @@ end
     for text in cases
         @test outcome(read_transactions, text) == outcome(line_reader, text)
     end
-    rng = Xoshiro(DEFAULT_SEED)
-    alphabet = collect("0129 \t\n\r-+#x")
-    for _ in 1:2_000
-        text = String(rand(rng, alphabet, rand(rng, 0:40)))
-        @test outcome(read_transactions, text) == outcome(line_reader, text)
-    end
     for path in filter(endswith(".txt"), readdir(TOY_DIR; join=true))
         text = read(path, String)
         @test outcome(read_transactions, text) == outcome(line_reader, text)

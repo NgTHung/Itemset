@@ -16,13 +16,14 @@ julia --startup-file=no --project=. test/runtests.jl
 
 `test/runtests.jl` includes `tests/runtests.jl`, so the brief's command `julia --project test/runtests.jl` and `Pkg.test()` run the same suite.
 
-Latest local test run, 2026-10-19, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
+Latest local test run, 2026-11-12, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
 
 ```text
-Test Summary: | Pass  Total
-Itemset setup |  490    490
-Testing ItemsetMining tests passed
+Test Summary: | Pass  Fail  Total
+Itemset setup | 1083     2   1085
 ```
+
+The two failures are in `tests/precompile.jl`: each cold CLI variant compiles a `cli_main` specialization for `IOContext{IOStream}`. All mining, SPMF comparison, I/O, application, and experiment checks pass.
 
 ## Use the API
 

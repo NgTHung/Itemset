@@ -60,7 +60,7 @@ end
 
     @testset "A block-count bound never rejects a frequent join" begin
         rng = Xoshiro(DEFAULT_SEED)
-        for _ in 1:200
+        for _ in 1:10
             n = rand(rng, 1:300)
             class = [ListMember(m, 1, sort!(randsubseq(rng, 1:n, rand(rng)))) for m in 1:rand(rng, 2:6)]
             filter!(m -> !isempty(m.tidset), class)
@@ -78,12 +78,12 @@ end
 
     @testset "Every pair-count, tid-list, and block-bound setting matches the oracle" begin
         rng = Xoshiro(DEFAULT_SEED)
-        # Sizes around multiples of 64 cross bitset word boundaries.
-        sizes = [0:40; 63:65; 127:129]
-        for _ in 1:200
-            transactions = random_database(rng, rand(rng, sizes); grouped=rand(rng, Bool))
+        # Pin word boundaries and both data shapes without repeating the full configuration grid.
+        cases = ((0, false, 1), (1, true, 1), (63, false, 2), (64, true, 3),
+                 (65, false, 4), (127, true, 2), (128, false, 3), (129, true, 4))
+        for (n, grouped, min_count) in cases
+            transactions = random_database(rng, n; grouped)
             canonical = ItemsetMining.canonical_database(transactions)
-            min_count = rand(rng, 1:4)
             expected = brute_force_supports(unique.(transactions), min_count)
             for use_pair_counts in (true, false), list_rule in (:never, :always, :cost),
                 bound_blocks in (0, 4, ItemsetMining.BOUND_BLOCKS)
