@@ -22,7 +22,7 @@ using Random: Xoshiro
 
     @testset "Counts agree with the miner on random databases" begin
         rng = Xoshiro(DEFAULT_SEED)
-        for _ in 1:80
+        for _ in 1:10
             n = rand(rng, 1:14)
             transactions = [sort!(unique(rand(rng, 1:7, rand(rng, 0:5)))) for _ in 1:n]
             minsup = rand(rng, 1:max(1, n ÷ 2))

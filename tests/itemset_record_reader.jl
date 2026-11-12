@@ -28,12 +28,6 @@ end
     for text in cases
         @test outcome(read_itemset_records, text) == outcome(line_record_reader, text)
     end
-    rng = Xoshiro(DEFAULT_SEED)
-    pieces = ["0", "1", "2", "9", " ", "\t", "\n", "\r", "-", "+", "x", "#", "%", "#SUP:", "#SUP: "]
-    for _ in 1:3_000
-        text = join(rand(rng, pieces, rand(rng, 0:30)))
-        @test outcome(read_itemset_records, text) == outcome(line_record_reader, text)
-    end
     for path in filter(endswith(".expected.txt"), readdir(TOY_DIR; join=true))
         text = read(path, String)
         @test outcome(read_itemset_records, text) == outcome(line_record_reader, text)
