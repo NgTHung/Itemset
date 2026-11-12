@@ -1,0 +1,44 @@
+# Transaction width at one minsup: the output volume changes with the width.
+name = "width-fixed"
+variants = ["baseline", "optimized", "spmf"]
+mode = "cold"
+stage = "width"
+hypothesis = "With minsup fixed at 0.05, runtime rises with width mainly because the output jumps from 100 itemsets to 5,050 and then 166,749."
+repeats = 3
+timeout_seconds = 300
+keep_outputs = true
+verify_outputs = true
+skip_after_timeout = false
+spmf_version = "2.66"
+
+[[series]]
+dataset = "width-w05"
+minsup = [0.05]
+
+[[series]]
+dataset = "width-w10"
+minsup = [0.05]
+
+[[series]]
+dataset = "width-w15"
+minsup = [0.05]
+
+[[series]]
+dataset = "width-w20"
+minsup = [0.05]
+
+[[series]]
+dataset = "width-w25"
+minsup = [0.05]
+
+[[series]]
+dataset = "width-w30"
+minsup = [0.05]
+
+[[series]]
+dataset = "width-w35"
+minsup = [0.05]
+
+[[series]]
+dataset = "width-w40"
+minsup = [0.05]

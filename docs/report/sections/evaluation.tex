@@ -109,6 +109,93 @@ Nested & 4 & 2 & 3/3 \\
 \subsection{Thời gian, số lượng kết quả và khả năng mở rộng}
 Thien viết runtime/độ dài giao dịch; Hung viết output size và tập con lồng nhau
 10\%, 25\%, 50\%, 75\%, 100\%. Dẫn chiếu hình và dữ liệu thô khi có kết quả.
+\subsubsection{Ảnh hưởng của độ dài giao dịch}
+\label{sec:width}
+Để tách độ dài giao dịch khỏi mật độ và khối lượng đầu ra vốn lẫn trong các
+benchmark thật, nhóm sinh tám cơ sở dữ liệu tổng hợp với cùng $N = 10\,000$ giao
+dịch và $|I| = 100$ item, chỉ khác độ dài giao dịch $w \in \{5, 10, \dots, 40\}$.
+Mô hình lấy mẫu: mỗi giao dịch là một tập con ngẫu nhiên đồng đều đúng $w$ item,
+độc lập với các giao dịch khác, nên các item hoán đổi được cho nhau và không cặp
+item nào đi cùng nhau nhiều hơn mức ngẫu nhiên. Do đó một $k$-itemset bất kỳ có
+support kỳ vọng $N \prod_{j=0}^{k-1} (w - j)/(|I| - j)$, ví dụ một cặp có
+$N\,w(w-1)/(|I|(|I|-1))$ giao dịch. Bộ sinh dùng SplitMix64 với seed
+$(42 \ll 32) \,|\, w$ thay cho \texttt{Xoshiro} của Julia, vì Julia không đảm bảo
+một dòng số ngẫu nhiên qua các phiên bản; nhờ vậy mã SHA-256 trong manifest đúng
+trên mọi nền tảng.
+
+Hai yếu tố gây nhiễu cần tách. Thứ nhất là khối lượng đầu ra: giao dịch dài hơn
+làm nhiều cặp và bộ ba đạt ngưỡng hơn nên số tập phổ biến tăng theo bậc thang,
+và thời gian tăng theo số tập phổ biến chứ chưa chắc theo $w$. Thứ hai là sự đồng
+xuất hiện (co-occurrence): mô hình đã loại nó bằng cách giữ các item độc lập,
+nên kết quả không thay thế được hành vi của Chess hay Mushroom. Vì vậy nhóm đo
+theo hai giao thức. Giao thức cố định dùng $\mathrm{minsup} = 0{,}05$ ở mọi $w$.
+Giao thức khớp đầu ra dùng, với mỗi $w$, ngưỡng $\sigma$ lớn nhất còn cho ít nhất
+5\,000 tập phổ biến, nên đầu ra gần như không đổi và $w$ là thay đổi duy nhất.
+
+Ở giao thức cố định, số tập phổ biến là 53, 100, 100, 100, 5\,050, 5\,050,
+5\,050 và 166\,749 khi $w$ tăng từ 5 đến 40. Các cặp bắt đầu đạt $\sigma = 500$
+từ $w = 25$ (support kỳ vọng 606, trong khi ở $w = 20$ chỉ là 384), và các bộ ba
+từ $w = 40$ (kỳ vọng 611). Thời gian của Eclat cơ bản đi theo các bậc này
+(1{,}1\,s ở $w = 20$, 2{,}6\,s ở $w = 25$, 43{,}7\,s ở $w = 40$ theo phạm vi
+\emph{process}, Hình~\ref{fig:width}), nên đồ thị theo $w$ ở một minsup chủ yếu
+phản ánh đầu ra chứ không phải độ dài giao dịch.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/width-curves.png}
+\caption{Thời gian chạy và khối lượng đầu ra theo độ dài giao dịch $w$ trên các
+cơ sở dữ liệu tổng hợp ($N = 10\,000$, $|I| = 100$). Từ trái sang phải: thời gian
+\emph{process} ở minsup cố định 0,05; thời gian \emph{process} khi khớp đầu ra
+khoảng 5\,000 tập; số tập phổ biến của hai giao thức; thời gian \emph{mine} (sau
+khởi động) khi khớp đầu ra. Trung vị của ba lần lặp, thanh là khoảng tứ phân vị;
+dưới mỗi nhãn trục là số tập phổ biến.}
+\label{fig:width}
+\end{figure*}
+
+Ở giao thức khớp đầu ra, số tập phổ biến giữ quanh 5\,000 và số phép giao tidset
+(join) gần như không đổi (khoảng 164\,000, trong đó khoảng 4\,900 phép thành
+công), nhưng thời gian khai thác của Eclat cơ bản tăng 53 lần khi $w$ đi từ 5 đến
+40 (Bảng~\ref{tab:width}). Lý do là Eclat cơ bản giao hai tidset đã sắp xếp bằng
+phép trộn, nên mỗi phép giao tốn công tỉ lệ với tổng độ dài hai tidset. Mỗi item
+có mặt trong $w/|I|$ số giao dịch, nên tidset của nó dài tỉ lệ với $w$, còn tidset
+của một cặp dài tỉ lệ với $w(w-1)$. Tổng số phần tử được trộn tăng 47 lần dù $w$
+chỉ tăng 8 lần, và thời gian của Eclat cơ bản bám theo với 5,4 đến 7,4\,ns mỗi
+phần tử. Bản tối ưu giao bitset có $\lceil N/64 \rceil = 157$ từ máy bất kể tidset
+dài bao nhiêu, nên thời gian khai thác của nó chỉ tăng 1,8 lần, từ 6,0 lên
+10,6\,ms. Theo phạm vi \emph{process}, bản tối ưu gần như phẳng ở 0,8 đến 1,0\,s
+vì chi phí khởi động và biên dịch của Julia lấn át. Nhóm chưa xác định nguồn gốc
+phần tăng 1,8 lần đó. Các thực nghiệm này chạy trên máy ở mục~\ref{sec:protocol}
+và ở cả hai giao thức, mọi đầu ra đều khớp hoàn toàn với SPMF.
+
+\begin{table}[t]
+\centering
+\caption{Eclat ở giao thức khớp đầu ra. $\sigma$ là ngưỡng theo số giao dịch,
+``Phần tử'' là tổng độ dài hai tidset trên mọi phép giao của bản cơ bản, thời
+gian là trung vị \emph{mine} của ba lần lặp.}
+\label{tab:width}
+\begin{tabular}{rrrrrr}
+\hline
+$w$ & $\sigma$ & Tập & Phần tử (triệu) & Cơ bản (s) & Tối ưu (ms) \\
+\hline
+5 & 10 & 5\,028 & 11,4 & 0,072 & 6,0 \\
+10 & 69 & 5\,016 & 38,9 & 0,226 & 6,4 \\
+15 & 179 & 5\,007 & 82,4 & 0,444 & 7,2 \\
+20 & 340 & 5\,007 & 142,0 & 0,934 & 7,9 \\
+25 & 550 & 5\,007 & 217,2 & 1,594 & 8,5 \\
+30 & 815 & 5\,002 & 308,8 & 2,297 & 9,3 \\
+35 & 1\,127 & 5\,002 & 416,4 & 3,052 & 10,2 \\
+40 & 1\,488 & 5\,001 & 538,8 & 3,824 & 10,6 \\
+\hline
+\end{tabular}
+\end{table}
+
+Về cây tìm kiếm, khi cố định minsup, cây vừa sâu thêm một mức ở $w = 25$ (cặp) và
+$w = 40$ (bộ ba), vừa rộng ra: số phép giao tăng từ 4\,950 lên 166\,650 rồi
+4\,087\,798. Khi khớp đầu ra, cây có cùng kích thước ở mọi $w$ nên chỉ chi phí trên
+mỗi phép giao thay đổi. Phạm vi kết luận có giới hạn: một $N$ và một số item, tám
+giá trị $w$, item độc lập, ba lần lặp trên một máy Windows, và mục tiêu 5\,000 tập
+là một lựa chọn. Dữ liệu thô, cấu hình và lệnh tái lập nằm trong
+\texttt{docs/width-runtime-2026-11-11.md}.
 \subsection{Phân tích và hướng phát triển}
 Thien đề xuất ít nhất hai tối ưu tương lai dựa trên bottleneck đã đo; phân biệt
 với kỹ thuật tối ưu Hung đã thực hiện trong chương cài đặt.
