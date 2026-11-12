@@ -1,0 +1,44 @@
+# The matched-output width runs in warm mode, so the mine scope excludes Julia start-up and compilation.
+name = "width-matched-warm"
+variants = ["baseline", "optimized"]
+mode = "warm"
+stage = "width"
+hypothesis = "With the output held near 5,000 itemsets, runtime still rises with width because every transaction adds C(w,2) pair occurrences to the tidset work."
+repeats = 3
+timeout_seconds = 300
+keep_outputs = true
+verify_outputs = true
+skip_after_timeout = false
+spmf_version = "2.66"
+
+[[series]]
+dataset = "width-w05"
+minsup = [0.001]
+
+[[series]]
+dataset = "width-w10"
+minsup = [0.0069]
+
+[[series]]
+dataset = "width-w15"
+minsup = [0.0179]
+
+[[series]]
+dataset = "width-w20"
+minsup = [0.034]
+
+[[series]]
+dataset = "width-w25"
+minsup = [0.055]
+
+[[series]]
+dataset = "width-w30"
+minsup = [0.0815]
+
+[[series]]
+dataset = "width-w35"
+minsup = [0.1127]
+
+[[series]]
+dataset = "width-w40"
+minsup = [0.1488]

@@ -118,6 +118,7 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     include("revisions.jl")
     include("runtime_curves.jl")
     include("join_work.jl")
+    include("width.jl")
     include("market_basket.jl")
     include("market_basket_rules.jl")
     include("market_basket_scripts.jl")
