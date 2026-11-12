@@ -19,11 +19,9 @@ julia --startup-file=no --project=. test/runtests.jl
 Latest local test run, 2026-11-12, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
 
 ```text
-Test Summary: | Pass  Fail  Total
-Itemset setup | 1083     2   1085
+Test Summary: | Pass  Total     Time
+Itemset setup | 1091   1091  1m42.8s
 ```
-
-The two failures are in `tests/precompile.jl`: each cold CLI variant compiles a `cli_main` specialization for `IOContext{IOStream}`. All mining, SPMF comparison, I/O, application, and experiment checks pass.
 
 ## Use the API
 
