@@ -38,6 +38,10 @@ terms = "UCI Machine Learning Repository dataset; cite the FIMI repository and U
 notes = "SPMF's mushrooms.txt is a different file with 8416 transactions and IDs up to 128, so it is not a source of this dataset."
 
 [[mushroom.sources]]
+url = "https://fimi.uantwerpen.be/data/mushroom.dat"
+format = "text"
+
+[[mushroom.sources]]
 url = "https://cs.rpi.edu/~zaki/Workshops/FIMI/data/mushroom.dat.gz"
 format = "gzip"
 

@@ -70,16 +70,21 @@ end
 
 function mining_artifacts(encoding, runs)
     outputs = Dict{String,String}()
-    thresholds, supports, examples, patches, selected = (IOBuffer() for _ in 1:5)
+    thresholds, supports, examples, patches, selected, labels = (IOBuffer() for _ in 1:6)
     println(thresholds, "minsup\tmin_count\titemsets\telapsed_seconds")
     println(supports, "minsup\titems\tsupport\timage_ids\tlabels")
     println(examples, "minsup\titems\tkind\timage_id\tlabel\tpresent_words\tmissing_words")
     println(patches, "minsup\titems\tkind\timage_id\tword\trow\tcol\tdistance2\tpatch_row_major")
     println(selected, "minsup\titems\tsupport\tlabel_counts_0_to_9")
+    println(labels, "minsup\titems\tlabel\ttotal\tsupport\tfraction\timage_ids")
     for run in runs
         println(thresholds, run.minsup, '\t', run.min_count, '\t', length(run.patterns), '\t', run.elapsed)
         outputs["patterns-$(run.minsup).txt"] = sprint(write_itemsets, run.patterns)
         for itemset in sort!(collect(keys(run.patterns)))
+            for row in pattern_label_summary(encoding.images, encoding.transactions, itemset)
+                println(labels, run.minsup, '\t', join(itemset, ','), '\t', row.label, '\t',
+                        row.total, '\t', row.support, '\t', something(row.fraction, "NA"), '\t', join(row.image_ids, ','))
+            end
             positions = supporting_images(encoding.transactions, itemset)
             length(positions) == run.patterns[itemset] || throw(ArgumentError("support scan differs for $itemset"))
             println(supports, run.minsup, '\t', join(itemset, ','), '\t', length(positions), '\t',
@@ -105,8 +110,8 @@ function mining_artifacts(encoding, runs)
             index == length(choices) && (outputs["supporting-$(run.minsup).svg"] = svg)
         end
     end
-    for (name, io) in zip(("thresholds.tsv", "supporting_images.tsv", "examples.tsv", "example_patches.tsv", "selected_patterns.tsv"),
-                          (thresholds, supports, examples, patches, selected))
+    for (name, io) in zip(("thresholds.tsv", "supporting_images.tsv", "examples.tsv", "example_patches.tsv", "selected_patterns.tsv", "label_frequencies.tsv"),
+                          (thresholds, supports, examples, patches, selected, labels))
         outputs[name] = String(take!(io))
     end
     outputs

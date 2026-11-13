@@ -319,3 +319,46 @@ nhau. Một nét ngang phổ biến trong nhiều nhãn có thể phản ánh c�
 cách đặt lưới trên ảnh nhị phân 16$\times$16. Cách chọn ví dụ cùng nhãn giúp
 kiểm tra kết quả cục bộ. Tần suất thu được mô tả tập ảnh Semeion và từ điển
 được học trên tập này.
+
+\subsubsection{Ứng dụng các mẫu thị giác}
+Một itemset đóng vai trò truy vấn ảnh theo tổ hợp nét. Với mẫu
+\{8,13\}, phép kiểm tra tập con trả về đủ 330 ID ảnh trong
+\texttt{supporting\_images.tsv}. Người đọc có thể xem các ảnh cùng chứa
+hai nét, rồi đối chiếu các ảnh cùng nhãn nhưng thiếu một từ trong
+Hình~\ref{fig:semeion-contrast}. Đây là truy xuất theo sự hiện diện của
+patch; phép mã hóa không bảo đảm hai nét nằm cạnh nhau trong ảnh.
+
+Để so sánh theo nhãn, cần chia số ảnh khớp cho số ảnh của từng nhãn,
+kể cả ảnh không có visual word. Chẳng hạn, cặp \{8,13\} có tần suất
+$69/159\approx43{,}4\%$ ở chữ số 3 và $9/161\approx5{,}6\%$ ở chữ số 4.
+Tệp \texttt{label\_frequencies.tsv} ghi số ảnh, support, tỷ lệ và toàn bộ
+ID nguồn cho từng nhãn của mọi mẫu. Một tỷ lệ cao chỉ mô tả tổ hợp nét
+phổ biến dưới codebook này; nó chưa đo độ chính xác phân loại. Các trường
+hợp thiếu từ như ảnh 41 cũng giúp kiểm tra bộ mã hóa: xem patch gần tâm,
+khoảng cách gán từ và ảnh hưởng của lưới $4\times4$ trước khi diễn giải
+khác biệt thành một đặc điểm chữ số.
+
+Các mẫu có thể tạo đặc trưng đầu vào cho một mô hình học có giám sát.
+Cho danh sách mẫu cố định $P=(p_1,\ldots,p_m)$ và transaction $T_i$ của
+ảnh thứ $i$, đặt
+\begin{equation}
+z_{ij}=\begin{cases}1,&p_j\subseteq T_i,\\0,&\text{trường hợp còn lại.}\end{cases}
+\label{eq:image-itemset-feature}
+\end{equation}
+Ở đây $m$ là số mẫu, $j$ là chỉ số cột đặc trưng và $z_{ij}$ cho biết
+ảnh $i$ chứa đủ các từ của mẫu $p_j$. Ví dụ,
+$P=(\{13\},\{8,13\},\{4,8,13\})$ biến transaction $\{8,13\}$ thành
+vector $(1,1,0)$; ảnh rỗng cho $(0,0,0)$. Hàm
+\texttt{itemset\_features} giữ nguyên thứ tự mẫu và hàng ảnh, nên có thể
+ghép vector này với vector BoVW hiện diện từ để đưa vào cùng một bộ phân loại.
+
+Để đánh giá hướng huấn luyện đó, phải chia ảnh trước, chỉ học codebook và
+khai thác mẫu trên tập training, rồi giữ tâm cụm, cutoff và thứ tự mẫu
+khi biến đổi tập test. Nhãn dùng cho chia tập và học mô hình, không dùng
+để tạo visual word. Có thể so sánh majority-class baseline, BoVW và
+đặc trưng itemset với cùng classifier trên cùng split bằng accuracy,
+macro-F1 và confusion matrix. Mẫu dài làm tăng số chiều và có thể lặp
+thông tin của mẫu con; mọi lựa chọn tham số cần dùng validation riêng.
+Input Semeion này không có ID người viết để kiểm soát giao nhau theo người.
+Nhóm chưa đo hiệu quả dự đoán của hướng mở rộng này; kết quả trong chương
+là phân tích mô tả trên toàn bộ tập ảnh.

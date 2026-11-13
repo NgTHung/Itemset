@@ -35,6 +35,8 @@ The runner selects the most supported singleton, most supported combination, and
 
 ## Deliverables
 
+`label_frequencies.tsv` gives each pattern's support, full denominator, fraction and all supporting source IDs per digit, including empty images in the denominator. `pattern_label_summary(images, transactions, itemset)` produces those rows. `itemset_features(transactions, patterns)` returns a binary image-by-pattern matrix in the supplied column order. A feature is true only when every word in the pattern occurs. Fit the codebook and mine the pattern list on training images before transforming held-out images. The all-data mining run is descriptive.
+
 - Frequent visual-word sets with representative patches and supporting images.
 - Sensitivity of the patterns to the support threshold and vocabulary size.
 - Interpretation and limitations.

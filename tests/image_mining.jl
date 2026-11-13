@@ -30,6 +30,7 @@
         @test isempty(read(joinpath(output, "patterns-1.0.txt"), String))
         @test occursin("support\t42\t3\t1\t", read(joinpath(output, "examples.tsv"), String))
         @test occursin("nonmatch\t7\t3\t\t1", read(joinpath(output, "examples.tsv"), String))
+        @test occursin("0.5\t1\t3\t2\t1\t0.5\t42", read(joinpath(output, "label_frequencies.tsv"), String))
         @test occursin("42\t1\t1\t1\t0.0\t1111", read(joinpath(output, "example_patches.tsv"), String))
         svg = read(joinpath(output, "supporting-0.5.svg"), String)
         @test occursin("image 42", svg) && occursin("image 7", svg)

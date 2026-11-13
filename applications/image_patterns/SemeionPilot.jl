@@ -353,6 +353,7 @@ end
 include("encoding.jl")
 include("encoding_artifacts.jl")
 include("mining.jl")
+include("analysis.jl")
 include("mining_visuals.jl")
 
 end
