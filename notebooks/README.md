@@ -19,13 +19,23 @@ The notebook prints its Julia version, thread count, project path, and seed. Rec
 
 The CLI executes Python. `scripts/run_colab_notebook.py` installs hash-verified Julia 1.13.2 and Java 25 on a Linux CPU runtime, clones an exact commit and executes every code cell from `demo.ipynb` in source order in one fresh Julia subprocess. This checks hosted computation; interactive rendering in the native Julia frontend is separate. The SPMF JAR must match the hash in [the reference protocol](../tools/spmf/README.md).
 
-After authenticating the installed `google-colab-cli`, set `PYTHONUTF8=1` and `PYTHONIOENCODING=utf-8` in Windows PowerShell. Create a local Python launcher with an exact pushed commit:
+After authenticating the installed `google-colab-cli`, enable UTF-8 in Windows PowerShell. For the Microsoft Store Python installation:
+
+```powershell
+$colabCli = Join-Path $env:LOCALAPPDATA 'Packages/PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0/LocalCache/local-packages/Python313/Scripts/colab.exe'
+Set-Alias colab $colabCli
+$env:PYTHONUTF8 = '1'
+$env:PYTHONIOENCODING = 'utf-8'
+```
+
+Create a local Python launcher with an exact pushed commit:
 
 ```python
-import os, runpy, sys
+import os, runpy
 os.environ["ITEMSET_REVISION"] = "REPLACE_WITH_EXACT_40_CHARACTER_COMMIT_SHA"
-sys.argv = ["run_colab_notebook.py"]
-runpy.run_path("/content/run_colab_notebook.py", run_name="__main__")
+runner = runpy.run_path("/content/run_colab_notebook.py")
+if runner["main"]([]) != 0:
+    raise RuntimeError("Notebook execution failed; inspect the evidence ZIP")
 ```
 
 Run these commands from the repository root, replacing `launcher.py` with that file:
