@@ -64,6 +64,8 @@ julia --project=. tools/spmf/compare.jl data/toy/spmf/baskets-0.5.txt results/pa
 
 `notebooks/demo.ipynb` runs on Colab's native Julia kernel, so it calls the package directly without a Python wrapper.
 
+Open the [public Colab notebook](https://colab.research.google.com/github/NgTHung/Itemset/blob/feat/dat-38-week3-notebook/notebooks/demo.ipynb). To reproduce the report's seeded codebook, use Julia 1.13.2; the [CLI runner](notebooks/README.md#run-through-the-colab-cli) installs that version with a verified archive hash.
+
 1. Export the committed tree with `git archive --format=zip --output=../Itemset-colab.zip HEAD`.
 2. Open the notebook in [Google Colab](https://colab.research.google.com/) and select Runtime, Change runtime type, Julia.
 3. Upload the ZIP through the Files sidebar to `/content/Itemset-colab.zip` and run all cells.
