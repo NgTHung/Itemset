@@ -132,13 +132,13 @@ def execute(args):
     return 0 if record["status"] == "success" else 1
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--revision", default=os.environ.get("ITEMSET_REVISION"))
     parser.add_argument("--spmf-jar", default="/content/itemset-spmf.jar")
     parser.add_argument("--root", default="/content/Itemset-cleanrun")
     parser.add_argument("--evidence", default="/content/itemset-cleanrun-evidence")
-    return execute(parser.parse_args())
+    return execute(parser.parse_args(argv))
 
 
 if __name__ == "__main__":

@@ -22,8 +22,9 @@ The CLI executes Python. `scripts/run_colab_notebook.py` installs hash-verified 
 After authenticating the installed `google-colab-cli`, set `PYTHONUTF8=1` and `PYTHONIOENCODING=utf-8` in Windows PowerShell. Create a local Python launcher with an exact pushed commit:
 
 ```python
-import os, runpy
+import os, runpy, sys
 os.environ["ITEMSET_REVISION"] = "REPLACE_WITH_EXACT_40_CHARACTER_COMMIT_SHA"
+sys.argv = ["run_colab_notebook.py"]
 runpy.run_path("/content/run_colab_notebook.py", run_name="__main__")
 ```
 

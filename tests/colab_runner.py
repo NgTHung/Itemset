@@ -11,6 +11,12 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_explicit_arguments_ignore_jupyter_kernel_flags(self):
+        from unittest.mock import patch
+        with patch("sys.argv", ["ipykernel", "-f", "kernel.json"]), patch.object(runner, "execute", return_value=0) as execute:
+            self.assertEqual(runner.main(["--revision", "a" * 40]), 0)
+            self.assertEqual(execute.call_args.args[0].revision, "a" * 40)
+
     def test_hash_rejects_modified_input(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "file"
