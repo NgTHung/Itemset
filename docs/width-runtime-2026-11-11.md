@@ -34,9 +34,9 @@ At count 500 the width-25 pairs (expected 606) are frequent and the width-20 pai
 
 ## Measurement
 
-Host: AMD Ryzen 7 H 260, 16 logical CPUs, 31.3 GiB, Windows 11, Julia 1.13.2 with one thread, SPMF 2.66 on OpenJDK 25.0.4.1. Code revision `8afea3d` plus the uncommitted width tooling, so the harness reports it as dirty. Each point has three repeats. Variants are baseline, optimized, and SPMF Eclat. The time is `process` scope in cold mode: spawn to exit, with Julia start-up and compilation, as in the other runtime curves. All 480 attempts are `ok`, and every output equals a separate SPMF Eclat run exactly.
+Host: AMD Ryzen 7 H 260, 16 logical CPUs, 31.3 GiB, Windows 11, Julia 1.13.2 with one thread, SPMF 2.66 on OpenJDK 25.0.4.1. Code revision `8afea3d` plus the uncommitted width tooling, so the harness reports it as dirty. Each point has three repeats. Variants are baseline, optimized, and SPMF Eclat. The time is `process` scope in cold mode: spawn to exit, with Julia start-up and compilation, as in the other runtime curves. Each cold run has 72 attempts (8 widths, 3 variants, 3 repeats), 144 in all. They add 480 rows to `runs.csv`, because a baseline or optimized attempt records four scopes (`process`, `read`, `mine`, `write`) and an SPMF attempt records two (`process`, `spmf_total`), so the rows are not separate trials. All 144 attempts are `ok`, and every output equals a separate SPMF Eclat run exactly.
 
-A third run repeats the matched protocol for baseline and optimized in warm mode. Its `mine` scope times one call after toy compilation and one full run of the same input, so it excludes Julia start-up and compilation. All 48 attempts are `ok` and exact against SPMF.
+A third run repeats the matched protocol for baseline and optimized in warm mode. Its `mine` scope times one call after toy compilation and one full run of the same input, so it excludes Julia start-up and compilation. It has 48 attempts (8 widths, 2 variants, 3 repeats) and 192 rows. All 48 attempts are `ok` and exact against SPMF.
 
 ```sh
 julia --startup-file=no --project=. scripts/width_experiment.jl run experiments/configs/width-fixed.toml --out results/raw/width-fixed-20261111
