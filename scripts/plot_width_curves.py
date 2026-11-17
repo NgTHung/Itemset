@@ -67,27 +67,43 @@ def plot_output(ax, protocols):
     ax.spines[["top", "right"]].set_visible(False)
 
 
+def sample_quantile(values, fraction):
+    """Linearly interpolated quantile of sorted values, as experiments/summary.jl computes it."""
+    position = (len(values) - 1) * fraction
+    low = int(position)
+    high = min(low + 1, len(values) - 1)
+    return values[low] + (values[high] - values[low]) * (position - low)
+
+
 def read_mine_summary(path):
-    """Median and IQR mine-scope seconds per variant and width from a run's summary.csv."""
+    """Median and bar offsets to Q1 and Q3 of mine-scope seconds per variant and width from a run's summary.csv.
+
+    The quartiles come from samples_seconds, because the IQR alone cannot place Q1 and Q3 around the median
+    when the samples are skewed.
+    """
     with path.open(newline="", encoding="utf-8-sig") as stream:
         rows = [r for r in csv.DictReader(stream) if r["timing_scope"] == "mine" and r["median_seconds"]]
     if not rows:
         raise SystemExit(f"{path} has no mine-scope rows with a median")
     series = {}
     for r in rows:
-        series.setdefault(r["variant"], []).append((width_of(r), float(r["median_seconds"]),
-                                                    float(r["iqr_seconds"] or 0)))
+        if not r["samples_seconds"]:
+            raise SystemExit(f"{path}: {r['dataset']} {r['variant']} has a median but no samples_seconds")
+        samples = sorted(float(s) for s in r["samples_seconds"].split(";"))
+        median = float(r["median_seconds"])
+        series.setdefault(r["variant"], []).append((width_of(r), median, median - sample_quantile(samples, 0.25),
+                                                    sample_quantile(samples, 0.75) - median))
     return {name: sorted(points) for name, points in series.items()}
 
 
 def plot_mine(ax, summary, style):
     for name, points in summary.items():
         color, marker = style.get(name, ("#555555", "P"))
-        xs, ys, iqr = zip(*points)
-        ax.errorbar(xs, ys, yerr=[[i / 2 for i in iqr], [i / 2 for i in iqr]], fmt=f"-{marker}", color=color,
+        xs, ys, lower, upper = zip(*points)
+        ax.errorbar(xs, ys, yerr=[lower, upper], fmt=f"-{marker}", color=color,
                     markersize=4.5, capsize=2.5, linewidth=1.3, elinewidth=1.0, label=name)
     ax.set_yscale("log")
-    ax.set_xticks(sorted({x for pts in summary.values() for x, _, _ in pts}))
+    ax.set_xticks(sorted({p[0] for pts in summary.values() for p in pts}))
     ax.set_xlabel("transaction width", fontsize=8)
     ax.set_ylabel("Median mine seconds (log)", fontsize=8)
     ax.set_title("Matched output, warm mine scope", fontsize=10)
