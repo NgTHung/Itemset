@@ -109,10 +109,18 @@ Tid-list length at matched output. With the output level, Eclat makes the same n
 
 Deeper and wider enumeration. At fixed minsup the search goes one level deeper at widths 25 (pairs) and 40 (triples), and the number of equivalence classes it opens and joins multiplies (166,650 joins at width 25, 4.1 M at width 40). That is the tree getting both deeper and wider. At matched output the tree has the same size at every width, so only the cost per join changes.
 
+## Evidence
+
+Git ignores the run folders, so the measured timings and the exact-SPMF checks rest on one archive, `width-evidence-20261111.tar.gz` (10.2 MB, SHA-256 `24381eac4543a32f00abd7b31b9a77139dbfdc39090d919bec8e97a7478d4004`). `width-evidence-20261111.SHA256SUMS` inside it gives the SHA-256 of each of its 1,472 files.
+
+For the fixed, matched, and warm runs the archive holds `runs.csv` and `summary.csv`; `environment.toml` with the revisions, CPU, memory, Java version, and SPMF jar hash; `source-checksums.toml` and the two worktree patches; `references/` with the SPMF reference outputs; and one folder per attempt with its command, stdout, stderr, and `comparison.toml`, which records the exact comparison against SPMF. It also holds the curve and join-work CSVs, the pilot table, and the figure.
+
+The harness records revision `8afea3d` as dirty, because the width tooling was uncommitted. The worktree patches list only changes to tracked files (`.gitignore`, `docs/report/main.tex`, `experiments/Experiments.jl`, `notebooks/demo.ipynb`, `tests/runtests.jl`). The new files `experiments/width.jl`, `experiments/curves.jl`, and `experiments/join_work.jl` enter the record only through `source-checksums.toml`. All 35 files it lists (18 package files and 17 harness files) have the same SHA-256 as the blobs at commit `9c7153b`, so the code that produced the timings is the committed code.
+
 ## Scope and limits
 
 - The model has independent items. It excludes the correlation that makes Chess and Mushroom dense, so it isolates width and does not stand in for those datasets.
 - Eight widths at one `N` and one item universe. A different `N` or universe moves the expected supports and therefore the cliffs, and is not measured here.
 - Three repeats on one Windows machine. The cold curves use `process` scope, which cannot separate the optimized variant's mining from start-up, so the warm `mine` scope carries that comparison. The warm run has no SPMF series. A run on the scored BBQ host would replace both.
 - The matched target of 5,000 is a choice. A target of 50,000 would move every matched count and not the shape.
-- The raw folders are local and untracked. Rerun the commands above on a clean revision to attach a clean `code_revision`.
+- The raw folders stay out of Git and ship in the evidence archive. Rerun the commands above on a clean revision to attach a clean `code_revision`.
