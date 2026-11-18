@@ -2,6 +2,9 @@ using Test
 using Random
 using ItemsetMining
 
+const EXTENDED_RANDOM_TESTS = parse(Bool, get(ENV, "ITEMSET_EXTENDED_TESTS", "false"))
+random_test_trials(standard::Int, extended::Int) = EXTENDED_RANDOM_TESTS ? extended : standard
+
 include("fixtures.jl")
 include("oracle.jl")
 include(joinpath(dirname(@__DIR__), "tools", "spmf", "compare.jl"))

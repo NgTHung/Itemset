@@ -17,7 +17,7 @@ end
     @test intersect_tidlists([1, 4, 7, 9], [2, 4, 9, 12]) == [4, 9]
     @test intersect_tidlists([5], [1, 2, 3, 4, 5]) == [5]
     rng = Xoshiro(DEFAULT_SEED)
-    for _ in 1:200
+    for _ in 1:random_test_trials(25, 200)
         a = sort!(unique(rand(rng, 1:40, rand(rng, 0:25))))
         b = sort!(unique(rand(rng, 1:40, rand(rng, 0:25))))
         @test intersect_tidlists(a, b) == intersect(a, b)
@@ -94,7 +94,7 @@ end
     end
     @testset "Random databases match the brute-force oracle" begin
         rng = Xoshiro(DEFAULT_SEED)
-        for _ in 1:300
+        for _ in 1:random_test_trials(20, 300)
             transactions = [rand(rng, 0:11, rand(rng, 0:9)) for _ in 1:rand(rng, 0:20)]
             min_count = rand(rng, 1:5)
             @test mine(transactions; minsup=min_count, variant) ==

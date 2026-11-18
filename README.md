@@ -16,11 +16,19 @@ julia --startup-file=no --project=. test/runtests.jl
 
 `test/runtests.jl` includes `tests/runtests.jl`, so the brief's command `julia --project test/runtests.jl` and `Pkg.test()` run the same suite.
 
-Latest local test run, 2026-11-13, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
+The default suite uses smaller seeded samples for repeated randomized checks. It keeps every fixed fixture, complete SPMF map comparison, input-validation case and application test. To run the original randomized trial counts in PowerShell:
+
+```powershell
+$env:ITEMSET_EXTENDED_TESTS = 'true'
+julia --startup-file=no --project=. test/runtests.jl
+Remove-Item Env:ITEMSET_EXTENDED_TESTS
+```
+
+Latest local test run, 2026-11-18, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
 
 ```text
 Test Summary: | Pass  Total
-Itemset setup | 5093   5093
+Itemset setup | 1498   1498
 ```
 
 ## Use the API

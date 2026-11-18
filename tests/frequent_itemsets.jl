@@ -23,7 +23,7 @@
             @test length(packed) == length(case.expected)
         end
         rng = Xoshiro(DEFAULT_SEED)
-        for _ in 1:100
+        for _ in 1:random_test_trials(10, 100)
             transactions = [rand(rng, 0:11, rand(rng, 0:9)) for _ in 1:rand(rng, 0:20)]
             min_count = rand(rng, 1:5)
             packed = mine_packed(transactions; minsup=min_count, variant)

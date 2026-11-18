@@ -27,7 +27,7 @@ end
     end
     rng = Xoshiro(DEFAULT_SEED)
     alphabet = collect("0129 \t\n\r-+#x")
-    for _ in 1:2_000
+    for _ in 1:random_test_trials(50, 2_000)
         text = String(rand(rng, alphabet, rand(rng, 0:40)))
         @test outcome(read_transactions, text) == outcome(line_reader, text)
     end

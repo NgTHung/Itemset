@@ -18,7 +18,7 @@
 
     @testset "Intersections count exactly and leave their inputs alone" begin
         rng = Xoshiro(DEFAULT_SEED)
-        for n in (1, 63, 64, 65, 129, 200), _ in 1:20
+        for n in (1, 63, 64, 65, 129, 200), _ in 1:random_test_trials(3, 20)
             in_a, in_b = rand(rng, Bool, n), rand(rng, Bool, n)
             database = [[item for (item, member) in ((1, in_a[t]), (2, in_b[t])) if member] for t in 1:n]
             a, b = bitset_tidsets(database, [1, 2])
@@ -56,7 +56,7 @@ end
 
     @testset "Maps match the oracle across word boundaries at N = $n" for n in (0, 1, 63, 64, 65, 127, 128, 129)
         rng = Xoshiro(DEFAULT_SEED + n)
-        for _ in 1:10
+        for _ in 1:random_test_trials(2, 10)
             transactions = [rand(rng, 0:7, rand(rng, 0:5)) for _ in 1:n]
             min_count = rand(rng, 1:max(1, n ÷ 4))
             @test mine(transactions; minsup=min_count, variant=:optimized) ==
