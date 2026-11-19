@@ -72,6 +72,15 @@ Compare complete itemset and support maps, not only itemset counts, because two 
 
 ## Scalability and width
 
-Scalability runs use seeded nested subsets of 10, 25, 50, 75, and 100 percent of each database at a fixed relative minsup, and plot the actual transaction counts. Width runs hold N, the item universe, and the sampling model fixed while varying transaction width. Output-size plots reuse the counts from the timing runs instead of rerunning.
+Scalability runs use seeded nested subsets of 10, 25, 50, 75, and 100 percent of each database at a fixed relative minsup, and plot the actual transaction counts. Every subset is a prefix of one permutation seeded with `DEFAULT_SEED`, so a larger subset adds transactions and never swaps out a smaller one's. Each subset is a dataset of its own, named like `accidents-p10`:
+
+```sh
+julia --startup-file=no --project=. experiments/prepare_subsets.jl accidents retail
+julia --startup-file=no --project=. experiments/run.jl experiments/configs/scalability.toml
+```
+
+`data/benchmark/subsets.toml` records each subset's SHA-256 and statistics, and `run.jl` reads it beside `manifest.toml`. Regenerating a recorded subset fails unless the bytes match, so a rerun proves it measured the same inputs. Julia does not promise the same random stream across versions, so the hashes hold for the pinned Julia only.
+
+Width runs hold N, the item universe, and the sampling model fixed while varying transaction width. Output-size plots reuse the counts from the timing runs instead of rerunning.
 
 Store figures in [results/figures](../results/figures/README.md), and copy the ones the report uses into the report with their provenance.

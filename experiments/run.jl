@@ -2,7 +2,7 @@ using ItemsetMining
 using Dates: Dates
 using TOML: TOML
 include(joinpath(@__DIR__, "Experiments.jl"))
-using .Experiments: load_manifest, parse_run_config, run_experiment
+using .Experiments: load_manifests, parse_run_config, run_experiment
 
 const USAGE = """
 Usage:
@@ -38,8 +38,11 @@ function main(args)
     stamp = Dates.format(Dates.now(Dates.UTC), "yyyymmddTHHMMSSZ")
     out = something(out, joinpath(root, "results", "raw", "$(config.name)-$stamp"))
     isdir(out) && !isempty(readdir(out)) && throw(ArgumentError("output folder $out is not empty"))
-    manifest = load_manifest(joinpath(root, "data", "benchmark", "manifest.toml"))
-    rows = run_experiment(config, manifest; data_dir=joinpath(root, "data", "benchmark"), out_dir=out)
+    data = joinpath(root, "data", "benchmark")
+    # Scalability subsets live in their own manifest, written by prepare_subsets.jl.
+    manifests = filter(isfile, [joinpath(data, "manifest.toml"), joinpath(data, "subsets.toml")])
+    manifest = load_manifests(manifests)
+    rows = run_experiment(config, manifest; data_dir=data, out_dir=out)
     println("wrote $(length(rows)) rows to $(joinpath(out, "runs.csv"))")
     return 0
 end

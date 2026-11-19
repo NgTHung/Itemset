@@ -67,6 +67,21 @@ a typo fails before any download starts.
 """
 load_manifest(path::AbstractString) = parse_manifest(read(path, String))
 
+"""
+    load_manifests(paths) -> Dict{String,DatasetEntry}
+
+Read several manifests into one. Throws `ArgumentError` naming a dataset that two
+manifests both define, because either choice would measure a file nobody asked for.
+"""
+function load_manifests(paths::AbstractVector{<:AbstractString})
+    merged = Dict{String,DatasetEntry}()
+    for path in paths, (name, entry) in load_manifest(path)
+        haskey(merged, name) && throw(ArgumentError("dataset $name is defined twice; the second is in $path"))
+        merged[name] = entry
+    end
+    return merged
+end
+
 function parse_manifest(text::AbstractString)
     entries = Dict{String,DatasetEntry}()
     for (name, table) in TOML.parse(text)
@@ -106,6 +121,8 @@ the verified file's statistics differ from the manifest.
 function prepare_dataset(entry::DatasetEntry, dir::AbstractString; fetch=Downloads.download)
     path = joinpath(dir, entry.file)
     isfile(path) && file_sha256(path) == entry.sha256 && return path
+    isempty(entry.sources) && error("dataset $(entry.name): $path is missing or has other bytes, and it " *
+        "has no download source; regenerate it with experiments/prepare_subsets.jl")
     failures = String[]
     for source in entry.sources
         staged = tempname(dir; cleanup=false)

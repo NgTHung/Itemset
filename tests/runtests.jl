@@ -109,6 +109,7 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     include("cli.jl")
     include("precompile.jl")
     include("benchmark_data.jl")
+    include("subsets.jl")
     include("image_patterns.jl")
     include("image_encoding.jl")
     include("image_mining.jl")

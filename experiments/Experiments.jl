@@ -8,10 +8,12 @@ module Experiments
 using ItemsetMining
 using Downloads: Downloads
 using p7zip_jll: p7zip
+using Random: Xoshiro, randperm
 using SHA: sha256
 using TOML: TOML
 
 include("datasets.jl")
+include("subsets.jl")
 include("harness.jl")
 include("references.jl")
 include("summary.jl")
