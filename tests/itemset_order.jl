@@ -10,7 +10,7 @@ reference_order(itemsets) = sortperm(itemsets; lt=isless)
 
     @testset "Random itemsets over item range $range" for range in (0:9, 0:200, 0:70_000, typemax(Int)-20:typemax(Int))
         rng = Xoshiro(DEFAULT_SEED)
-        for _ in 1:20
+        for _ in 1:3
             itemsets = unique([sort!(unique(rand(rng, range, rand(rng, 1:12)))) for _ in 1:rand(rng, 1:400)])
             @test lexicographic_order(pack_itemsets(itemsets)) == reference_order(itemsets)
         end

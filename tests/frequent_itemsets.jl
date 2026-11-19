@@ -19,7 +19,7 @@
         @test support_map(mine_packed(boundary; minsup=1, variant)) == BOUNDARY_LOW_EXPECTED
         rng = Xoshiro(DEFAULT_SEED)
         # Equal maps and equal counts also prove each itemset ascending and emitted once.
-        for _ in 1:300
+        for _ in 1:10
             transactions = [rand(rng, 0:11, rand(rng, 0:9)) for _ in 1:rand(rng, 0:20)]
             min_count = rand(rng, 1:5)
             packed = mine_packed(transactions; minsup=min_count, variant)

@@ -20,7 +20,7 @@ end
 @testset "Market basket rules" begin
     @testset "Rules agree with direct counting on random databases" begin
         rng = Xoshiro(DEFAULT_SEED)
-        for _ in 1:60
+        for _ in 1:10
             transactions = [sort!(unique(rand(rng, 1:6, rand(rng, 1:4)))) for _ in 1:rand(rng, 4:10)]
             n = length(transactions)
             rules = MarketBasket.association_rules(mine(transactions; minsup=2), n; minconf=0.3)

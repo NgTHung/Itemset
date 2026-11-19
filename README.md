@@ -16,12 +16,11 @@ julia --startup-file=no --project=. test/runtests.jl
 
 `test/runtests.jl` includes `tests/runtests.jl`, so the brief's command `julia --project test/runtests.jl` and `Pkg.test()` run the same suite.
 
-Latest local test run, 2026-10-19, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
+Latest local test run, 2026-11-12, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
 
 ```text
-Test Summary: | Pass  Total
-Itemset setup |  490    490
-Testing ItemsetMining tests passed
+Test Summary: | Pass  Total     Time
+Itemset setup | 1091   1091  1m42.8s
 ```
 
 ## Use the API

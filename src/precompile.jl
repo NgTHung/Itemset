@@ -26,4 +26,6 @@ if ccall(:jl_generating_output, Cint, ()) == 1
     # Julia 1.12 keeps this one-line method inferred but without native code after the
     # call above, so the image needs an explicit request to compile it.
     precompile(read_transactions, (String,))
+    # Redirected stdout can wrap its file stream in an IOContext.
+    precompile(cli_main, (Vector{String}, IOContext{IOStream}))
 end
