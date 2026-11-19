@@ -106,9 +106,89 @@ Nested & 4 & 2 & 3/3 \\
 \hline
 \end{tabular}
 \end{table}
-\subsection{Thời gian và số lượng kết quả theo minsup}
-Thien viết runtime/độ dài giao dịch; Hung viết output size. Dẫn chiếu hình và dữ liệu
-thô khi có kết quả.
+\subsection{Thời gian chạy theo minsup}
+Thien viết runtime/độ dài giao dịch. Dẫn chiếu hình và dữ liệu thô khi có kết quả.
+
+\subsection{Số lượng tập phổ biến theo minsup}
+\label{sec:output-size}
+Số tập phổ biến (output size) được lấy lại từ lần chạy đo thời gian ngày 17/11/2026 trên
+33 ngưỡng của năm CSDL, ghi trong chú thích Hình~\ref{fig:output-size}, nên không cần khai
+thác thêm lần nào. Lần chạy này gồm bản cơ bản, biến thể tối ưu, Eclat và PrePost+ của
+SPMF, mỗi chương trình năm lần ở mỗi ngưỡng, và cả 660 đầu ra đều khớp hoàn toàn với
+Eclat của SPMF. Kịch bản \texttt{scripts/output\_size.jl} kiểm tra thêm ba tính chất trên
+các đầu ra được giữ lại. Thứ nhất, bốn chương trình báo cùng một số tập ở mỗi ngưỡng. Thứ
+hai, số tập không giảm khi minsup giảm, vì theo tính chất phản đơn điệu (anti-monotone),
+mọi tập con của một tập phổ biến đều phổ biến, nên hạ ngưỡng không làm mất tập nào. Thứ
+ba, các đầu ra lồng nhau: ở mỗi cặp ngưỡng liền kề $\sigma_1 > \sigma_2$, các tập có
+support ít nhất $\sigma_1$ trong đầu ra ở $\sigma_2$ đúng bằng đầu ra ở $\sigma_1$, với
+cùng support. Support không phụ thuộc vào ngưỡng, nên phép kiểm tra này phát hiện một
+support chỉ sai ở một lần chạy. Cả 28 cặp ngưỡng đều đạt ba tính chất.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/output-size.pdf}
+\caption{Số tập phổ biến (trái, thang log) và độ dài trung bình của tập phổ biến (phải)
+theo minsup giảm dần trên năm CSDL. Đường liền là dữ liệu dày, đường đứt là dữ liệu thưa.
+Số liệu từ lần chạy \texttt{bbq-all-variants-cli-5repeat-20261117T041922Z}}
+\label{fig:output-size}
+\end{figure*}
+
+Hình~\ref{fig:output-size} cho thấy số tập phổ biến tăng nhanh hơn nhiều ở dữ liệu dày.
+Để so sánh tốc độ tăng giữa các CSDL có khoảng minsup khác nhau, nhóm khớp mô hình
+\begin{equation}
+  \log F = c - s \log(\mathrm{minsup}),
+  \label{eq:output-growth}
+\end{equation}
+trong đó $F$ là số tập phổ biến ở một ngưỡng, $c$ là hằng số của CSDL và $s$ là độ dốc
+trên thang log-log: khi minsup giảm $q$ lần, $F$ tăng khoảng $q^s$ lần.
+Bảng~\ref{tab:output-growth} cho thấy $s$ từ 5{,}2 đến 14{,}3 ở ba CSDL dày, nhưng chỉ
+1{,}6 và 1{,}7 ở hai CSDL thưa. Chess tăng 410 lần khi minsup chỉ giảm từ 0{,}9 xuống
+0{,}6, trong khi Retail tăng 48 lần khi minsup giảm mười lần.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Số tập phổ biến $F$ ở ngưỡng cao nhất và thấp nhất, độ dốc $s$ của
+mô hình~\eqref{eq:output-growth} và độ dài lớn nhất $k_{\max}$ của tập phổ biến ở ngưỡng
+thấp nhất}
+\label{tab:output-growth}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrr}
+\hline
+Dữ liệu & minsup & $F$ cao & $F$ thấp & $s$ & $k_{\max}$ \\
+\hline
+Chess & 0{,}9--0{,}6 & 622 & 254\,944 & 14{,}3 & 14 \\
+Accidents & 0{,}95--0{,}65 & 15 & 1\,093 & 11{,}3 & 8 \\
+Mushroom & 0{,}5--0{,}1 & 153 & 574\,431 & 5{,}2 & 16 \\
+Retail & 0{,}01--0{,}001 & 159 & 7\,589 & 1{,}7 & 5 \\
+T10I4D100K & 0{,}01--0{,}00025 & 385 & 96\,959 & 1{,}6 & 11 \\
+\hline
+\end{tabular}
+\end{table}
+
+Độ dài của tập phổ biến giải thích khác biệt này. Trong dữ liệu dày, mỗi giao dịch chứa
+một phần lớn các item, nên nhiều item cùng xuất hiện trong phần lớn giao dịch và tạo thành
+các tập phổ biến dài. Một $k$-itemset phổ biến kéo theo $2^k - 1$ tập con khác rỗng cũng
+phổ biến, nên mỗi khi hạ ngưỡng làm xuất hiện các tập dài hơn, số tập tăng theo hàm mũ của
+độ dài. Độ dài trung bình ở Chess tăng từ 3{,}8 lên 7{,}4 và ở Mushroom từ 2{,}9 lên 8{,}0
+trên lưới ngưỡng. Mushroom tăng 9{,}7 lần, từ 5\,545 lên 53\,583 tập, khi minsup giảm từ
+0{,}25 xuống 0{,}2, và cũng ở bước đó độ dài lớn nhất tăng từ 11 lên 15. Trong dữ liệu thưa,
+giao dịch ngắn và các item hiếm khi đi cùng nhau, nên hạ ngưỡng chủ yếu thêm item đơn và
+cặp item. Độ dài trung bình ở Retail chỉ từ 1{,}8 đến 2{,}1. Ở T10I4D100K 0{,}00025,
+45\,660 trong 96\,959 tập, tức 47\%, là 2-itemset.
+
+Số tập phổ biến không một mình quyết định thời gian chạy. Trong cùng lần chạy, bản cơ bản
+mất 12{,}59 s ở Retail 0{,}001 với 7\,589 tập, nhưng chỉ 3{,}07 s ở Chess 0{,}6 với
+254\,944 tập. Theo~\eqref{eq:cost}, chi phí là số phép giao nhân với độ dài tidset, không
+phải số kết quả: Retail có 2\,117 item phổ biến, nên lớp gốc có hơn hai triệu cặp cần giao,
+và hầu hết các phép giao đó thất bại mà không sinh tập nào (Mục~\ref{sec:optimized}). Biến
+thể tối ưu tránh phần lớn các phép giao này bằng cách đếm cặp, và chạy Retail 0{,}001
+trong 0{,}38 s. Ngay cả với biến thể tối ưu, Mushroom 0{,}1 với 574\,431 tập mất 0{,}41 s,
+còn T10I4D100K 0{,}00025 với 96\,959 tập mất 0{,}96 s, vì tidset ở T10I4D100K dài theo
+100\,000 giao dịch và phần lớn phép giao ở độ sâu 2 thất bại. Số tập chỉ chi phối thời gian
+khi nó rất lớn: ở Mushroom 0{,}05, trước khi có radix sort, phép sắp xếp và ghi
+3\,755\,511 itemset chiếm 89\% thời gian, còn khai thác chỉ 11\% (Mục~\ref{sec:optimized}). Ngược lại, khi minsup tương đối cố định thì số tập gần
+như không đổi, và thời gian tăng theo $N$ như Mục~\ref{sec:scalability} cho thấy.
 
 \subsection{Khả năng mở rộng}
 \label{sec:scalability}
