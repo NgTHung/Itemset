@@ -35,7 +35,7 @@ No duplicates. Properties 2 and 4 make every recorded key strictly ascending. A 
 
 Complete output. Take a frequent itemset X = {x1 < ... < xk}. Every subset of X is frequent, because a transaction that contains X contains each subset, so the pruning in steps 2 and 3 never removes a subset of a frequent itemset. By induction on j, the class with prefix (x1, ..., xj-1) holds every item y > xj-1 for which (x1, ..., xj-1, y) is frequent. The root class holds every frequent item. For the step, if (x1, ..., xj, y) is frequent with y > xj, then (x1, ..., xj-1, y) is frequent and holds y after xj in the parent class, so the join keeps it. With j = k, the class of (x1, ..., xk-1) holds xk, and the search records X.
 
-`tests/eclat.jl` checks these claims on every toy fixture and on 300 seeded random databases against a brute-force count of all subsets.
+`tests/frequent_itemsets.jl` checks these claims on every toy fixture and on 300 seeded random databases against a brute-force count of all subsets.
 
 ## Cost
 
