@@ -1,0 +1,53 @@
+# Runtime against database size: seeded nested subsets from prepare_subsets.jl at one
+# fixed relative minsup per database, so only N changes between points.
+name = "scalability"
+variants = ["baseline", "optimized", "spmf", "prepost"]
+mode = "cli"
+stage = "final"
+repeats = 5
+timeout_seconds = 300
+keep_outputs = false
+verify_outputs = true
+skip_after_timeout = false
+spmf_version = "2.66"
+java_options = ["-Xms256m", "-Xmx4g"]
+
+[[series]]
+dataset = "accidents-p10"
+minsup = [0.65]
+
+[[series]]
+dataset = "accidents-p25"
+minsup = [0.65]
+
+[[series]]
+dataset = "accidents-p50"
+minsup = [0.65]
+
+[[series]]
+dataset = "accidents-p75"
+minsup = [0.65]
+
+[[series]]
+dataset = "accidents-p100"
+minsup = [0.65]
+
+[[series]]
+dataset = "retail-p10"
+minsup = [0.001]
+
+[[series]]
+dataset = "retail-p25"
+minsup = [0.001]
+
+[[series]]
+dataset = "retail-p50"
+minsup = [0.001]
+
+[[series]]
+dataset = "retail-p75"
+minsup = [0.001]
+
+[[series]]
+dataset = "retail-p100"
+minsup = [0.001]
