@@ -106,9 +106,117 @@ Nested & 4 & 2 & 3/3 \\
 \hline
 \end{tabular}
 \end{table}
-\subsection{Thời gian, số lượng kết quả và khả năng mở rộng}
-Thien viết runtime/độ dài giao dịch; Hung viết output size và tập con lồng nhau
-10\%, 25\%, 50\%, 75\%, 100\%. Dẫn chiếu hình và dữ liệu thô khi có kết quả.
+\subsection{Thời gian và số lượng kết quả theo minsup}
+Thien viết runtime/độ dài giao dịch; Hung viết output size. Dẫn chiếu hình và dữ liệu
+thô khi có kết quả.
+
+\subsection{Khả năng mở rộng}
+\label{sec:scalability}
+Thực nghiệm này trả lời câu hỏi: khi CSDL lớn lên mà ngưỡng tương đối giữ nguyên, thời
+gian chạy tăng tuyến tính (linear) hay phi tuyến (nonlinear) theo số giao dịch $N$.
+Nhóm chọn Accidents, CSDL lớn nhất trong Bảng~\ref{tab:datasets}, và Retail, CSDL thưa
+với nhiều item nhất. Mỗi CSDL được hoán vị ngẫu nhiên một lần với seed 42, và tập con
+$p\%$ gồm $p\%$ giao dịch đầu của hoán vị đó, với $p \in \{10, 25, 50, 75, 100\}$. Nhờ
+vậy các tập con lồng nhau (nested): tập lớn hơn chỉ thêm giao dịch, không thay giao dịch
+của tập nhỏ hơn, nên chênh lệch giữa hai điểm chỉ đến từ phần dữ liệu thêm vào. Kịch bản
+\texttt{experiments/prepare\_subsets.jl} sinh lại các tập con, và mã băm SHA-256 của
+từng tệp được ghi trong \texttt{data/benchmark/subsets.toml}. Độ dài giao dịch trung bình
+gần như không đổi giữa các tập con, từ 33{,}79 đến 33{,}81 ở Accidents và từ 10{,}30 đến
+10{,}37 ở Retail, nên lấy mẫu không làm thay đổi hình dạng dữ liệu.
+
+Ngưỡng được giữ ở minsup 0{,}65 cho Accidents và 0{,}001 cho Retail, là hai ngưỡng thấp
+nhất trong lưới thời gian chạy của mỗi CSDL. Ngưỡng tuyệt đối vì vậy tăng theo $N$, từ
+$\sigma = 22\,112$ đến $221\,119$ ở Accidents và từ 9 đến 89 ở Retail. Bốn chương trình
+được đo bằng dòng lệnh, mỗi lần chạy là một tiến trình mới, với năm lần lặp xen kẽ trên
+cùng máy và cấu hình như Mục~\ref{sec:measure}. Cả 200 đầu ra đều khớp hoàn toàn với một
+lần chạy Eclat của SPMF độc lập. Độ trải tứ phân vị không vượt quá 1{,}9\% trung vị ở hai
+bản của nhóm và 7{,}6\% ở hai chương trình của SPMF.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/scalability.pdf}
+\caption{Trung vị thời gian tiến trình theo số giao dịch trên năm tập con lồng nhau của
+Accidents (minsup 0{,}65) và Retail (minsup 0{,}001), thanh lỗi là khoảng tứ phân vị của
+năm lần chạy. Hàng số thứ hai dưới trục hoành là số tập phổ biến ở mỗi tập con. Đo ngày
+19/11/2026, lần chạy \texttt{bbq-scalability-cli-20261119T140526Z}}
+\label{fig:scalability}
+\end{figure*}
+
+Hình~\ref{fig:scalability} cho thấy cả tám đường gần như thẳng. Để kiểm tra, nhóm khớp
+mỗi đường bằng mô hình
+\begin{equation}
+  T(N) = a + b\,N,
+  \label{eq:linear-fit}
+\end{equation}
+trong đó $T(N)$ là trung vị thời gian (giây) trên tập con có $N$ giao dịch, $a$ là chi
+phí cố định không phụ thuộc vào dữ liệu và $b$ là chi phí biên của mỗi giao dịch. Hệ số
+xác định $R^2$ là tỉ lệ phương sai của $T$ được mô hình giải thích, bằng 1 khi năm điểm
+nằm đúng trên một đường thẳng. Bảng~\ref{tab:scalability-fit} cho thấy $R^2 \ge 0{,}992$
+ở mọi đường, nên trong khoảng đo, thời gian của cả bốn chương trình tăng tuyến tính theo
+$N$.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Hệ số của mô hình~\eqref{eq:linear-fit}: chi phí cố định $a$ (s), chi phí biên
+$b$ (s trên 100\,000 giao dịch), hệ số xác định $R^2$ và tỉ số thời gian giữa tập con
+100\% và 10\%}
+\label{tab:scalability-fit}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrr}
+\hline
+Dữ liệu & Chương trình & $a$ & $b$ & $R^2$ & $T_{100}/T_{10}$ \\
+\hline
+Accidents & Cơ bản & 0{,}19 & 1{,}90 & 0{,}9999 & 8{,}1 \\
+ & Tối ưu & 0{,}19 & 0{,}20 & 0{,}9986 & 3{,}3 \\
+ & Eclat SPMF & $-1{,}16$ & 8{,}02 & 0{,}9951 & 12{,}3 \\
+ & PrePost+ & 0{,}52 & 0{,}54 & 0{,}9987 & 3{,}5 \\
+Retail & Cơ bản & 0{,}61 & 12{,}87 & 0{,}9996 & 6{,}7 \\
+ & Tối ưu & 0{,}22 & 0{,}18 & 0{,}9978 & 1{,}6 \\
+ & Eclat SPMF & 1{,}00 & 0{,}69 & 0{,}9923 & 1{,}5 \\
+ & PrePost+ & 0{,}48 & 3{,}51 & 0{,}9983 & 4{,}4 \\
+\hline
+\end{tabular}
+\end{table}
+
+Phân tích độ phức tạp~\eqref{eq:cost} giải thích xu hướng này. Khi minsup tương đối cố
+định, tập các itemset phổ biến hầu như không đổi: Accidents có từ 1\,079 đến 1\,095 tập
+phổ biến ở cả năm kích thước. Các lớp tương đương được duyệt vì vậy giống nhau, nên số
+phép giao $C$ gần như không đổi. Trong khi đó tổng độ dài $L$ tăng tỉ lệ với $N$, và mỗi
+phép giao tốn thời gian tỉ lệ với độ dài tidset, mà độ dài này cũng xấp xỉ tỉ lệ với
+$N$, vì mẫu ngẫu nhiên giữ gần đúng tỉ lệ giao dịch chứa mỗi itemset. Với bitset, một phép giao
+đọc $\lceil N/64 \rceil$ từ máy, nên kết luận không đổi. Cả ba số hạng đều tuyến tính
+theo $N$, và Eclat không có bước nào phụ thuộc vào bình phương số giao dịch.
+
+Chi phí cố định $a$ của bản tối ưu là 0{,}19 s ở Accidents và 0{,}22 s ở Retail, xấp xỉ
+thời gian khởi động Julia và nạp gói trong Mục~\ref{sec:measure}. Vì phần cố định này
+chiếm phần lớn thời gian ở các tập con nhỏ, thời gian của bản tối ưu chỉ tăng 3{,}3 lần ở
+Accidents và 1{,}6 lần ở Retail khi $N$ tăng 10 lần, dù đường vẫn thẳng. Hệ số $b$ mới là
+đại lượng so sánh khả năng mở rộng: chi phí biên của bản cơ bản lớn gấp 9{,}7 lần bản tối
+ưu ở Accidents và 71 lần ở Retail. Ở Retail, bản cơ bản giao từng cặp item phổ biến ở lớp
+gốc trên danh sách tid dài tỉ lệ với $N$, còn bản tối ưu đếm cặp trong một lượt duyệt CSDL
+ngang và chỉ giao các cặp đạt ngưỡng. Vì vậy tỉ số thời gian giữa hai bản tăng từ 7{,}7 lần
+ở tập con 10\% lên 31{,}9 lần ở tập con 100\%. Bản tối ưu nhanh hơn PrePost+ ở cả mười
+điểm, với tỉ số $R$ từ 0{,}35 đến 0{,}38 ở Accidents và từ 0{,}29 xuống 0{,}11 ở Retail,
+vì chi phí biên của PrePost+ lớn hơn 2{,}8 lần ở Accidents và 19 lần ở Retail.
+
+Hai yếu tố khác ngoài $N$ có thể làm khối lượng công việc thay đổi giữa các tập con, và
+nhóm đã đo cả hai. Thứ nhất là số item phân biệt, tăng theo $N$ từ 343 lên 468 ở Accidents
+và từ 10\,208 lên 16\,470 ở Retail. Số item phổ biến thì gần như không đổi: đúng 18 item ở
+cả năm tập con của Accidents, và từ 2\,100 đến 2\,270 ở Retail, nên các item mới đều hiếm và
+bị loại ở lượt đếm đầu tiên. Thứ hai, ở Retail 10\%, ngưỡng tuyệt đối chỉ là $\sigma = 9$.
+Với mẫu nhỏ, support của các itemset có độ hỗ trợ thật ngay dưới ngưỡng dao động mạnh hơn,
+và vì có rất nhiều itemset như vậy, số itemset vượt lên trên ngưỡng nhiều hơn số rơi xuống.
+Tập con 10\% vì thế có 2\,270 item phổ biến, nhiều nhất trong năm tập con, và 8\,895 tập phổ
+biến, nhiều hơn 17\% so với 7\,589 tập của toàn bộ CSDL. Khối lượng dôi ra này nhỏ so với phần
+tăng theo $N$: điểm đo xa đường khớp nhất của bản tối ưu ở Retail chỉ lệch 4 ms, và của bản
+cơ bản lệch 0{,}12 s, tức 1\% thời gian ở tập con 100\%.
+
+Eclat của SPMF là chương trình duy nhất có dấu hiệu phi tuyến: ở Accidents, thời gian tăng
+12{,}3 lần khi $N$ tăng 10 lần, số hạng bậc hai của phép khớp dương và $R^2$ thấp nhất
+bảng, nên đường thẳng cắt trục tung ở giá trị âm và $a$ ở dòng này không phải chi phí cố
+định. Nhóm không đo cấu trúc bên trong của SPMF, nên chỉ ghi nhận xu hướng này mà không
+quy cho một nguyên nhân cụ thể.
 \subsection{Phân tích và hướng phát triển}
 Thien đề xuất ít nhất hai tối ưu tương lai dựa trên bottleneck đã đo; phân biệt
 với kỹ thuật tối ưu Hung đã thực hiện trong chương cài đặt.
