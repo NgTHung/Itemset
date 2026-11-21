@@ -61,17 +61,20 @@ biên dịch. Với SPMF, nhóm dùng thêm thời gian do SPMF tự báo cáo. 
 peak RSS (resident set size, lượng bộ nhớ vật lý lớn nhất mà tiến trình chiếm) do
 hệ điều hành đo, vì chỉ đại lượng này so sánh được giữa tiến trình Julia và Java.
 
-Các thực nghiệm chạy trên máy AMD Ryzen 7 H 260 (16 luồng logic, 31,3 GiB RAM),
-Windows 11, Julia 1.13.2 với một luồng, SPMF v2.66~\cite{spmf2016} trên Java
-Temurin 25.0.4.1.
+Môi trường đo mặc định dùng máy AMD Ryzen 7 H 260 (16 luồng logic, 31,3 GiB
+RAM), Windows 11, Julia 1.13.2 với một luồng và SPMF 2.66~\cite{spmf2016}
+trên Java Temurin 25.0.4.1. Các mục thực nghiệm ghi riêng cấu hình nếu dùng
+máy khác.
 \subsection{Độ đúng và bộ nhớ}
-Để kiểm tra độ đúng, chúng tôi chạy Eclat của SPMF như chương trình tham chiếu
-độc lập. Bộ so sánh đọc toàn bộ ánh xạ từ tập mục phổ biến (frequent itemset)
-sang độ hỗ trợ (support), chuẩn hóa thứ tự mục rồi đối chiếu từng cặp. Tỉ lệ
-khớp là số tập mục có cùng độ hỗ trợ trong cả hai đầu ra chia cho số tập mục
-khác nhau trong hợp của hai đầu ra. Ánh xạ trống ở cả hai phía được tính là
-khớp hoàn toàn. Một tập mục xuất hiện hai lần trong cùng một đầu ra không được
-tính là khớp, vì khi đó độ hỗ trợ của nó không xác định.
+\label{sec:exact-memory}
+\subsubsection{Đối chiếu với SPMF}
+Hai cài đặt có thể sinh cùng số lượng tập mục nhưng gán support khác nhau.
+Vì vậy, nhóm dùng Eclat của SPMF làm tham chiếu độc lập và đối chiếu toàn bộ
+ánh xạ từ tập mục sang số giao dịch hỗ trợ. Bộ so sánh bỏ dòng siêu dữ liệu và
+sắp xếp các mục trong từng khóa để thứ tự in không ảnh hưởng đến kết quả.
+Tỉ lệ khớp lấy số khóa xuất hiện đúng một lần ở mỗi phía với cùng support chia
+cho số khóa phân biệt trong hợp hai đầu ra. Hai ánh xạ trống được tính là
+khớp hoàn toàn. Báo cáo ghi riêng số khóa thiếu, thừa, lặp và sai support.
 
 Bảng~\ref{tab:toy-spmf} trình bày kết quả trên bảy cơ sở dữ liệu nhỏ. $N$ là
 số giao dịch; $\sigma$ là ngưỡng hỗ trợ theo số giao dịch như ở
@@ -106,6 +109,95 @@ Nested & 4 & 2 & 3/3 \\
 \hline
 \end{tabular}
 \end{table}
+
+Hai biến thể Eclat ở revision \texttt{d851169} dùng chung một kết quả SPMF
+cho mỗi cặp bộ dữ liệu và ngưỡng. Cả 66 phép đối chiếu trên 33 cặp đạt tỉ lệ
+khớp 100\%, với 0 tập mục thiếu, thừa, lặp hoặc sai support. Bảng~\ref{tab:bench-exact}
+ghi số ngưỡng khớp của mỗi biến thể và khoảng kích thước đầu ra SPMF.
+Hình~\ref{fig:exact-grid} ghi các giá trị minsup được kiểm tra.
+
+Lần chạy đầu ghi nhận 11 lượt chưa đối chiếu được do JVM hết bộ nhớ và một
+lượt Julia hết bộ nhớ, tại Retail 1\% và năm ngưỡng Accidents. Nhóm chạy lại
+12 lượt này và đối chiếu với các đầu ra SPMF 2.66 đã lưu. Mỗi đầu ra tham
+chiếu được ghép theo cùng ngưỡng nguyên và có mã băm SHA-256 đã xác minh
+cho dữ liệu, JAR và tệp kết quả. Nhóm giữ nhật ký của cả hai lần chạy.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/correctness-grid.pdf}
+\caption{Lưới minsup theo bộ dữ liệu. Mỗi ô ghi minsup theo phần trăm và
+biểu thị cả hai biến thể khớp toàn bộ tập mục và support với SPMF.}
+\label{fig:exact-grid}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Số ngưỡng khớp toàn bộ đầu ra với SPMF và số tập mục tham chiếu}
+\label{tab:bench-exact}
+\begin{tabular}{lrrr}
+\hline
+Dữ liệu & Cơ bản & Tối ưu & Khoảng số tập mục \\
+\hline
+Chess & 7/7 & 7/7 & 622--254\,944 \\
+Mushroom & 7/7 & 7/7 & 153--574\,431 \\
+Retail & 6/6 & 6/6 & 159--7\,589 \\
+T10I4D100K & 6/6 & 6/6 & 385--96\,959 \\
+Accidents & 7/7 & 7/7 & 15--1\,093 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Bộ nhớ đỉnh của tiến trình}
+Loạt đối chiếu benchmark và loạt đo bộ nhớ dùng AMD Ryzen 5 6600H, Windows 11,
+Julia 1.13.2 với một luồng, và SPMF 2.66 trên Temurin 25.0.4.1. Trên mỗi bộ
+dữ liệu, nhóm chạy CLI của mỗi biến thể năm lần trong tiến trình mới tại
+cùng một ngưỡng ở giữa dải khảo sát. Windows cung cấp peak RSS qua
+\texttt{PeakWorkingSetSize}. Phép đo bao gồm khởi động, đọc dữ liệu, khai thác
+và ghi toàn bộ đầu ra. Nhóm lặp lại loạt Accidents với tham chiếu SPMF đã
+xác minh mã băm sau khi JVM hết bộ nhớ. Các đối chiếu diễn ra sau khi đo và
+xác nhận cả 50 đầu ra dùng trong phân tích khớp hoàn toàn.
+
+\begin{table}[t]
+\centering
+\caption{Trung vị peak RSS theo bộ dữ liệu qua năm lần lặp, đơn vị MiB}
+\label{tab:peak-rss}
+\begin{tabular}{lrrrr}
+\hline
+Dữ liệu & Minsup & Cơ bản & Tối ưu & $R$ \\
+\hline
+Chess & 0,75 & 191,0 & 150,0 & 1,274 \\
+Mushroom & 0,25 & 189,0 & 149,0 & 1,269 \\
+Retail & 0,0025 & 204,1 & 175,9 & 1,161 \\
+T10I4D100K & 0,001 & 204,0 & 181,7 & 1,123 \\
+Accidents & 0,8 & 479,6 & 313,4 & 1,530 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.88\textwidth]{figures/peak-memory.png}
+\caption{Trung vị peak RSS với khoảng nhỏ nhất đến lớn nhất qua năm lần lặp
+(trái) và tỉ số $R$ (phải). Đường chấm tại $R=1$ biểu thị hai trung vị bằng nhau.}
+\label{fig:peak-rss}
+\end{figure*}
+
+Trong Bảng~\ref{tab:peak-rss} và Hình~\ref{fig:peak-rss}, $R$ là trung vị
+peak RSS của bản cơ bản chia cho trung vị của bản tối ưu. Mức giảm tại năm
+điểm đo nằm trong khoảng từ 11,0\% ở T10I4D100K đến 34,7\% ở Accidents.
+Bản tối ưu dùng \emph{bitset} (mảng bit) và tái sử dụng vùng đệm khi giao
+các tidset trong tìm kiếm theo tiền tố của Eclat~\cite{zaki2000}. Với cơ sở
+dữ liệu có $N$ giao dịch, một tidset có $s$ mã chiếm $8s$ byte dưới dạng
+danh sách số nguyên 64 bit và $8\lceil N/64\rceil$ byte dưới dạng mảng bit,
+tính riêng phần tử. Mảng bit giảm dung lượng cho tidset dài, còn bản tối
+ưu có thể chuyển các lớp có tidset ngắn sang danh sách. Peak RSS gộp dữ liệu,
+cấu trúc tìm kiếm, kết quả và bộ nhớ môi trường chạy. Số đo cho biết chênh
+lệch toàn tiến trình tại các ngưỡng đã chọn.
+
+Tệp \texttt{docs/report/README.md} ghi cấu hình và lệnh tái lập. Công cụ đo
+lưu mã băm dữ liệu, phiên bản SPMF, revision mã nguồn và trạng thái của từng
+phép so sánh cùng số liệu gốc.
+
 \subsection{Thời gian, số lượng kết quả và khả năng mở rộng}
 Thien viết runtime/độ dài giao dịch; Hung viết output size và tập con lồng nhau
 10\%, 25\%, 50\%, 75\%, 100\%. Dẫn chiếu hình và dữ liệu thô khi có kết quả.
