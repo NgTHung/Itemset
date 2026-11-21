@@ -14,6 +14,12 @@ xelatex main.tex
 xelatex main.tex
 ```
 
+Tectonic tự chạy XeTeX, BibTeX và số lần biên dịch lại cần thiết trong một lệnh:
+
+```sh
+tectonic -X compile main.tex
+```
+
 Xuất bản hoàn thiện thành `docs/Report.pdf`: 10–15 trang nội dung chính, không tính
 tài liệu tham khảo/phụ lục; ba chương theo đề; mọi hình/bảng có caption và dẫn chiếu,
 công thức giải thích biến. Trích bài gốc và ít nhất ba tài liệu liên quan khác.
