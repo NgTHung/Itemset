@@ -91,5 +91,31 @@ end
             end
             @test !ispath(fresh)
         end
+        @testset "A manifest beside the benchmark one counts a width database" begin
+            settings = Experiments.WidthSettings(transactions=50, items=8, widths=[3])
+            width_dir = mkpath(joinpath(dir, "width-data"))
+            width_manifest = joinpath(dir, "width-manifest.toml")
+            Experiments.freeze_width_manifest(width_manifest, settings, width_dir)
+            width_config = joinpath(dir, "width.toml")
+            write(width_config, """
+            name = "width"
+            variants = ["baseline"]
+            repeats = 1
+            timeout_seconds = 60
+            [[series]]
+            dataset = "width-w03"
+            minsup = [0.5]
+            """)
+            out = joinpath(dir, "width-out")
+            @test quiet(() -> JoinWorkScript.main(["--out", out, "--manifest", width_manifest, width_config];
+                                                  data_dir=width_dir)) == 0
+            rows = Experiments.read_csv_rows(joinpath(out, "join-work.csv"))
+            database = Experiments.width_database(settings, 3)
+            @test only(rows)["dataset"] == "width-w03"
+            @test parse(Int, only(rows)["itemsets"]) == Experiments.output_count(database, support_threshold(0.5, 50))
+            @test_throws ArgumentError quiet(() -> JoinWorkScript.main(
+                ["--out", joinpath(dir, "never"), "--manifest", joinpath(dir, "missing.toml"), width_config]))
+            @test !ispath(joinpath(dir, "never"))
+        end
     end
 end
