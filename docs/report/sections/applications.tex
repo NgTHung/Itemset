@@ -210,6 +210,9 @@ vector nhị phân 16 chiều. Nhóm dùng k-means với seed (hạt giống ng�
 Mỗi tâm là một từ thị giác. Một patch được gán vào tâm gần nhất nếu khoảng
 cách Euclid bình phương không vượt quá 1,0. Giao dịch ảnh lưu mỗi từ được
 gán đúng một lần, nên vị trí và số lần lặp của patch không tham gia vào support.
+Lưới $4\times4$ giữ được các đoạn nét cục bộ trong khi giới hạn mỗi ảnh ở
+16 patch trước lọc. Ngưỡng khoảng cách loại các patch ở xa mọi tâm cụm để
+hạn chế gán các hình nét khác biệt vào cùng một từ.
 
 Trong số 18.386 patch qua bước lọc pixel nét, các patch đạt ngưỡng khoảng cách
 tạo 5.767 lượt hiện diện từ, trung bình 3,62 từ mỗi ảnh. Giao dịch chứa từ 0
@@ -293,6 +296,14 @@ có thể hiện diện ở các vị trí bất kỳ trong ảnh.
 
 Mỗi tập mục cũng có thể tạo một đặc trưng nhị phân. Với danh sách mẫu
 $(\{13\},\{8,13\},\{4,8,13\})$, ảnh có giao dịch $\{8,13\}$ nhận vector
-$(1,1,0)$. Để đánh giá đặc trưng này cho phân loại, cần học từ điển và khai
-thác danh sách mẫu trên tập huấn luyện, rồi giữ cố định chúng khi mã hóa tập
-kiểm tra. Nghiên cứu báo cáo mức đồng xuất hiện và chưa đo hiệu quả phân loại.
+$(1,1,0)$. Notebook tạo ma trận gồm 1.593 hàng ảnh và 46 cột tập mục ở minsup
+5\%. Tổng mỗi cột bằng support của tập mục tương ứng. Để đánh giá hiệu quả
+phân loại của đặc trưng này, cần học từ điển và khai thác mẫu trên tập huấn
+luyện, rồi giữ cố định cả hai khi mã hóa tập kiểm tra. Phân tích ở đây mô tả
+tần suất trên Semeion.
+
+Nhóm kiểm tra khả năng tái lập bằng phiên CPU mới trên Google Colab. Bản
+notebook ở revision \texttt{426edb2} chạy 13 ô mã bằng Julia 1.13.2 với seed
+42. Mã băm của từ điển mặc định và của cả ba tệp đầu ra ở minsup 20\%,
+10\% và 5\% khớp với kết quả lưu trữ. Lần chạy này xác nhận pipeline mặc
+định, còn Bảng~\ref{tab:semeion-sensitivity} ghi loạt khảo sát ở 15 cấu hình.
