@@ -7,6 +7,21 @@
   BoldFont=*-bold, ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{array}
+\usepackage{xcolor}
+% hyperref loads last so its patches of \ref, \label and \cite win.
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=green!40!black,
+  urlcolor=blue!60!black,
+  pdftitle={Khai thác tập phổ biến bằng Eclat và hai ứng dụng thực tế},
+  pdfauthor={Hung, Thien, Phat},
+}
+% Rows of the optimization-step table get labels so prose cites them with \ref.
+\newcounter{optstep}
+\newcommand{\optstep}[1]{\refstepcounter{optstep}\theoptstep\label{#1}}
 \title{Khai thác tập phổ biến bằng Eclat và hai ứng dụng thực tế}
 \author{\IEEEauthorblockN{Hung \and Thien \and Phat}
 \IEEEauthorblockA{Nhóm DataMining — cập nhật họ tên và mã số sinh viên}}

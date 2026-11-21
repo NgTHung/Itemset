@@ -1,8 +1,9 @@
 \section{Cài đặt}
-Nhóm cài đặt lại Eclat từ bài báo gốc của Zaki~\cite{zaki2000} bằng Julia, không dùng
-thư viện khai thác tập phổ biến (frequent itemset mining, FIM) nào. Chương này trình bày
-biểu diễn dữ liệu, thủ tục tìm kiếm, lý do thuật toán cho kết quả đúng, độ phức tạp và
-cách nhóm kiểm thử bản cài đặt cơ bản (baseline).
+Nhóm cài đặt lại Eclat từ bài báo gốc của Zaki~\cite{zaki2000} bằng Julia, chỉ dùng thư
+viện chuẩn và không dùng thư viện khai thác tập phổ biến (frequent itemset mining, FIM)
+nào. Gói có hai biến thể cho cùng một kết quả: bản cơ bản (baseline) bám sát bài báo, và
+biến thể tối ưu (optimized). Chương này trình bày thuật toán và lý do nó cho kết quả đúng,
+cách kiểm thử, các kỹ thuật tối ưu và mức cải thiện đo được so với bản cơ bản.
 
 \subsection{Biểu diễn dọc và tidset}
 Cơ sở dữ liệu (CSDL) gồm $N$ giao dịch (transaction). Mỗi giao dịch được gán một mã
@@ -41,13 +42,37 @@ $(b, t(P \cup \{b\}))$, với mỗi $b$ lớn hơn mọi item của $P$. Hai ite
 một lớp chỉ khác nhau ở item cuối, nên phép giao~\eqref{eq:intersect} chỉ hợp lệ giữa
 các phần tử cùng lớp.
 
-Hàm \texttt{bottom\_up!} cài đặt thủ tục Bottom-Up của bài báo theo chiều sâu
-(depth-first search, DFS). Với mỗi phần tử $a$ của lớp tiền tố $P$, hàm ghi
-$P \cup \{a\}$ cùng độ hỗ trợ, giao $t(P \cup \{a\})$ với tidset của mọi phần tử $b$
-đứng sau $a$, giữ lại các kết quả phổ biến làm lớp con có tiền tố $P \cup \{a\}$, rồi
-duyệt lớp con đó trước khi xét phần tử kế tiếp. Lớp gốc có tiền tố rỗng và gồm các item
-phổ biến. Bài báo đếm trước các 2-itemset phổ biến bằng một mảng tam giác trên CSDL
-ngang; bản cơ bản bắt đầu phép giao từ các item đơn để một thủ tục xử lý mọi mức.
+Hàm \texttt{bottom\_up!} cài đặt thủ tục Bottom-Up của bài báo. Với mỗi phần tử $a$ của
+lớp tiền tố $P$, hàm ghi $P \cup \{a\}$ cùng độ hỗ trợ, giao $t(P \cup \{a\})$ với tidset
+của mọi phần tử $b$ đứng sau $a$, giữ lại các kết quả phổ biến làm lớp con có tiền tố
+$P \cup \{a\}$, rồi duyệt lớp con đó trước khi xét phần tử kế tiếp. Lớp gốc có tiền tố
+rỗng và gồm các item phổ biến. Bài báo cho phép duyệt dàn các lớp theo chiều sâu
+(depth-first search, DFS) hoặc chiều rộng và báo cáo kết quả theo chiều rộng; nhóm chọn
+chiều sâu để bộ nhớ chỉ giữ một lớp cho mỗi mức trên đường đi hiện tại. Bài báo cũng đếm
+trước các 2-itemset phổ biến bằng một mảng tam giác trên CSDL ngang; bản cơ bản bắt đầu
+phép giao từ các item đơn để một thủ tục xử lý mọi mức, còn biến thể tối ưu dùng lại
+bước đếm này ở Mục~\ref{sec:optimized}. Bảng~\ref{tab:mapping} đối chiếu các thành phần
+của bài báo với mã nguồn.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Đối chiếu bài báo~\cite{zaki2000} với mã nguồn trong \texttt{src/algorithm/}}
+\label{tab:mapping}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.37\columnwidth}>{\raggedright\arraybackslash}p{0.53\columnwidth}}
+\hline
+Bài báo & Bản cơ bản; biến thể tối ưu \\
+\hline
+Tid-list của item (Mục 4.1) & \texttt{to\_class}; \texttt{bitset\_tidsets} \\
+Lớp theo tiền tố (Mục 4.2) & vector các cặp (item, tid-list); vector các
+\texttt{ClassMember\{T\}} \\
+Bottom-Up (Mục 4.3.1 và 5.2, Hình 12) & \texttt{bottom\_up!}; \texttt{eclat\_search!} \\
+Giao hai tid-list & \texttt{intersect\_tidlists}; \texttt{intersect\_bitsets!} và
+\texttt{intersect\_lists!} \\
+Đếm 2-itemset bằng mảng tam giác (Mục 5.1) & không dùng; \texttt{count\_pairs} \\
+\hline
+\end{tabular}
+\end{table}
 
 Bảng~\ref{tab:trace} truy vết thuật toán trên CSDL \texttt{baskets.txt} gồm bốn giao
 dịch $T_1 = \{1,2,3\}$, $T_2 = \{1,2\}$, $T_3 = \{1,3\}$, $T_4 = \{2,3\}$ với
@@ -78,6 +103,7 @@ $\emptyset$ & -- & $t(3) = \{1,3,4\}$ & ghi $\{3\}$, $\sigma = 3$ \\
 \end{table}
 
 \subsection{Tính đúng đắn}
+\label{sec:correctness}
 Mọi lớp mà \texttt{bottom\_up!} nhận đều thỏa bốn bất biến (invariant): (i) mỗi tid-list
 tăng dần và không lặp; (ii) các phần tử xếp tăng dần theo item và lớn hơn mọi item của
 tiền tố; (iii) mỗi phần tử là phổ biến; (iv) tid-list của phần tử $b$ đúng bằng
@@ -110,7 +136,7 @@ chỉ giữ các lớp trên đường đi hiện tại, mỗi mức một lớp
 phần tử tối đa $N$ tid. Số kết quả có thể tăng theo hàm mũ: một $k$-itemset phổ biến có
 $2^k - 1$ tập con khác rỗng, và mọi tập con đó đều phổ biến.
 
-\subsection{Giao diện và định dạng SPMF}
+\subsection{Giao diện, định dạng SPMF và dòng lệnh}
 Hai ứng dụng và phần thực nghiệm chỉ gọi bốn hàm công khai: \texttt{read\_transactions}
 đọc file SPMF (mỗi dòng một giao dịch, các item cách nhau bởi dấu cách),
 \texttt{support\_threshold} đổi $\mathit{minsup}$ thành số giao dịch, \texttt{mine} trả
@@ -118,342 +144,294 @@ về từ điển \texttt{SupportMap} từ itemset sang độ hỗ trợ, và \t
 ghi mỗi itemset một dòng theo dạng \texttt{1 2 \#SUP: 2}. Một $\mathit{minsup}$ thực
 trong $(0, 1]$ là tỉ lệ và được làm tròn lên thành $\lceil \mathit{minsup} \cdot N \rceil$
 giao dịch; một $\mathit{minsup}$ nguyên là số giao dịch tuyệt đối. Tham số
-\texttt{variant} chọn \texttt{:baseline} hoặc \texttt{:optimized}, nên hai phiên bản được
+\texttt{variant} chọn \texttt{:baseline} hoặc \texttt{:optimized}, nên hai biến thể được
 chọn riêng và so sánh trên cùng đầu vào.
 
 Chương trình dòng lệnh \texttt{demo.jl} nhận đường dẫn đầu vào, \texttt{--output},
 đúng một trong hai ngưỡng \texttt{--minsup} (tỉ lệ) hoặc \texttt{--min-count} (số giao
 dịch) và \texttt{--variant}, ví dụ
 \texttt{julia --project=. demo.jl --minsup 0.5 --output out.txt data/toy/baskets.txt}.
+Đầu vào sai làm chương trình dừng với mã thoát 1 và thông báo nêu số dòng lỗi. Hàm ghi
+kiểm tra toàn bộ kết quả trước khi mở tệp, nên một lần chạy lỗi không làm thay đổi tệp
+đầu ra đã có. Các itemset được ghi theo thứ tự từ điển (lexicographic order) của mã item,
+nên tệp đầu ra của hai biến thể giống nhau từng byte.
 
-\subsection{Kiểm thử và tối ưu hóa}
-Bộ kiểm thử tự động (\texttt{julia --project=. test/runtests.jl}) gồm 490 phép kiểm
-tra. Với bản cơ bản, bộ kiểm thử so sánh toàn bộ \texttt{SupportMap} trên sáu CSDL nhỏ
-có kết quả tính tay (gồm CSDL rỗng, CSDL không có tập phổ biến và giao dịch lặp) và một
-CSDL ảnh có giao dịch rỗng. Bộ kiểm thử còn đối chiếu với một bộ đếm vét cạn
-(brute force) liệt kê mọi tập con trên 300 CSDL ngẫu nhiên sinh với hạt giống 42, kiểm
-tra các ngưỡng biên, một phản ví dụ cho phép giao giữa hai lớp khác tiền tố, thứ tự
-khóa và tính ổn định kiểu (type stability). Bộ đếm vét cạn chỉ là công cụ kiểm thử;
-phép so sánh với SPMF được trình bày trong chương thực nghiệm.
+\subsection{Kiểm thử tự động}
+\label{sec:tests}
+Lệnh \texttt{julia --project=. test/runtests.jl} chạy 1\,091 phép kiểm tra, và tất cả
+đều đạt trên Julia 1.13.2. Mỗi kiểm thử khai thác so sánh toàn bộ \texttt{SupportMap} lẫn
+số itemset được ghi, vì một itemset bị ghi hai lần sẽ bị từ điển che mất. Cả hai biến thể
+chạy cùng các nhóm kiểm thử sau.
 
-Bổ sung kỹ thuật tối ưu đã cài đặt kèm bằng chứng đo so với bản cơ bản.
+\begin{itemize}
+\item Kết quả tính tay: tám CSDL nhỏ, gồm CSDL rỗng, CSDL không có tập phổ biến, giao
+dịch lặp và ngưỡng nằm ngay trên và dưới độ hỗ trợ của một itemset, và một CSDL ảnh có
+giao dịch rỗng.
+\item Đối chiếu với Eclat của SPMF~\cite{spmf2016}: tám lần chạy trên bảy CSDL nhỏ và
+một lần chạy trên T25I10D10K (9\,976 giao dịch, 929 item), nơi SPMF cho 14\,782 itemset
+dài từ 1 đến 13 item ở $\mathit{minsup} = 0{,}008$. Cả hai biến thể khớp 100\% trên cả
+chín lần chạy, không có itemset thiếu, thừa hoặc sai độ hỗ trợ.
+\item Đối chiếu với bộ đếm vét cạn (brute force) liệt kê mọi tập con: 10 CSDL ngẫu
+nhiên sinh với hạt giống 42 cho mỗi biến thể. Biến thể tối ưu chạy thêm tám CSDL có 0, 1,
+63, 64, 65, 127, 128 và 129 giao dịch, tức quanh biên của một từ 64 bit trong bitset; một
+nửa trong số đó chứa các nhóm item luôn đi cùng nhau để sinh phần mở rộng hoàn hảo. Mỗi
+CSDL chạy với 18 tổ hợp cấu hình bật và tắt từng kỹ thuật ở Mục~\ref{sec:optimized}.
+\item Tính ổn định kiểu (type stability): \texttt{Test.@inferred} trên \texttt{mine},
+\texttt{mine\_packed} và các hàm tìm kiếm của hai biến thể.
+\item Đọc, ghi và dòng lệnh: hàm đọc theo byte được đối chiếu với bộ phân tích theo dòng
+trên các đầu vào biên (số tràn \texttt{Int}, ký tự lạ, dòng trống, xuống dòng kiểu Windows)
+và mọi CSDL nhỏ, hàm ghi được so từng byte với một bộ định dạng tham chiếu, và các lỗi tham
+số cùng mã thoát của tiến trình được kiểm tra.
+\end{itemize}
 
-\subsubsection{Mốc đo của bản cơ bản}
-Mọi kỹ thuật tối ưu được so với một mốc đo (baseline measurement) cố định. Nhóm chạy bản
-cơ bản, Eclat của SPMF và PrePost+ của SPMF~\cite{spmf2016} trên đủ 33 ngưỡng của năm
-CSDL Chess, Mushroom, Retail, T10I4D100K và Accidents. Mỗi chương trình chạy năm lần ở
-mỗi ngưỡng trong chế độ nguội (cold), tức mỗi lần là một tiến trình mới, nên có tổng cộng
-495 lần chạy. Toàn bộ đợt đo diễn ra liên tục trên một máy Linux (Intel Core i7-11800H,
-7{,}4 GiB RAM) với Julia 1.13.2 một luồng và SPMF 2.66 trên Java Temurin 25.0.4.1, giới
-hạn heap 4 GiB, xung nhịp CPU cố định 2{,}3 GHz. Cả 495 đầu ra đều khớp hoàn toàn với
-một lần chạy Eclat của SPMF độc lập; không lần chạy nào lỗi hoặc vượt giới hạn 300 s. Độ
-trải tứ phân vị (interquartile range, IQR) của bản cơ bản không vượt quá 3\% trung vị ở
-mọi ngưỡng, nên một chênh lệch lớn hơn mức này giữa hai phiên bản có thể quy cho thay đổi
-mã nguồn.
+Bộ đếm vét cạn chỉ là công cụ kiểm thử. Ngoài bộ kiểm thử, mỗi đợt đo ở
+Mục~\ref{sec:measure} so sánh mọi tệp đầu ra với một lần chạy Eclat của SPMF độc lập sau
+khi đo xong. Đợt đo cuối gồm 820 tệp đầu ra trên năm CSDL chuẩn (615 của biến thể tối ưu
+và 205 của PrePost+), và cả 820 tệp khớp 100\%.
 
-Bản cơ bản giao hai tid-list bằng một lượt trộn (merge) trên hai danh sách đã sắp xếp,
-với chi phí $O(|t(P \cup \{a\})| + |t(P \cup \{b\})|)$. Tiền tố nằm trong một mảng dùng
-chung cho mọi mức của tìm kiếm. Kết quả được lưu thành ba mảng phẳng: item, vị trí bắt
-đầu của mỗi itemset và độ hỗ trợ. Tệp được đọc và ghi trực tiếp theo byte.
-Bảng~\ref{tab:baseline} cho kết quả ở ngưỡng thấp nhất của mỗi CSDL.
+\subsection{Biến thể tối ưu}
+\label{sec:optimized}
+Biến thể tối ưu giữ nguyên thủ tục Bottom-Up và thay đổi ba thứ: cách lưu tidset, những
+phép giao được bỏ qua, và cách ghi kết quả. Mỗi thay đổi đều giữ đầu ra chính xác; các
+chứng minh nằm trong \texttt{docs/eclat-optimized.md}. Phần khởi động, đọc và ghi tệp nằm
+trong mã dùng chung, nên cả hai biến thể cùng hưởng các thay đổi ở đó.
 
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{3pt}
-\caption{Trung vị thời gian tiến trình nguội (giây) ở ngưỡng thấp nhất của mỗi CSDL,
-năm lần chạy mỗi ô}
-\label{tab:baseline}
-\begin{tabular}{lrrrrr}
-\hline
-Dữ liệu / minsup & Itemset & Bản cơ bản & Eclat & PrePost+ & \texttt{mine} \\
-\hline
-Chess / 0{,}6 & 254\,944 & 5{,}85 & 15{,}98 & 0{,}59 & 51\% \\
-Mushroom / 0{,}1 & 574\,431 & 8{,}74 & 7{,}44 & 0{,}68 & 67\% \\
-Retail / 0{,}001 & 7\,589 & 14{,}89 & 1{,}53 & 3{,}51 & 81\% \\
-T10I4D100K / 0{,}00025 & 96\,959 & 13{,}08 & 8{,}02 & 4{,}31 & 78\% \\
-Accidents / 0{,}65 & 1\,093 & 9{,}55 & 26{,}87 & 2{,}37 & 64\% \\
-\hline
-\end{tabular}
-\end{table}
+\subsubsection{Tidset dạng bitset và thứ tự duyệt}
+Ở ngưỡng thấp nhất của mỗi CSDL, lời gọi khai thác của bản cơ bản cấp phát 3{,}3 đến
+5{,}7 GiB, chủ yếu cho tid-list mới của mỗi phép giao. Biến thể tối ưu lưu mỗi tidset
+thành bitset (chuỗi bit, bit thứ $i$ ứng với giao dịch $i$) gồm $W = \lceil N/64 \rceil$
+từ 64 bit. Phép giao là phép AND từng từ, và độ hỗ trợ là số bit 1 đếm bằng
+\texttt{count\_ones} trong cùng vòng lặp. Kết quả được ghi vào một bitset lấy từ kho dùng
+lại (pool); bitset của phép giao không phổ biến quay về kho, nên phép giao thất bại không
+cấp phát bộ nhớ. Một phép giao đọc $2W$ từ bất kể độ hỗ trợ: $W = 50$ ở Chess và
+$5\,316$ ở Accidents.
 
-Bản cơ bản nhanh hơn Eclat của SPMF ở mọi ngưỡng của Accidents và ở Chess từ 0{,}7 trở
-xuống, nhưng chậm hơn PrePost+ từ 2{,}2 đến 12{,}8 lần trên cả 33 ngưỡng. Thời gian
-chạy có hai điểm nghẽn. Cột \texttt{mine} là tỉ lệ thời gian tiến trình nằm trong lời
-gọi khai thác: lời gọi này chiếm 51\% đến 81\% thời gian ở
-ngưỡng thấp nhất và cấp phát 3{,}3 đến 5{,}7 GiB, chủ yếu cho tid-list mới của mỗi phép
-giao. Điểm nghẽn thứ hai là chi phí cố định: ngoài ba pha đọc, khai thác và ghi, mỗi
-tiến trình Julia mất thêm 2{,}77 đến 2{,}88 s. Khởi động Julia chỉ chiếm 0{,}17 s; phần
-còn lại là biên dịch JIT. Ở ngưỡng cao, chi phí cố định này chiếm gần hết thời gian chạy,
-trong khi PrePost+ hoàn tất mọi ngưỡng của Chess và Mushroom trong 0{,}40 đến 0{,}68 s.
-Vì vậy, bước tối ưu tiếp theo là loại bỏ phần biên dịch bằng tiền biên dịch
-(precompilation), sau đó mới đến một biểu diễn tidset nhanh hơn cho phép giao.
+Các item được duyệt theo độ hỗ trợ tăng dần. Item hiếm đứng đầu được giao với nhiều item
+nhất, nhưng hầu hết các phép giao đó thất bại, còn item phổ biến đứng cuối chỉ còn ít
+phần tử theo sau, nên các lớp con nhỏ hơn. Chứng minh ở Mục~\ref{sec:correctness} chỉ
+dùng một thứ tự toàn phần trên các item, nên nó vẫn đúng với thứ tự này.
 
-\subsubsection{Tiền biên dịch}
-Nhóm chạy các hàm công khai \texttt{read\_transactions}, \texttt{mine\_packed},
-\texttt{mine} và \texttt{write\_itemsets} trên một CSDL nhỏ trong lúc Julia dựng package
-image, để mã máy của chúng được lưu kèm gói và không phải biên dịch lại ở mỗi tiến trình.
-Một phép kiểm thử chạy các hàm này trong tiến trình mới với \texttt{--trace-compile} và
-yêu cầu không có phương thức nào của gói phải biên dịch khi chạy.
-
-Để đo riêng tác động này, nhóm chạy hai đợt liên tiếp trên cùng máy với cùng cấu hình mốc
-đo, mỗi đợt 165 lần chạy trên 33 ngưỡng. Hai đợt đo trực tiếp tiến trình \texttt{demo.jl},
-tức chương trình người dùng chạy, nên mã đo không được biên dịch cùng tiến trình. Cả 330
-đầu ra đều khớp hoàn toàn với Eclat của SPMF, và IQR không vượt quá 4{,}1\% trung vị.
-Thời gian của PrePost+ lấy từ mốc đo ở mục trước, nên tỉ số
-$R = T_\text{sau} / T_\text{PrePost+}$, với $T_\text{sau}$ là thời gian sau tiền biên
-dịch và $T_\text{PrePost+}$ là thời gian của PrePost+, chỉ là ước lượng giữa hai phiên đo.
-Bảng~\ref{tab:precompile} cho kết quả ở ngưỡng cao nhất và thấp nhất của mỗi CSDL.
-
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{4pt}
-\caption{Trung vị thời gian tiến trình nguội (giây) của \texttt{demo.jl} trước và sau tiền
-biên dịch, năm lần chạy mỗi ô}
-\label{tab:precompile}
-\begin{tabular}{lrrrr}
-\hline
-Dữ liệu / minsup & Trước & Sau & PrePost+ & $R$ \\
-\hline
-Chess / 0{,}9 & 2{,}36 & 0{,}33 & 0{,}40 & 0{,}82 \\
-Chess / 0{,}6 & 5{,}42 & 3{,}12 & 0{,}59 & 5{,}26 \\
-Mushroom / 0{,}5 & 2{,}34 & 0{,}32 & 0{,}43 & 0{,}76 \\
-Mushroom / 0{,}1 & 8{,}26 & 6{,}49 & 0{,}68 & 9{,}52 \\
-Retail / 0{,}01 & 2{,}54 & 0{,}54 & 0{,}76 & 0{,}70 \\
-Retail / 0{,}001 & 14{,}90 & 12{,}22 & 3{,}51 & 3{,}48 \\
-T10I4D100K / 0{,}01 & 5{,}10 & 2{,}79 & 1{,}41 & 1{,}97 \\
-T10I4D100K / 0{,}00025 & 12{,}72 & 10{,}51 & 4{,}31 & 2{,}44 \\
-Accidents / 0{,}95 & 3{,}31 & 1{,}30 & 1{,}68 & 0{,}77 \\
-Accidents / 0{,}65 & 9{,}03 & 6{,}99 & 2{,}37 & 2{,}95 \\
-\hline
-\end{tabular}
-\end{table}
-
-Tiền biên dịch rút ngắn mỗi tiến trình từ 1{,}77 đến 2{,}67 s (trung vị 2{,}04 s), tức
-thời gian còn lại bằng 14\% đến 83\% trước đó. Bộ nhớ đỉnh giảm 3\% đến 18\%, còn thời
-gian nạp gói chỉ tăng từ 0{,}164 lên 0{,}176 s. Bản cơ bản đạt $R \le 1$ ở 11 trên 33
-ngưỡng, chủ yếu ở các ngưỡng cao. Trung bình nhân của $R$ theo CSDL vẫn lớn hơn 1: Accidents
-1{,}25, Retail 1{,}31, Mushroom 1{,}60, Chess 1{,}71 và T10I4D100K 2{,}78. Ở ngưỡng thấp,
-phần thời gian còn lại chủ yếu là khai thác, nên bước tiếp theo là một biểu diễn tidset
-nhanh hơn cho phép giao.
-
-\subsubsection{Tidset dạng bitset}
-Biến thể tối ưu (\texttt{:optimized}) giữ nguyên thủ tục Bottom-Up của bản cơ bản nhưng
-lưu mỗi tidset dưới dạng bitset (chuỗi bit, mỗi bit ứng với một giao dịch) gồm
-$\lceil N/64 \rceil$ từ 64 bit, với $N$ là số giao dịch. Phép giao hai tidset là phép AND
-từng từ, và độ hỗ trợ là số bit 1 đếm bằng \texttt{count\_ones} trong cùng vòng lặp. Các
-item được duyệt theo độ hỗ trợ tăng dần, nên các lớp tương đương gần gốc nhỏ hơn. Bitset
-của các phép giao không phổ biến được dùng lại, nên các phép giao này không cấp phát bộ
-nhớ. Thứ tự duyệt chỉ đổi cách đánh số item trong chứng minh của bản cơ bản, nên đầu ra
-vẫn chính xác. Biến thể này chạy toàn bộ các kiểm thử mà bản cơ bản chạy, cùng các trường
-hợp biên $N = 0, 1, 63, 64, 65, 127, 128, 129$.
-
-Nhóm đo bản cơ bản, biến thể tối ưu và PrePost+ trong cùng một phiên. Ở mỗi lần lặp của
-mỗi ngưỡng, ba chương trình chạy nối tiếp nhau, nên độ trôi của máy chia đều cho cả ba.
-Phiên gồm 495 lần chạy trên 33 ngưỡng, và cả 495 đầu ra đều khớp hoàn toàn với Eclat của
-SPMF. Ở đây $R = T_\text{tối ưu} / T_\text{PrePost+}$ đo trong cùng phiên, với
-$T_\text{tối ưu}$ là trung vị thời gian tiến trình của biến thể tối ưu.
-Bảng~\ref{tab:bitset} cho kết quả ở ngưỡng cao nhất và thấp nhất của mỗi CSDL.
-
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{4pt}
-\caption{Trung vị thời gian tiến trình nguội (giây) của \texttt{demo.jl} với bản cơ bản,
-biến thể tối ưu và PrePost+, năm lần chạy mỗi ô, cùng một phiên đo}
-\label{tab:bitset}
-\begin{tabular}{lrrrr}
-\hline
-Dữ liệu / minsup & Cơ bản & Tối ưu & PrePost+ & $R$ \\
-\hline
-Chess / 0{,}9 & 0{,}33 & 0{,}32 & 0{,}40 & 0{,}79 \\
-Chess / 0{,}6 & 3{,}24 & 0{,}54 & 0{,}59 & 0{,}92 \\
-Mushroom / 0{,}5 & 0{,}33 & 0{,}32 & 0{,}44 & 0{,}73 \\
-Mushroom / 0{,}1 & 6{,}28 & 0{,}88 & 0{,}68 & 1{,}29 \\
-Retail / 0{,}01 & 0{,}55 & 0{,}40 & 0{,}78 & 0{,}52 \\
-Retail / 0{,}001 & 12{,}80 & 1{,}90 & 3{,}64 & 0{,}52 \\
-T10I4D100K / 0{,}01 & 2{,}93 & 0{,}47 & 1{,}39 & 0{,}34 \\
-T10I4D100K / 0{,}00025 & 10{,}92 & 1{,}72 & 4{,}33 & 0{,}40 \\
-Accidents / 0{,}95 & 1{,}31 & 1{,}18 & 1{,}69 & 0{,}70 \\
-Accidents / 0{,}65 & 7{,}13 & 1{,}26 & 2{,}35 & 0{,}54 \\
-\hline
-\end{tabular}
-\end{table}
-
-Biến thể tối ưu chỉ cần từ 10\% đến 97\% thời gian của bản cơ bản (trung vị 37\%) và dùng
-ít bộ nhớ đỉnh hơn ở mọi ngưỡng. Nó nhanh hơn PrePost+ ở 32 trên 33 ngưỡng. Trung bình
-nhân của $R$ theo CSDL đều nhỏ hơn 1: T10I4D100K 0{,}36, Retail 0{,}41, Accidents 0{,}61,
-Mushroom 0{,}78 và Chess 0{,}79. Ngưỡng duy nhất có $R > 1$ là Mushroom 0{,}1, nơi chương
-trình phải ghi 574\,431 itemset. Ở các ngưỡng cao, thời gian còn khoảng 0{,}32 s, gần bằng
-chi phí khởi động Julia và nạp gói.
-
-\subsubsection{Tỉa phần mở rộng hoàn hảo}
-Một item $b$ là phần mở rộng hoàn hảo (perfect extension) của itemset $X$ khi
-$t(X \cup \{b\}) = t(X)$, tức mọi giao dịch chứa $X$ đều chứa $b$. Vì
+\subsubsection{Tỉa phần mở rộng hoàn hảo và cấp phát kết quả một lần}
+Một item $b$ là phần mở rộng hoàn hảo (perfect extension)~\cite{borgelt2012} của itemset
+$X$ khi $t(X \cup \{b\}) = t(X)$, tức mọi giao dịch chứa $X$ đều chứa $b$. Vì
 $t(X \cup \{b\}) \subseteq t(X)$, điều kiện này tương đương với hai độ hỗ trợ bằng nhau,
-nên chỉ cần so sánh một số đếm. Khi đó mọi itemset $X \cup Y$ trong cây con của $X$ có cùng
-độ hỗ trợ với $X \cup Y \cup S$, với $S$ là tập con bất kỳ của các phần mở rộng hoàn hảo.
-Biến thể tối ưu vì vậy bỏ $b$ khỏi lớp con, không giao tidset của $b$ thêm lần nào, và ghi
-trực tiếp $X$ hợp với mọi tập con $S$ theo thứ tự mã Gray (Gray code), để hai itemset liên
-tiếp chỉ khác nhau một item. Chứng minh độ hỗ trợ chính xác, tính đầy đủ và tính duy nhất
-nằm trong \texttt{docs/eclat-optimized.md}.
+nên chỉ cần so sánh một số đếm. Khi đó mọi itemset $X \cup Y$ trong cây con của $X$ có
+cùng độ hỗ trợ với $X \cup Y \cup S$, với $S$ là tập con bất kỳ của tập phần mở rộng
+hoàn hảo $E$. Biến thể tối ưu vì vậy bỏ $b$ khỏi lớp con và không giao tidset của $b$
+thêm lần nào. Mỗi nút (node) của cây tìm kiếm đại diện cho $2^{|E|}$ itemset có chung độ
+hỗ trợ. Ở Mushroom 0{,}05, cây tìm kiếm chỉ có 33\,819 nút cho 3\,755\,511 itemset.
 
-Phép tỉa giữ đầu ra chính xác ở cả 540 lần chạy trên 33 ngưỡng bắt buộc và ba ngưỡng
-stress (ngưỡng thấp ngoài lưới bắt buộc, chỉ dùng để kiểm tra giới hạn). Tuy vậy, nó chỉ
-rút ngắn thời gian tối đa 6{,}9\% (Mushroom 0{,}1 và 0{,}05), dưới mức 10\% mà kế hoạch
-yêu cầu. Nhóm vẫn giữ bước này vì nó không làm tăng bộ nhớ đỉnh và là nền cho hướng lưu
-kết quả nén ở mục hướng phát triển.
+Phép tìm kiếm chỉ ghi lại các nút theo thứ tự duyệt trước (preorder), mỗi nút gồm độ
+sâu, item nó thêm vào, các phần mở rộng hoàn hảo nó tìm thấy và độ hỗ trợ. Hàm
+\texttt{expand\_nodes} tính kích thước cuối cùng của kết quả từ các nút, có kiểm tra tràn
+số, cấp phát ba mảng kết quả đúng một lần, rồi ghi các tập con $S$ theo thứ tự mã Gray
+(Gray code) để hai itemset liên tiếp chỉ khác nhau một item. Nếu để mảng kết quả lớn dần
+theo từng itemset, mỗi lần gấp đôi dung lượng phải sao chép toàn bộ mảng: ở Mushroom
+0{,}05, lời gọi khai thác trong một tiến trình đã khởi động (warm) cấp phát 1\,068 MiB để
+tạo một kết quả 306 MiB và mất 0{,}40 s; khi cấp phát một lần, nó cấp phát 310 MiB và mất
+0{,}17 s.
 
-\subsubsection{Sắp xếp đầu ra bằng radix sort}
-Để phân tích nguyên nhân, nhóm dùng bộ lấy mẫu \texttt{Profile} của Julia (mỗi 1 ms) trên
-Mushroom 0{,}05. Hàm ghi phải xuất itemset theo thứ tự từ điển (lexicographic order) để tệp
-đầu ra của mọi biến thể so sánh được từng byte. Bản cơ bản duyệt item theo mã nên đầu ra
-đã có thứ tự này, nhưng biến thể tối ưu duyệt theo độ hỗ trợ tăng dần nên phải sắp xếp
-lại. Phép sắp xếp bằng so sánh chiếm 64\% thời gian, ghi tệp 25\%, còn khai thác chỉ 11\%.
+\subsubsection{Dữ liệu thưa: đếm cặp, danh sách tid và cận theo khối}
+Trên dữ liệu thưa, phép giao bitset vẫn đọc đủ $W$ từ dù tidset ngắn ($W = 1\,378$ ở
+Retail và $1\,563$ ở T10I4D100K), và hầu hết phép giao thất bại. Ở Retail 0{,}001,
+99{,}9\% trong 2\,239\,786 phép giao ở lớp gốc không đạt ngưỡng. Ở T10I4D100K 0{,}00025,
+phần lớn phép giao nằm ở độ sâu 2 (2\,256\,822 phép, 99{,}1\% thất bại) trên các tidset
+chỉ khoảng 100 tid. Ba kỹ thuật sau xử lý hai dạng này.
 
-Nhóm thay phép sắp xếp này bằng radix sort (sắp xếp theo cơ số) trên khóa 128 bit. Các
-bit thấp của khóa chứa chỉ số của itemset. Các bit cao chứa những item đầu tiên, mỗi item
-ghi thành chữ số $\mathit{item} + 1$, item đầu ở vị trí cao nhất và chữ số 0 cho vị trí
-đã hết itemset. So sánh hai khóa như số nguyên vì vậy cho đúng thứ tự từ điển của các item
-đó, với tiền tố đứng trước. Chỉ những itemset trùng mọi item trong khóa mới cần so sánh
-đầy đủ, và cùng lượt đó phát hiện itemset bị lặp. Bảng~\ref{tab:sorted} cho kết quả đo
-trong cùng một phiên, với $R$ định nghĩa như ở Bảng~\ref{tab:bitset}.
+\emph{Đếm cặp ở lớp gốc.} Hàm \texttt{count\_pairs} đếm độ hỗ trợ của mọi cặp item phổ
+biến bằng một mảng tam giác gồm $m_f(m_f-1)/2$ ô qua một lượt duyệt CSDL ngang, như Mục
+5.1 của bài báo~\cite{zaki2000}, với $m_f$ là số item phổ biến. Lớp gốc chỉ giao những cặp
+đạt ngưỡng. Tại gốc tiền tố rỗng, nên số đếm của cặp $(a, b)$ đúng bằng $|t(\{a, b\})|$
+và không phép giao phổ biến nào bị bỏ. Việc đếm chỉ chạy khi chi phí ước lượng của nó nhỏ
+hơn một phần mười chi phí các phép giao ở gốc, tức khi
+$10 \sum_i |T_i|(|T_i| - 1)/2 < W m_f(m_f-1)/2$. Retail và T10I4D100K thỏa điều kiện này;
+Chess, Mushroom và Accidents, với giao dịch dài và ít item phổ biến, vẫn giao như trước.
 
-\begin{table}[t]
+\emph{Danh sách tid theo lớp.} Một lớp con gồm $k$ phần tử chuyển từ bitset sang danh
+sách tid tăng dần khi
+\begin{equation}
+  kW + c\,(k - 1) \sum_{i=1}^{k} \sigma_i < W\,\frac{k(k-1)}{2},
+  \label{eq:lists}
+\end{equation}
+trong đó vế phải là số từ mà các phép giao bitset của lớp phải đọc, $kW$ là chi phí
+chuyển đổi, $\sigma_i$ là độ hỗ trợ của phần tử thứ $i$, và $c = 8$ là chi phí một bước
+trộn tính theo số từ, chọn từ phép quét $c$ từ 2 đến 16 trên máy đo.
+Quy tắc~\eqref{eq:lists} dựa trên độ dài tidset và $N$, không dựa trên tên CSDL. Phép trộn hai danh sách không có nhánh rẽ phụ
+thuộc dữ liệu và dừng sớm khi số tid chung đã tìm cộng phần còn lại của danh sách ngắn hơn
+không thể đạt $\mathit{minsup}$.
+
+\emph{Cận theo khối.} Ở T10I4D100K 0{,}00025, 98{,}7\% trong 2\,076\,972 phép trộn vẫn
+thất bại, trên hai danh sách có tổng cộng trung bình 126 tid. Trước khi duyệt một lớp danh
+sách tid, chương
+trình chia khoảng tid thành tối đa $K = 256$ khối có độ rộng là lũy thừa của 2 và đếm số
+tid của mỗi phần tử trong từng khối. Với hai phần tử $X$ và $Y$ của lớp,
+\begin{equation}
+  \sigma(X \cup Y) \le \sum_{j=1}^{K} \min(c_{X,j}, c_{Y,j}),
+  \label{eq:bound}
+\end{equation}
+trong đó $c_{X,j}$ và $c_{Y,j}$ là số tid của $X$ và $Y$ trong khối $j$, vì một tid chung
+nằm trong đúng một khối và được đếm một lần cho mỗi phần tử. Phép trộn nào có cận nhỏ hơn
+$\mathit{minsup}$ bị bỏ qua mà không đọc tid nào. Cận~\eqref{eq:bound} không bao giờ loại
+một phép giao phổ biến, nên đầu ra không đổi. Giá trị $K = 256$ được chọn từ phép quét 64
+đến 512 khối.
+
+\subsubsection{Khởi động, đọc và ghi}
+Các thay đổi trong mục này nằm trong mã dùng chung của hai biến thể. Ở ngưỡng cao, thời
+gian chạy không nằm trong thuật toán. Một tiến trình \texttt{demo.jl}
+của bản cơ bản trên Chess 0{,}9 mất 2{,}36 s, trong khi khởi động Julia chỉ mất 0{,}17 s;
+phần còn lại là biên dịch JIT (just-in-time, biên dịch khi chạy). Nhóm chạy các hàm công
+khai và phần xử lý dòng lệnh trên một CSDL nhỏ trong lúc Julia dựng package image, để mã
+máy của chúng được lưu kèm gói. Phần xử lý dòng lệnh nằm trong gói (\texttt{src/cli.jl})
+thay vì trong tệp script, vì mã của script không được lưu trong package image và phải
+biên dịch lại 108{,}6 ms ở mỗi lần chạy. Một phép kiểm thử chạy \texttt{demo.jl} trong
+tiến trình mới với \texttt{--trace-compile} và yêu cầu không phương thức nào phải biên
+dịch.
+
+Ở ngưỡng thấp trên dữ liệu dày, phần lớn thời gian nằm ở việc ghi kết quả. Bộ lấy mẫu
+\texttt{Profile} trên Mushroom 0{,}05 cho thấy phép sắp xếp đầu ra bằng so sánh chiếm
+64\% thời gian, định dạng và ghi tệp 25\%, còn khai thác chỉ 11\%. Biến thể tối ưu duyệt
+item theo độ hỗ trợ nên phải sắp lại kết quả theo thứ tự từ điển; nhóm thay phép sắp xếp
+này bằng radix sort (sắp xếp theo cơ số) trên khóa 128 bit chứa các item đầu của itemset
+và chỉ số của nó. Hàm ghi lấy chữ số của mỗi số nhỏ hơn $2^{20}$ từ một bảng tra và ghi
+bằng một lệnh 8 byte. Hàm đọc phân tích mỗi dòng vào một vector dùng lại và sao chép một
+lần với độ dài cuối cùng, nên lời gọi đọc Accidents (34 MB) trong một tiến trình đã khởi
+động giảm từ 0{,}57 s còn 0{,}29 s và cấp phát 151 MiB thay vì 354 MiB.
+
+\subsubsection{Đặc trưng của Julia}
+Kiểu \texttt{ClassMember\{T\}} có tham số \texttt{T} là \texttt{UInt64} cho bitset hoặc
+\texttt{Int} cho danh sách tid. Hàm tìm kiếm \texttt{eclat\_search!} được viết một lần,
+và multiple dispatch (chọn phương thức theo kiểu của mọi đối số) chọn phép giao, quy tắc
+chuyển đổi và bộ lọc phép giao theo \texttt{T}. Julia biên dịch một bản chuyên biệt cho
+mỗi dạng tidset, nên vòng lặp trong không có phép kiểm tra kiểu khi chạy. Nhóm dùng
+\texttt{Vector\{UInt64\}} thay cho \texttt{BitVector} vì vòng lặp giao ghi kết quả vào
+vùng nhớ dùng lại và đếm bit trong cùng một lượt.
+
+Kiểu khóa \texttt{Tuple\{Vararg\{Int\}\}} của \texttt{SupportMap} không cố định độ dài,
+nên việc tạo hàng triệu khóa tốn hơn chính bước khai thác: trong một phép thử ban đầu trên
+Mushroom 0{,}05, chèn 3{,}76 triệu itemset vào từ điển mất 12{,}4 s trong khi đếm độ hỗ trợ
+của chúng mất 0{,}63 s. Cả hai biến thể vì vậy ghi kết
+quả vào ba mảng \texttt{Vector\{Int\}} phẳng (item, vị trí bắt đầu của mỗi itemset, độ hỗ
+trợ); hàm ghi tệp đọc thẳng ba mảng này, và \texttt{mine} chỉ dựng \texttt{SupportMap} ở
+biên giao diện cho ứng dụng. Mọi hằng số điều chỉnh là \texttt{const}, mọi container trên
+đường nóng có kiểu phần tử cụ thể. \texttt{@inbounds} chỉ có mặt ở phép trộn danh sách
+tid và hàm ghi số, kèm chú thích chứng minh chỉ số hợp lệ. Trên vòng lặp giao bitset,
+\texttt{@inbounds @simd} làm thời gian khai thác thay đổi từ $-8\%$ đến $+11\%$ trên năm
+điểm đo, nằm trong nhiễu, nên nhóm không dùng.
+
+\subsection{Đo lường mức cải thiện}
+\label{sec:measure}
+Mọi số đo trong mục này là trung vị thời gian của năm tiến trình \texttt{demo.jl} nguội
+(cold), tức mỗi lần chạy là một tiến trình mới gồm khởi động Julia, đọc, khai thác và ghi
+tệp. Các đợt đo chạy trên một máy Linux (Intel Core i7-11800H, 7{,}4 GiB RAM, xung nhịp
+cố định 2{,}3 GHz) với Julia 1.13.2 một luồng. Lưới đo gồm 33 ngưỡng trên năm CSDL Chess,
+Mushroom, Retail, T10I4D100K và Accidents, cùng một số ngưỡng stress thấp hơn lưới, chỉ
+dùng để kiểm tra giới hạn. Ngoài Eclat của SPMF, nhóm so sánh với PrePost+~\cite{deng2015}
+của SPMF 2.66 (Java Temurin 25.0.4.1, heap 4 GiB), vì đây là thuật toán nhanh hơn Eclat
+của SPMF trên dữ liệu dày. Tỉ số $R = T_\text{tối ưu} / T_\text{PrePost+}$ chia trung vị
+thời gian của biến thể tối ưu cho trung vị của PrePost+ ở cùng ngưỡng.
+
+Mỗi kỹ thuật được đo trong một phiên riêng, trong đó phiên bản trước và sau thay đổi chạy
+xen kẽ ở mỗi lần lặp, nên độ trôi của máy chia đều cho cả hai. Riêng bước tiền biên dịch
+được đo bằng hai đợt liên tiếp. Bảng~\ref{tab:steps} cho tỉ số thời gian sau trên trước
+của từng bước trên 33 ngưỡng, và tỉ số bộ nhớ đỉnh tương ứng. Bộ nhớ đỉnh là peak RSS
+(resident set size, lượng bộ nhớ vật lý lớn nhất mà tiến trình chiếm) do hệ điều hành đo.
+
+\begin{table*}[t]
 \centering
 \small
-\setlength{\tabcolsep}{4pt}
-\caption{Trung vị thời gian tiến trình nguội (giây) của biến thể tối ưu trước và sau khi
-sắp xếp đầu ra bằng radix sort, năm lần chạy mỗi ô, cùng một phiên đo}
-\label{tab:sorted}
-\begin{tabular}{lrrrrr}
+\caption{Tác động của từng bước tối ưu trên 33 ngưỡng: tỉ số thời gian và bộ nhớ đỉnh sau
+trên trước (nhỏ hơn 1 là tốt hơn), và ngưỡng cải thiện nhiều nhất}
+\label{tab:steps}
+\begin{tabular}{rllll}
 \hline
-Dữ liệu / minsup & Itemset & Trước & Sau & PrePost+ & $R$ \
+Bước & Kỹ thuật & Tỉ số thời gian & Ví dụ, thời gian trước $\to$ sau (s) & Tỉ số bộ nhớ \\
 \hline
-Chess / 0{,}6 & 254\,944 & 0{,}54 & 0{,}46 & 0{,}58 & 0{,}79 \
-Chess / 0{,}5 & 1\,272\,932 & 1{,}51 & 1{,}00 & 0{,}89 & 1{,}13 \
-Mushroom / 0{,}1 & 574\,431 & 0{,}83 & 0{,}64 & 0{,}71 & 0{,}90 \
-Mushroom / 0{,}05 & 3\,755\,511 & 4{,}06 & 2{,}43 & 1{,}36 & 1{,}78 \
-Retail / 0{,}001 & 7\,589 & 1{,}78 & 1{,}79 & 3{,}52 & 0{,}51 \
-T10I4D100K / 0{,}00025 & 96\,959 & 1{,}74 & 1{,}71 & 4{,}32 & 0{,}40 \
-Accidents / 0{,}65 & 1\,093 & 1{,}29 & 1{,}26 & 2{,}33 & 0{,}54 \
+\optstep{step:precompile-package} & Tiền biên dịch các hàm của gói & 0{,}14 đến 0{,}83 & Chess 0{,}9: 2{,}36 $\to$ 0{,}33 & 0{,}82 đến 0{,}97 \\
+\optstep{step:bitset} & Bitset và thứ tự độ hỗ trợ tăng dần & 0{,}10 đến 0{,}97 & Mushroom 0{,}1: 6{,}28 $\to$ 0{,}88 & 0{,}68 đến 0{,}99 \\
+\optstep{step:perfect-extension} & Tỉa phần mở rộng hoàn hảo & 0{,}93 đến 1{,}04 & Mushroom 0{,}1: 0{,}89 $\to$ 0{,}83 & 0{,}95 đến 1{,}00 \\
+\optstep{step:radix-sort} & Radix sort cho thứ tự ghi & 0{,}77 đến 1{,}02 & Mushroom 0{,}1: 0{,}83 $\to$ 0{,}64 & 1{,}00 đến 1{,}02 \\
+\optstep{step:precompile-cli} & Tiền biên dịch dòng lệnh & 0{,}66 đến 0{,}94 & Chess 0{,}9: 0{,}33 $\to$ 0{,}22 & 0{,}91 đến 1{,}03 \\
+\optstep{step:pair-count} & Đếm cặp ở lớp gốc & 0{,}24 đến 1{,}01 & Retail 0{,}001: 1{,}72 $\to$ 0{,}42 & 1{,}00 đến 1{,}03 \\
+\optstep{step:tid-lists} & Danh sách tid theo lớp & 0{,}83 đến 1{,}02 & T10I4D100K 0{,}00025: 1{,}46 $\to$ 1{,}21 & 1{,}00 đến 1{,}01 \\
+\optstep{step:byte-io} & Đọc và ghi theo byte, bảng chữ số & 0{,}76 đến 0{,}99 & Accidents 0{,}65: 1{,}10 $\to$ 0{,}85 & 0{,}74 đến 1{,}00 \\
+\optstep{step:single-allocation} & Cấp phát kết quả một lần, cận theo khối & 0{,}82 đến 1{,}03 & T10I4D100K 0{,}00025: 1{,}18 $\to$ 0{,}97 & 0{,}83 đến 1{,}02 \\
 \hline
 \end{tabular}
-\end{table}
+\end{table*}
 
-Thời gian giảm 14{,}1\% ở Chess 0{,}6, 22{,}7\% ở Mushroom 0{,}1 và từ 24\% đến 40\% ở
-các ngưỡng stress, trong khi không ngưỡng nào chậm đi quá 2{,}1\%. Bộ nhớ đỉnh tăng tối
-đa 8\% do mảng khóa. Biến thể tối ưu nay nhanh hơn PrePost+ ở cả 33 ngưỡng bắt buộc, với
-trung bình nhân của $R$ theo CSDL là T10I4D100K 0{,}35, Retail 0{,}41, Accidents 0{,}61,
-Mushroom 0{,}73 và Chess 0{,}77. Ở Chess 0{,}5 và Mushroom 0{,}05, PrePost+ vẫn nhanh
-hơn, vì phần còn lại chủ yếu là ghi hàng triệu dòng văn bản.
+Bước~\ref{step:bitset} có tác động lớn nhất: thời gian còn 10\% đến 97\% của bản cơ bản (trung vị 37\%)
+và bộ nhớ đỉnh giảm ở mọi ngưỡng. Bước~\ref{step:pair-count} chỉ tác động lên dữ liệu thưa, nơi nó giảm thời
+gian của Retail 0{,}001 đi 76\%. Bước~\ref{step:perfect-extension} một mình chỉ rút ngắn tối đa 6{,}9\% thời gian
+tiến trình, vì ở ngưỡng đó việc sắp xếp và ghi hàng trăm nghìn itemset chiếm phần lớn thời
+gian; nhóm vẫn giữ bước này vì nó không làm tăng bộ nhớ và là nền của bước~\ref{step:single-allocation}. Không bước
+nào làm một ngưỡng chậm đi quá 4{,}4\%.
 
-\subsubsection{Tiền biên dịch chương trình dòng lệnh}
-Sau hai bước trên, ở các ngưỡng cao một tiến trình \texttt{demo.jl} vẫn mất khoảng
-0{,}32 s, trong khi khởi động Julia chỉ mất 0{,}17 s. Cờ \texttt{--trace-compile-timing}
-cho thấy mỗi lần chạy vẫn biên dịch hàm \texttt{main} của chính \texttt{demo.jl} trong
-108{,}6 ms, vì mã của tệp script không nằm trong package image. Nhóm chuyển phần xử lý
-dòng lệnh vào gói (\texttt{src/cli.jl}), chạy nó trong workload tiền biên dịch, và để
-\texttt{demo.jl} chỉ còn một lời gọi. Một phép kiểm thử chạy \texttt{demo.jl} trong tiến
-trình mới và yêu cầu không có phương thức nào phải biên dịch.
+Bảng~\ref{tab:final} cho tác động cộng dồn của các bước~\ref{step:bitset}
+đến~\ref{step:single-allocation} ở ngưỡng cao nhất và thấp nhất của mỗi CSDL: nó so sánh bản
+cơ bản sau bước~\ref{step:precompile-package} với biến thể tối ưu sau
+bước~\ref{step:single-allocation}. Các bước~\ref{step:precompile-cli} và~\ref{step:byte-io}
+nằm trong mã dùng chung, nên bản cơ bản của phiên bản nộp cũng hưởng hai bước này; phép so
+sánh hai biến thể trên cùng một phiên bản mã là bước~\ref{step:bitset} của
+Bảng~\ref{tab:steps}. Hai cột được đo ở hai phiên cách nhau ba ngày trên cùng máy và cùng
+cấu hình. PrePost+ chạy trong cả hai phiên, và trung vị của nó giữa hai phiên lệch nhau từ
+$-3{,}8\%$ đến $+5{,}8\%$ (trung vị $+0{,}3\%$), nên hai phiên so sánh được với nhau trong
+sai số này.
 
-Trong cùng một phiên đo 495 lần chạy, mọi đầu ra vẫn khớp hoàn toàn với Eclat của SPMF. Mỗi
-tiến trình nhanh hơn từ 0{,}096 đến 0{,}160 s (trung vị 0{,}111 s), tức thời gian còn lại
-bằng 66\% đến 94\% trước đó. Chess 0{,}9 còn 0{,}217 s, trong đó chưa tới 0{,}03 s là đọc,
-khai thác và ghi. Tỉ số $R$ nay nằm trong khoảng 0{,}25 đến 0{,}74 trên cả 33 ngưỡng, với
-trung bình nhân theo CSDL là T10I4D100K 0{,}30, Retail 0{,}33, Mushroom 0{,}51, Chess
-0{,}53 và Accidents 0{,}53. Chi phí cố định còn lại là khởi động runtime của Julia, chỉ có
-thể bỏ đi nếu biên dịch trước toàn bộ chương trình thành tệp thực thi, chẳng hạn bằng
-\texttt{juliac}.
+\begin{table*}[t]
+\centering
+\small
+\caption{Trung vị thời gian tiến trình nguội (s) và bộ nhớ đỉnh lớn nhất (MiB) trong năm
+lần chạy. Bản cơ bản (sau bước~\ref{step:precompile-package}) đo ngày 06/11/2026, biến thể
+tối ưu (sau bước~\ref{step:single-allocation}) và
+PrePost+ ngày 09/11/2026, Eclat của SPMF ngày 31/10/2026, cùng một máy}
+\label{tab:final}
+\begin{tabular}{lrrrrrrrr}
+\hline
+ & & \multicolumn{5}{c}{Thời gian (s)} & \multicolumn{2}{c}{Bộ nhớ đỉnh (MiB)} \\
+Dữ liệu / minsup & Itemset & Cơ bản & Tối ưu & Tăng tốc & Eclat SPMF & PrePost+ & Cơ bản & Tối ưu \\
+\hline
+Chess / 0{,}9 & 622 & 0{,}33 & 0{,}21 & 1{,}6 & 0{,}51 & 0{,}42 & 268 & $\le 254$ \\
+Chess / 0{,}6 & 254\,944 & 3{,}24 & 0{,}30 & 10{,}8 & 15{,}98 & 0{,}59 & 308 & 262 \\
+Mushroom / 0{,}5 & 153 & 0{,}33 & 0{,}22 & 1{,}5 & 0{,}51 & 0{,}44 & 256 & $\le 254$ \\
+Mushroom / 0{,}1 & 574\,431 & 6{,}28 & 0{,}40 & 15{,}7 & 7{,}44 & 0{,}68 & 414 & 302 \\
+Retail / 0{,}01 & 159 & 0{,}55 & 0{,}29 & 1{,}9 & 1{,}19 & 0{,}80 & 304 & $\le 254$ \\
+Retail / 0{,}001 & 7\,589 & 12{,}80 & 0{,}38 & 33{,}5 & 1{,}53 & 3{,}52 & 331 & 281 \\
+T10I4D100K / 0{,}01 & 385 & 2{,}93 & 0{,}32 & 9{,}1 & 0{,}78 & 1{,}42 & 304 & $\le 254$ \\
+T10I4D100K / 0{,}00025 & 96\,959 & 10{,}92 & 0{,}97 & 11{,}3 & 8{,}02 & 4{,}34 & 363 & 279 \\
+Accidents / 0{,}95 & 15 & 1{,}31 & 0{,}78 & 1{,}7 & 4{,}59 & 1{,}71 & 650 & 397 \\
+Accidents / 0{,}65 & 1\,093 & 7{,}13 & 0{,}86 & 8{,}3 & 26{,}87 & 2{,}34 & 804 & 397 \\
+\hline
+\end{tabular}
+\end{table*}
 
-\subsubsection{Nhân khai thác cho dữ liệu thưa}
-Trên Retail và T10I4D100K, hầu hết thời gian còn lại nằm trong phép giao bitset, vì mỗi
-phép giao đọc $\lceil N/64 \rceil$ từ dù tidset ngắn. Đếm số phép giao cho thấy hai dạng
-khác nhau. Ở Retail 0{,}001, 99{,}9\% trong 2\,239\,786 phép giao ở lớp gốc thất bại. Ở
-T10I4D100K 0{,}00025, phần lớn phép giao nằm ở độ sâu 2 (2\,256\,822 phép, 99{,}1\% thất
-bại) trên các tidset chỉ khoảng 100 tid.
+Trên cả 33 ngưỡng, các bước~\ref{step:bitset} đến~\ref{step:single-allocation} rút ngắn thời gian tiến trình từ 1{,}5 đến 33{,}5 lần
+(trung vị 4{,}0 lần). Trung bình nhân của mức tăng tốc theo CSDL là 3{,}1 lần ở Accidents,
+3{,}3 ở Mushroom, 3{,}4 ở Chess, 6{,}5 ở Retail và 13{,}5 ở T10I4D100K. Mức tăng nhỏ nhất
+nằm ở các ngưỡng cao của Chess và Mushroom, nơi một lần chạy chỉ còn khoảng 0{,}22 s, trong
+đó 0{,}19 s là khởi động Julia và nạp gói; ở đó phần lớn mức tăng đến từ bước~\ref{step:precompile-cli}. So với
+SPMF, biến thể tối ưu nhanh hơn Eclat từ 2{,}3 đến 53 lần, theo số đo Eclat của phiên
+31/10/2026, và nhanh hơn PrePost+ ở cả 33 ngưỡng, với $R$ từ 0{,}11 đến 0{,}59. Trung bình
+nhân của $R$ theo CSDL là 0{,}20 ở Retail, 0{,}21 ở T10I4D100K, 0{,}41 ở Accidents, 0{,}49
+ở Mushroom và 0{,}51 ở Chess. Độ trải tứ phân vị (interquartile range, IQR) của hai cột
+Cơ bản và Tối ưu không vượt quá 3{,}3\% trung vị ở mọi ngưỡng.
 
-Bước thứ nhất đếm trước độ hỗ trợ của mọi cặp item phổ biến bằng một mảng tam giác qua một
-lượt duyệt CSDL ngang, như bài báo gốc~\cite{zaki2000}, và lớp gốc chỉ giao những cặp đạt
-ngưỡng. Kích thước mảng được kiểm tra tràn số trước khi cấp phát. Việc đếm chỉ chạy khi chi
-phí ước lượng của nó nhỏ hơn mười lần chi phí các phép giao ở gốc, nên Chess, Mushroom và
-Accidents, với giao dịch dài và ít item phổ biến, vẫn giao như trước.
+Bộ nhớ đỉnh sau bước~\ref{step:single-allocation} thấp hơn bản cơ bản ở mọi ngưỡng. Mức giảm lớn nhất nằm ở
+Accidents (804 còn 397 MiB ở 0{,}65), nhờ hàm đọc không cấp phát thừa và tidset trong lúc
+tìm kiếm chỉ chiếm vài MiB. Trên máy đo, cả ba chương trình Julia, Eclat và PrePost+ của
+SPMF đều cho giá trị nhỏ nhất trong khoảng 253{,}0 đến 253{,}6 MiB, nên phép đo có một mức
+sàn chung và các ô ghi $\le 254$ trong Bảng~\ref{tab:final} chỉ là cận trên.
 
-Bước thứ hai chuyển một lớp con từ bitset sang danh sách tid đã sắp xếp (sorted tid list)
-khi chi phí ước lượng của danh sách nhỏ hơn. Với lớp có $k$ phần tử và $W = \lceil N/64
-\rceil$, chi phí bitset là $W k(k-1)/2$ từ, còn chi phí danh sách là $kW$ để chuyển đổi
-cộng $L (k-1) \sum_i \sigma_i$ cho các phép trộn, trong đó $\sigma_i$ là độ hỗ trợ của
-phần tử thứ $i$ và $L = 8$ là chi phí một bước trộn tính theo số từ, đo trên máy BBQ. Phép
-trộn dừng sớm (early stop) khi số tid đã tìm cộng phần còn lại ngắn hơn không thể đạt
-ngưỡng. Phiên bản đầu chỉ xét độ hỗ trợ trung bình và làm Retail 0{,}00025 chậm đi 12\%,
-vì ở đó chi phí chuyển đổi gần bằng phần tiết kiệm; công thức trên đã khắc phục điều này.
+Ba kỹ thuật đã được thử, đo và không giữ lại. Diffset~\cite{zaki2003} lưu các tid mà
+một phần tử thiếu so với tiền tố; trong phép quét tỉ số chuyển đổi, không giá trị nào
+nhanh hơn bitset, Accidents 0{,}2 chậm đi tới 10\% và T10I4D100K 0{,}00025 chậm đi tới
+71\%. Lý do là phép tỉa phần mở rộng hoàn hảo đã loại mọi phần tử có diffset rỗng, đúng
+những chỗ diffset có lợi nhất: ngay cả khi chọn tối ưu cho từng lớp, số từ cần đọc chỉ
+giảm tối đa 0{,}3\%. In itemset trực tiếp từ khóa sắp xếp chậm hơn 5\% đến 7\%. Chỉ thị
+\texttt{@inbounds @simd} trên phép giao bitset không cho mức cải thiện vượt nhiễu.
 
-Trong cùng một phiên 700 lần chạy, mọi đầu ra đều khớp hoàn toàn với Eclat của SPMF. Đếm
-cặp làm Retail 0{,}001 nhanh hơn 76\% (1{,}72 s còn 0{,}42 s), T10I4D100K 0{,}001 nhanh hơn
-26\%, và ngưỡng stress Retail 0{,}00025 giảm từ 14{,}55 s còn 0{,}59 s. Danh sách tid làm
-T10I4D100K 0{,}00025 nhanh thêm 17\% (1{,}46 s còn 1{,}21 s). Không bước nào làm ngưỡng
-khác thay đổi quá 1{,}7\%. Biến thể tối ưu nhanh hơn PrePost+ ở cả 33 ngưỡng với $R$ từ
-0{,}12 đến 0{,}76, và trung bình nhân của $R$ là 0{,}22 trên Retail và 0{,}24 trên
-T10I4D100K.
-
-\subsubsection{Diffset: đã thử và không giữ lại}
-Diffset (Zaki và Gouda, 2003) lưu các tid mà một phần tử thiếu so với tiền tố thay vì các
-tid nó có, nên độ hỗ trợ bằng độ hỗ trợ của tiền tố trừ độ dài diffset. Nhóm cài đặt việc
-chuyển các lớp bitset dày sang diffset, chứng minh đầu ra vẫn chính xác, và mọi kiểm thử
-đều đạt. Tuy vậy, khi quét tỉ số chuyển đổi trên máy BBQ, không giá trị nào nhanh hơn
-bitset: Accidents 0{,}2 chậm đi tới 10\% và T10I4D100K 0{,}00025 chậm đi tới 71\%. Ngay cả
-khi chọn tối ưu cho từng lớp dựa trên kích thước diffset chính xác, số từ cần đọc chỉ giảm
-tối đa 0{,}3\%. Lý do là phép tỉa phần mở rộng hoàn hảo đã loại mọi phần tử có diffset
-rỗng, đúng những chỗ diffset có lợi nhất, còn một bước trộn diffset tốn khoảng 8 lần một
-từ bitset. Diffset cũng không tiết kiệm bộ nhớ đáng kể, vì tidset trong lúc tìm kiếm chiếm
-tối đa 4{,}6 MiB, trong khi bộ nhớ đỉnh nằm ở CSDL đầu vào và tập kết quả. Nhóm vì vậy bỏ
-phần mã này và ghi diffset thành một hướng phát triển cho trường hợp không dùng phép tỉa
-phần mở rộng hoàn hảo.
-
-\subsubsection{Đọc và ghi tệp}
-Sau nhân khai thác cho dữ liệu thưa, ở các ngưỡng dày chương trình dòng lệnh tốn nhiều thời
-gian đọc và ghi hơn khai thác. Ở Mushroom 0{,}05, khai thác trong tiến trình đã khởi động
-mất 0{,}43 s, còn sắp xếp và in 3\,755\,511 itemset mất 1{,}47 s. Ở Accidents, đọc tệp
-34 MB mất 0{,}56 s. Nhóm viết lại mọi hàm đọc và ghi mà không đổi byte đầu ra hay thông báo
-lỗi. Hàm đọc phân tích mỗi dòng vào một vector dùng lại và chỉ sao chép một lần với độ dài
-cuối cùng, vì cấp phát một vector mới cho mỗi dòng chiếm khoảng 70\% thời gian đọc. Hàm ghi
-lấy mỗi số nhỏ hơn $2^{20}$ từ một bảng chữ số và ghi bằng một lệnh 8 byte, còn khóa radix
-sort chỉ chứa các item của chính itemset đó.
-
-Trong một phiên đo 820 lần chạy (660 ở lưới bắt buộc và 160 ở ngưỡng stress), mọi đầu ra
-đều khớp hoàn toàn với Eclat của SPMF. Bước này làm mọi ngưỡng Accidents nhanh hơn 20\% đến
-25\% và giảm bộ nhớ đỉnh ở đó từ 533 MiB còn 397 MiB. Retail và T10I4D100K nhanh hơn 5\%
-đến 12\%, còn ở hai ngưỡng stress Chess 0{,}5 và Mushroom 0{,}05 thời gian giảm 17\% và
-19\%.
-
-\subsubsection{Cấp phát kết quả một lần và cận theo khối}
-Hai chi phí còn lại nằm trong bước khai thác. Thứ nhất, mảng kết quả lớn dần theo từng
-itemset và bị sao chép mỗi lần gấp đôi, nên ở Mushroom 0{,}05 bước khai thác cấp phát
-1\,068 MiB để tạo một kết quả 306 MiB. Phép tìm kiếm vì vậy chỉ ghi lại các nút (node) theo
-thứ tự duyệt trước. Mỗi nút lưu độ sâu, item nó thêm vào, các phần mở rộng hoàn hảo nó tìm
-thấy và độ hỗ trợ chung. Một nút có tập phần mở rộng hoàn hảo $E$ sinh đúng $2^{|E|}$
-itemset, nên hàm \texttt{expand\_nodes} tính được kích thước cuối cùng, có kiểm tra tràn số,
-rồi cấp phát một lần và ghi các tập con theo mã Gray như trước.
-
-Thứ hai, ở T10I4D100K 0{,}00025, 98{,}7\% trong 2\,076\,972 phép trộn danh sách tid thất
-bại sau khi đã đọc tới 126 tid. Trước khi tìm kiếm một lớp danh sách tid, chương trình chia
-khoảng tid thành tối đa $K = 256$ khối có độ rộng là lũy thừa của 2 và đếm số tid của mỗi
-phần tử trong từng khối. Với hai phần tử $X$ và $Y$ của lớp,
-\[
-  \sigma(XY) \le \sum_{k=1}^{K} \min(c_{X,k}, c_{Y,k}),
-\]
-trong đó $\sigma(XY)$ là độ hỗ trợ của phép giao, còn $c_{X,k}$ và $c_{Y,k}$ là số tid của
-$X$ và $Y$ trong khối $k$. Phép trộn nào có cận này nhỏ hơn minsup bị bỏ qua mà không đọc tid
-nào. Cận không bao giờ loại một phép giao phổ biến, nên đầu ra không đổi. Giá trị $K = 256$
-được chọn từ phép quét 64 đến 512 khối trên máy BBQ.
-
-Trong cùng phiên đo, bước này làm Mushroom 0{,}1 nhanh hơn 10{,}8\%, T10I4D100K 0{,}00025
-nhanh hơn 17{,}9\% (1{,}18 s còn 0{,}97 s) và Mushroom 0{,}05 nhanh hơn 19{,}0\%, đồng thời
-giảm bộ nhớ đỉnh ở Mushroom 0{,}05 từ 911 MiB còn 686 MiB. Không ngưỡng nào chậm đi quá
-2{,}7\%. Biến thể tối ưu nhanh hơn PrePost+ ở cả 33 ngưỡng bắt buộc với $R$ từ 0{,}11 đến
-0{,}59, và trung bình nhân của $R$ theo CSDL là Retail 0{,}20, T10I4D100K 0{,}21, Accidents
-0{,}41, Mushroom 0{,}49 và Chess 0{,}51. Trong các ngưỡng stress, PrePost+ chỉ còn nhanh hơn
-ở Mushroom 0{,}05 (1{,}38 s so với 1{,}45 s), nơi chương trình phải ghi 3{,}76 triệu dòng.
-Nhóm cũng thử in itemset trực tiếp từ khóa sắp xếp, nhưng cách này chậm hơn 5\% đến 7\% nên
-không được giữ lại.
+Biến thể tối ưu còn ba giới hạn đo được. Thứ nhất, ở ngưỡng stress Mushroom 0{,}05 chương
+trình phải ghi 3\,755\,511 dòng và vẫn chậm hơn PrePost+ (1{,}45 s so với 1{,}38 s). Thứ
+hai, mỗi tiến trình mất khoảng 0{,}19 s để khởi động Julia và nạp gói, phần này chỉ có thể
+bỏ đi nếu biên dịch trước toàn bộ chương trình thành tệp thực thi. Thứ ba, đếm cặp làm bộ
+nhớ đỉnh tăng 20\% ở ngưỡng stress Retail 0{,}00025, vì mảng tam giác cho 5\,918 item phổ
+biến chiếm 67 MiB.
