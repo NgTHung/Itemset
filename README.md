@@ -16,11 +16,11 @@ julia --startup-file=no --project=. test/runtests.jl
 
 `test/runtests.jl` includes `tests/runtests.jl`, so the brief's command `julia --project test/runtests.jl` and `Pkg.test()` run the same suite.
 
-Latest local test run, 2026-11-19, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
+Latest local test run, 2026-11-22, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
 
 ```text
 Test Summary: | Pass  Total     Time
-Itemset setup | 1123   1123  2m24.2s
+Itemset setup | 1251   1251  1m49.3s
 ```
 
 ## Use the API
@@ -63,7 +63,7 @@ julia --project=. tools/spmf/compare.jl data/toy/spmf/baskets-0.5.txt results/pa
 
 `notebooks/demo.ipynb` runs on Colab's native Julia kernel, so it calls the package directly without a Python wrapper.
 
-Open the [public Colab notebook](https://colab.research.google.com/github/NgTHung/Itemset/blob/feat/dat-38-week3-notebook/notebooks/demo.ipynb). To reproduce the report's seeded codebook, use Julia 1.13.2; the [CLI runner](notebooks/README.md#run-through-the-colab-cli) installs that version with a verified archive hash.
+Open the [public Colab notebook](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo.ipynb). To reproduce the report's seeded codebook, use Julia 1.13.2. The [CLI runner](notebooks/README.md#run-through-the-colab-cli) verifies the archive hash before installing Julia.
 
 The [13 November hosted verification](docs/phat-application2-colab-2026-11-13.md) records the tested revision, complete cell run, environment and image-map comparisons.
 
