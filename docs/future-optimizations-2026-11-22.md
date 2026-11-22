@@ -38,9 +38,13 @@ Intersections, the core operation of Eclat, dominate at one point, T10I4D100K 0.
 
 Hung's BBQ run of the four contenders on nested subsets of Accidents and Retail (`docs/bbq-scalability-runtime-2026-11-19.md` on branch `dat-21-scalability`, DAT-21) fits time as `a + bN`, with R² of at least 0.992. On Accidents the optimized CLI has `a = 0.188 s` and `b = 0.195 s` per 100,000 transactions, against 0.544 for PrePost+, 1.896 for the baseline, and 8.015 for SPMF Eclat. The output stays near 1,100 itemsets at every size, so the slope is the cost of reading and laying out the database. On Retail `b` is 0.182 for the optimized CLI, 0.685 for SPMF Eclat, and 3.510 for PrePost+.
 
+### Output size
+
+Hung's count record (`docs/output-size-2026-11-19.md` on branch `dat-31-output-size`, DAT-31) reads the counts from the same cohort as the runtime record, run `bbq-all-variants-cli-5repeat-20261117T041922Z`, and checks that all four programs report the same count at all 33 thresholds. Its times for Retail 0.001 (baseline 12.59 s), Chess 0.6 (baseline 3.07 s), Mushroom 0.1 (optimized 0.41 s), and T10I4D100K 0.00025 (optimized 0.96 s) equal the ones in this record, so the two analyses cross-check each other. The dense datasets end at long itemsets. The mean length at the lowest minsup is 8.02 on Mushroom, 7.37 on Chess, and 4.00 on Accidents, against 2.07 on Retail and 3.10 on T10I4D100K, and the count grows 5 to 14 times faster on the log-log scale on the dense datasets (slopes 5.23 to 14.33 against 1.55 to 1.68). The bytes the CLI formats grow with the count times the length, so the dense points are where output is the largest cost.
+
 ### Memory
 
-Phat's median peak RSS of five CLI runs (DAT-20, report text in PR #39, Windows) is 149.0 to 181.7 MiB for the optimized variant on Chess, Mushroom, Retail, and T10I4D100K, and 313.4 MiB on Accidents, which is 34.7% below the baseline's 479.6 MiB. The Accidents excess of 131 to 164 MiB over the other points is of the order of its input database, which `Base.summarysize` puts at 105 MiB as `Vector{Vector{Int}}` and which Hung's I/O record shows the reader allocating as 151 MiB. The Retail and T10I4D100K databases take 11 and 12 MiB. Hung's [diffset probe](bbq-diffset-probe-2026-11-08.md) reaches the same conclusion on BBQ: the tidsets alive during the search peak at 4.6 MiB while the input database takes 211 MiB.
+Phat's median peak RSS of five CLI runs (DAT-20, report text in PR #39, Windows) is 149.0 to 181.7 MiB for the optimized variant on Chess, Mushroom, Retail, and T10I4D100K, and 313.4 MiB on Accidents, which is 34.7% below the baseline's 479.6 MiB. The Accidents excess of 131 to 164 MiB over the other points is of the order of its input database, which `Base.summarysize` puts at 105 MiB as `Vector{Vector{Int}}` and which Hung's I/O record shows the reader allocating as 151 MiB. The Retail and T10I4D100K databases take 11 and 12 MiB. Hung's [diffset probe](bbq-diffset-probe-2026-11-08.md) reaches the same conclusion on BBQ: the tidsets alive during the search peak at 4.6 MiB while the input database takes 211 MiB. Phat's first verification run could not verify 11 comparisons because the JVM ran out of memory and one because Julia did, at Retail 1% and five Accidents thresholds. She reran all 12 against stored SPMF 2.66 outputs.
 
 ### Runtime and width
 
@@ -55,7 +59,7 @@ The comparison rests on measured behavior. This record does not inspect SPMF's s
 - Width. The bitset join costs 157 words at every width of the synthetic databases, so mining grows 1.8 times, while SPMF Eclat's cold time grows 21 times over the same widths.
 - Work that is Eclat's own. At Retail 0.001 the baseline merges 2.17 billion tid-list elements and takes 12.59 s, while SPMF Eclat takes 1.57 s. The optimized variant avoids most of that work with pair counts and tid lists and takes 0.38 s.
 - Output. At Mushroom 0.05, the only required or stress point where PrePost+ is faster, the optimized CLI takes 1.445 s against 1.378 s ([BBQ record](bbq-io-emission-runtime-2026-11-09.md)). The profile puts 98% of that pass in output, and the sort alone is 32% of the samples. SPMF writes its output in mining order, so the CLI does a sort that the SPMF programs do not.
-- Memory. Phat measured the baseline against the optimized variant only. No measurement compares peak RSS with SPMF.
+- Memory. Phat measured peak RSS for the baseline and the optimized variant only, so no number compares our memory with SPMF's. Her first verification run lost 12 comparisons to out-of-memory failures at the Accidents and Retail 1% points. That shows memory pressure there, and it does not say which program needs more.
 
 ## Proposal 1: a flat integer store and an array-indexed vertical layout
 
@@ -171,4 +175,4 @@ Run it as `julia --startup-file=no --project=. proto.jl accidents 0.65`.
 - The profile samples the CLI path of the optimized variant only. It does not cover the `SupportMap` that applications receive.
 - The prototype changes only the two layout passes, so its saving is a lower bound on proposal 1 and no measurement of reading into a flat store.
 - The expected benefits are predictions with the tests above as their checks. None is implemented.
-- Hung's scalability results and Phat's memory results come from branches and a pull request that are not on `main` when this record is written.
+- Hung's scalability and count results (branches `dat-21-scalability` and `dat-31-output-size`) and Phat's memory and correctness results (PR #39) are not on `main` when this record is written. The record cites them by name and file.

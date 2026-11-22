@@ -248,8 +248,11 @@ trên BBQ rằng thời gian CLI của bản tối ưu tuyến tính theo số g
 1\,100 itemset), so với 0{,}544 của PrePost+ và 8{,}015 của SPMF Eclat. Phat đo peak
 RSS của bản tối ưu từ 149{,}0 đến 181{,}7\,MiB ở bốn bộ dữ liệu nhỏ và 313{,}4\,MiB ở
 Accidents, phần chênh cùng bậc với cơ sở dữ liệu đầu vào (105\,MiB theo
-\texttt{Base.summarysize}). Mọi lần chạy phía sau các số này đều khớp SPMF Eclat hoàn
-toàn.
+\texttt{Base.summarysize}). Hung cũng ghi độ dài trung bình của itemset ở minsup thấp
+nhất là 8{,}02 ở Mushroom, 7{,}37 ở Chess và 4{,}00 ở Accidents, so với 2{,}07 ở Retail và
+3{,}10 ở T10I4D100K, và số itemset ở các CSDL dày tăng nhanh hơn 5 đến 14 lần trên
+thang log-log; bản ghi đó dùng cùng đợt đo với mục thời gian chạy và cho cùng số thời
+gian. Mọi lần chạy phía sau các số này đều khớp SPMF Eclat hoàn toàn.
 
 So với SPMF, các điểm mạnh và yếu dưới đây dựa trên hành vi đã đo, vì nhóm chưa đọc mã
 nguồn SPMF nên không gán nguyên nhân bên trong SPMF. Về điểm mạnh, chi phí theo giao
@@ -261,7 +264,9 @@ chi phí 157 từ ở mọi độ dài (mục~\ref{sec:width}), còn thời gian
 (1{,}445 so với 1{,}378\,s), 98\% lượt chạy là đầu ra và riêng bước sắp xếp chiếm 32\%
 số mẫu, trong khi SPMF ghi theo thứ tự khai thác nên không phải sắp xếp. Bộ nhớ chỉ so
 được giữa bản cơ bản và bản tối ưu (giảm từ 11{,}0\% đến 34{,}7\%), chưa có số đo so với
-SPMF.
+SPMF. Lần kiểm chứng đầu của Phat mất 12 phép đối chiếu vì hết bộ nhớ ở Accidents và
+Retail 1\%, cho thấy áp lực bộ nhớ ở các điểm đó nhưng không cho biết chương trình nào cần
+nhiều hơn.
 
 \paragraph{Đề xuất 1: kho số nguyên phẳng và dựng bố cục dọc bằng mảng.}
 \emph{Nút thắt.} Bố cục chiếm 99\% lượt chạy ở Accidents và Retail 0{,}01, và là thứ mà
