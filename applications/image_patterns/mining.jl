@@ -26,20 +26,25 @@ end
 
 """Find all supports and select source-ID-ordered matches plus near misses, preferring the same digit label."""
 function pattern_evidence(encoding::ImageEncoding, itemset; limit::Int=3)
+    pattern = checked_pattern(itemset; max_word=encoding.settings.vocabulary_size)
+    totals = image_label_totals(encoding.images, encoding.transactions)
+    positions = supporting_images(encoding.transactions, pattern)
+    labels = pattern_label_summary(encoding.images, positions; totals)
+    pattern_evidence(encoding, pattern, positions, labels; limit)
+end
+
+function pattern_evidence(encoding::ImageEncoding, itemset, supporting, labels; limit::Int=3)
     limit >= 1 || throw(ArgumentError("example limit must be positive: $limit"))
-    items = collect(itemset)
-    !isempty(items) && issorted(items) && allunique(items) &&
-        all(word -> word isa Int && 1 <= word <= encoding.settings.vocabulary_size, items) ||
-        throw(ArgumentError("invalid visual-word itemset: $itemset"))
-    supporting = supporting_images(encoding.transactions, itemset)
     matching = sort(supporting; by=p -> encoding.images[p].id)
     resize!(matching, min(limit, length(matching)))
     anchor = isempty(matching) ? -1 : encoding.images[first(matching)].label
-    nonmatching = [p for p in eachindex(encoding.images) if !all(word -> word in encoding.transactions[p], itemset)]
+    matched = falses(length(encoding.images))
+    matched[supporting] .= true
+    nonmatching = findall(!, matched)
     sort!(nonmatching; by=p -> (encoding.images[p].label != anchor,
           -count(word -> word in encoding.transactions[p], itemset), encoding.images[p].id))
     resize!(nonmatching, min(limit, length(nonmatching)))
-    label_counts = [count(p -> encoding.images[p].label == label, supporting) for label in 0:9]
+    label_counts = [row.support for row in labels]
     (; itemset, supporting, matching, nonmatching, label_counts)
 end
 
@@ -77,23 +82,29 @@ function mining_artifacts(encoding, runs)
     println(patches, "minsup\titems\tkind\timage_id\tword\trow\tcol\tdistance2\tpatch_row_major")
     println(selected, "minsup\titems\tsupport\tlabel_counts_0_to_9")
     println(labels, "minsup\titems\tlabel\ttotal\tsupport\tfraction\timage_ids")
+    totals = image_label_totals(encoding.images, encoding.transactions)
     for run in runs
         println(thresholds, run.minsup, '\t', run.min_count, '\t', length(run.patterns), '\t', run.elapsed)
         outputs["patterns-$(run.minsup).txt"] = sprint(write_itemsets, run.patterns)
+        choices = select_patterns(run.patterns)
+        evidence_by_pattern = Dict{keytype(run.patterns),NamedTuple}()
         for itemset in sort!(collect(keys(run.patterns)))
-            for row in pattern_label_summary(encoding.images, encoding.transactions, itemset)
+            positions = supporting_images(encoding.transactions, itemset)
+            length(positions) == run.patterns[itemset] || throw(ArgumentError("support scan differs for $itemset"))
+            label_rows = pattern_label_summary(encoding.images, positions; totals)
+            for row in label_rows
                 println(labels, run.minsup, '\t', join(itemset, ','), '\t', row.label, '\t',
                         row.total, '\t', row.support, '\t', something(row.fraction, "NA"), '\t', join(row.image_ids, ','))
             end
-            positions = supporting_images(encoding.transactions, itemset)
-            length(positions) == run.patterns[itemset] || throw(ArgumentError("support scan differs for $itemset"))
             println(supports, run.minsup, '\t', join(itemset, ','), '\t', length(positions), '\t',
                     join([encoding.images[p].id for p in positions], ','), '\t',
                     join([encoding.images[p].label for p in positions], ','))
+            if itemset in choices
+                evidence_by_pattern[itemset] = pattern_evidence(encoding, itemset, positions, label_rows)
+            end
         end
-        choices = select_patterns(run.patterns)
         for (index, itemset) in enumerate(choices)
-            evidence = pattern_evidence(encoding, itemset)
+            evidence = evidence_by_pattern[itemset]
             rows = example_rows(encoding, evidence)
             println(selected, run.minsup, '\t', join(itemset, ','), '\t', length(evidence.supporting), '\t', join(evidence.label_counts, ','))
             for row in rows
@@ -124,7 +135,12 @@ Write complete baseline maps, exact support IDs, contrasting source images/patch
 and a timing/provenance manifest into a fresh directory. Validate supports before
 publishing. No pattern-length or output cap is imposed; failures propagate.
 """
-function write_mining_run(dir, encoding::ImageEncoding; levels=MINING_LEVELS,
+function write_mining_run(dir, encoding::ImageEncoding; kwargs...)
+    write_mining_run_with_results(dir, encoding; kwargs...)
+    dir
+end
+
+function write_mining_run_with_results(dir, encoding::ImageEncoding; levels=MINING_LEVELS,
                           source_sha, revision, command, source_url="", dirty=false, source_hashes=Dict{String,String}())
     ispath(dir) && throw(ArgumentError("output path already exists: $dir"))
     validate_encoding(encoding)
@@ -151,5 +167,5 @@ function write_mining_run(dir, encoding::ImageEncoding; levels=MINING_LEVELS,
         open(io -> TOML.print(io, manifest; sorted=true), joinpath(bundle, "mining_manifest.toml"), "w")
         mv(bundle, output)
     end
-    dir
+    runs
 end

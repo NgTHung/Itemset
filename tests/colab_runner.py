@@ -48,6 +48,25 @@ class RunnerTests(unittest.TestCase):
                 runner.run([sys.executable, "-c", "print('before failure'); raise SystemExit(7)"], root)
             self.assertIn("before failure", (root / "commands.log").read_text())
 
+    def test_collects_manifest_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "run"
+            source.mkdir()
+            (source / "proof.txt").write_text("proof", encoding="utf-8")
+            evidence = root / "evidence"
+            evidence.mkdir()
+            manifest = evidence / "notebook-artifacts.toml"
+            names = ("semeion", "encoding", "spmf-smoke", "market_basket")
+            entries = [f"{name} = {json.dumps(str(source))}\n" for name in names]
+            manifest.write_text("".join(entries[:2]), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "spmf-smoke"):
+                runner.collect_artifacts(manifest, evidence)
+            manifest.write_text("".join(entries), encoding="utf-8")
+            runner.collect_artifacts(manifest, evidence)
+            for name in names:
+                self.assertEqual((evidence / name / "proof.txt").read_text(), "proof")
+
 
 if __name__ == "__main__":
     unittest.main()

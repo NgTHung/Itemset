@@ -49,4 +49,10 @@ colab download --session itemset-cleanrun /content/itemset-cleanrun-evidence.zip
 colab stop --session itemset-cleanrun
 ```
 
-The ZIP contains exact cell sources, logs, application outputs, comparisons, measurements and `result.json` with versions, revision and artifact hashes. Require `status=success`, every cell completion marker and both SPMF comparisons before accepting a run. A failure retains its log and creates an evidence ZIP. If the CLI disconnects, inspect the remote log and session state before retrying. Download evidence before stopping the session; use fresh root and evidence paths for another attempt.
+The notebook writes an artifact manifest for the runner. The evidence ZIP contains
+that manifest, cell sources, logs, application outputs, comparisons, measurements
+and `result.json` with versions, revision and artifact hashes. Require
+`status=success`, every cell completion marker and both SPMF comparisons before
+accepting a run. A failure retains its log and creates an evidence ZIP. If the CLI
+disconnects, inspect the remote log and session state before retrying. Download
+evidence before stopping the session. Use fresh root and evidence paths for another attempt.

@@ -1,14 +1,22 @@
+function checked_pattern(pattern; max_word=typemax(Int))
+    items = Tuple(pattern)
+    !isempty(items) && all(x -> x isa Int && 1 <= x <= max_word, items) &&
+        issorted(items) && allunique(items) ||
+        throw(ArgumentError("invalid visual-word pattern: $pattern"))
+    items
+end
+
 function checked_patterns(patterns)
-    columns = Tuple{Vararg{Int}}[]
-    for pattern in patterns
-        items = collect(pattern)
-        !isempty(items) && all(x -> x isa Int && x > 0, items) &&
-            issorted(items) && allunique(items) ||
-            throw(ArgumentError("invalid visual-word pattern: $pattern"))
-        push!(columns, Tuple(items))
-    end
+    columns = [checked_pattern(pattern) for pattern in patterns]
     allunique(columns) || throw(ArgumentError("duplicate visual-word patterns: $patterns"))
     columns
+end
+
+function check_visual_transactions(transactions)
+    for (i, items) in enumerate(transactions)
+        all(x -> x isa Int && x > 0, items) ||
+            throw(ArgumentError("invalid visual words in transaction $i: $items"))
+    end
 end
 
 """
@@ -22,16 +30,38 @@ Fit the vocabulary on training data before transforming held-out images.
 """
 function itemset_features(transactions, patterns)
     columns = checked_patterns(patterns)
+    check_visual_transactions(transactions)
     presence = falses(length(transactions), length(columns))
-    for (i, transaction) in enumerate(transactions)
-        items = collect(transaction)
-        all(x -> x isa Int && x > 0, items) ||
-            throw(ArgumentError("invalid visual words in transaction $i: $transaction"))
-        for (j, pattern) in enumerate(columns)
-            presence[i, j] = all(word -> word in items, pattern)
-        end
+    for (j, pattern) in enumerate(columns), i in supporting_images(transactions, pattern)
+        presence[i, j] = true
     end
     presence
+end
+
+function image_label_totals(images, transactions)
+    length(images) == length(transactions) ||
+        throw(ArgumentError("image/transaction counts differ: $(length(images)), $(length(transactions))"))
+    seen = Set{Int}()
+    totals = zeros(Int, 10)
+    for image in images
+        image.id in seen && throw(ArgumentError("duplicate source image ID $(image.id)"))
+        push!(seen, image.id)
+        totals[image.label + 1] += 1
+    end
+    totals
+end
+
+function pattern_label_summary(images, positions; totals)
+    image_ids = [Int[] for _ in 0:9]
+    for p in positions
+        image = images[p]
+        push!(image_ids[image.label + 1], image.id)
+    end
+    [begin
+        ids = sort!(image_ids[label + 1])
+        total, support = totals[label + 1], length(ids)
+        (; label, total, support, fraction=total == 0 ? nothing : support / total, image_ids=ids)
+    end for label in 0:9]
 end
 
 """
@@ -43,15 +73,8 @@ has fraction `nothing`. Preserve empty transactions in each label's denominator.
 Misaligned images, duplicate source IDs, or invalid words throw `ArgumentError`.
 """
 function pattern_label_summary(images, transactions, itemset)
-    length(images) == length(transactions) ||
-        throw(ArgumentError("image/transaction counts differ: $(length(images)), $(length(transactions))"))
-    allunique(image.id for image in images) ||
-        throw(ArgumentError("duplicate source image IDs"))
-    presence = itemset_features(transactions, [itemset])
-    [begin
-        positions = findall(image -> image.label == label, images)
-        ids = sort!([images[p].id for p in positions if presence[p, 1]])
-        total, support = length(positions), length(ids)
-        (; label, total, support, fraction=total == 0 ? nothing : support / total, image_ids=ids)
-    end for label in 0:9]
+    totals = image_label_totals(images, transactions)
+    check_visual_transactions(transactions)
+    positions = supporting_images(transactions, checked_pattern(itemset))
+    pattern_label_summary(images, positions; totals)
 end

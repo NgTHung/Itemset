@@ -11,11 +11,16 @@
     @test rows[1].fraction === nothing
     @test sum(row.support for row in rows) == 2
     @test_throws ArgumentError SemeionPilot.pattern_label_summary(images[1:2], transactions, (13,))
-    @test_throws ArgumentError SemeionPilot.pattern_label_summary([images[1], images[1]], [[13], [13]], (13,))
+    @test_throws ArgumentError("duplicate source image ID 42") SemeionPilot.pattern_label_summary(
+        [images[1], images[1]], [[13], [13]], (13,))
+    totals = SemeionPilot.image_label_totals(images, transactions)
+    @test SemeionPilot.pattern_label_summary(images, [1, 4]; totals) == rows
+    @test SemeionPilot.pattern_label_summary(images, transactions, (13,))[4].image_ids == [7, 42]
     patterns = [(13,), (8, 13), (4, 8, 13)]
     features = SemeionPilot.itemset_features(transactions, patterns)
     @test features == Bool[1 1 0; 1 0 0; 0 0 0; 1 1 1]
     @test SemeionPilot.itemset_features([[13, 8, 8]], patterns) == features[1:1, :]
+    @test SemeionPilot.itemset_features([(13, 8)], patterns) == features[1:1, :]
     @test size(SemeionPilot.itemset_features(Vector{Int}[], patterns)) == (0, 3)
     @test size(SemeionPilot.itemset_features(transactions, Tuple{Int}[])) == (4, 0)
     for bad in ([()], [(13, 8)], [(8, 8)], [(0,)], [(true,)], [(13,), (13,)])

@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import tarfile
+import tomllib
 import traceback
 import urllib.request
 
@@ -59,12 +60,23 @@ def notebook_script(notebook, evidence):
         lines.append(f'println({json.dumps("ITEMSET_CELL_START " + ident)})\n'
                      f'include({json.dumps(str(path))})\n'
                      f'println({json.dumps("ITEMSET_CELL_OK " + ident)})\n')
-    lines.append('for (source, name) in ((pilot_output, "semeion"), '
-                 '(encoding_output, "encoding"), (output, "spmf-smoke"))\n'
-                 '    cp(source, joinpath(@__DIR__, name))\nend\n')
     script = evidence / "notebook-cells.jl"
     script.write_text("\n".join(lines), encoding="utf-8")
     return script, identifiers
+
+
+def collect_artifacts(manifest, evidence):
+    with manifest.open("rb") as stream:
+        folders = tomllib.load(stream)
+    required = {"encoding", "semeion", "spmf-smoke", "market_basket"}
+    missing = required.difference(folders)
+    if missing:
+        raise ValueError(f"Notebook artifacts missing: {', '.join(sorted(missing))}")
+    for name in sorted(required):
+        source = Path(folders[name])
+        if not source.is_dir():
+            raise ValueError(f"Notebook artifact {name} is not a directory: {source}")
+        shutil.copytree(source, evidence / name)
 
 
 def run(command, evidence, *, cwd=None, env=None):
@@ -107,11 +119,13 @@ def execute(args):
         notebook = root / "notebooks/demo.ipynb"
         record["notebook_sha256"] = file_sha(notebook)
         script, identifiers = notebook_script(notebook, evidence)
+        artifact_manifest = evidence / "notebook-artifacts.toml"
         env = dict(os.environ, ITEMSET_ROOT=str(root), ITEMSET_JAVA=str(java),
+                   ITEMSET_ARTIFACT_MANIFEST=str(artifact_manifest),
                    JULIA_NUM_THREADS="1", JULIA_DEPOT_PATH=str(root.parent / (root.name + "-depot")))
         env["PATH"] = str(java.parent) + os.pathsep + env.get("PATH", "")
         run([str(julia), "--startup-file=no", "--project=.", str(script)], evidence, cwd=root, env=env)
-        shutil.copytree(root / "results/raw/market_basket", evidence / "market_basket")
+        collect_artifacts(artifact_manifest, evidence)
         record.update(status="success", code_cells=len(identifiers), cell_ids=identifiers)
         print("ITEMSET_HOSTED_NOTEBOOK_OK", flush=True)
     except Exception as error:
