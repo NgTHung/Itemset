@@ -34,21 +34,20 @@ thay toàn bộ nhóm. Phat ghép notebook; Hung kiểm tra repository cuối c�
 Chạy từ thư mục gốc trên Julia 1.13.2 với [SPMF 2.66 và Java 25](../../tools/spmf/README.md).
 Hai cấu hình đo cả hai biến thể qua CLI và đối chiếu toàn bộ đầu ra với cùng
 tham chiếu SPMF ở mỗi ngưỡng. Dùng các thư mục kết quả mới.
+Mỗi cấu hình chạy JVM với heap tối đa 3 GiB và bộ thu gom Serial GC.
 
 ```sh
 julia --startup-file=no --project=. experiments/prepare_benchmarks.jl
-julia --startup-file=no --threads=1 --project=. experiments/run.jl experiments/configs/report-correctness.toml --out results/raw/report-correctness
-julia --startup-file=no --threads=1 --project=. experiments/run.jl experiments/configs/report-peak-memory.toml --out results/raw/report-peak-memory
-python scripts/plot_report_validation.py results/raw/report-correctness results/raw/report-peak-memory
+julia --startup-file=no --threads=1 --heap-size-hint=512M --project=. experiments/run.jl experiments/configs/report-correctness.toml --out results/raw/report-correctness
+julia --startup-file=no --threads=1 --heap-size-hint=512M --project=. experiments/run.jl experiments/configs/report-peak-memory.toml --out results/raw/report-peak-memory
+uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py results/raw/report-correctness results/raw/report-peak-memory
 ```
 
-Dùng Python từ 3.11 và Matplotlib để vẽ. Thêm `--project PATH` vào hai lệnh
-đo để chọn checkout ở revision được ghi trong báo cáo. Mỗi thư mục kết quả
+Thêm `--project PATH` vào hai lệnh đo để chọn checkout ở revision được
+ghi trong báo cáo. Mỗi thư mục kết quả
 ghi mã băm và phiên bản trong `environment.toml`, `source-checksums.toml` và
 `config.toml`. Tệp `runs.csv` ghi từng phép đo. Các tệp `comparison.toml`
 ghi số tập mục thiếu, thừa, lặp và sai support.
 
-Nếu một số lượt cần chạy lại, giữ thư mục gốc và lưu các lượt chạy lại trong
-thư mục riêng. Truyền `--correctness-retry` hoặc `--memory-retry` cho trình vẽ.
-Trình vẽ đối chiếu mã băm đầu vào, ngưỡng và revision trước khi dùng kết quả
-chạy lại cho một lượt lỗi.
+[Hướng dẫn ứng dụng ảnh](../../applications/image_patterns/README.md#reproduce-the-sensitivity-study)
+có lệnh tạo bảng độ nhạy và hình đối chiếu Semeion.

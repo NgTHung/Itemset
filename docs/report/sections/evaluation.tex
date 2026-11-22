@@ -116,11 +116,10 @@ khớp 100\%, với 0 tập mục thiếu, thừa, lặp hoặc sai support. B�
 ghi số ngưỡng khớp của mỗi biến thể và khoảng kích thước đầu ra SPMF.
 Hình~\ref{fig:exact-grid} ghi các giá trị minsup được kiểm tra.
 
-Lần chạy đầu ghi nhận 11 lượt chưa đối chiếu được do JVM hết bộ nhớ và một
-lượt Julia hết bộ nhớ, tại Retail 1\% và năm ngưỡng Accidents. Nhóm chạy lại
-12 lượt này và đối chiếu với các đầu ra SPMF 2.66 đã lưu. Mỗi đầu ra tham
-chiếu được ghép theo cùng ngưỡng nguyên và có mã băm SHA-256 đã xác minh
-cho dữ liệu, JAR và tệp kết quả. Nhóm giữ nhật ký của cả hai lần chạy.
+Hai cấu hình báo cáo đặt giới hạn Java heap ở 3 GiB và dùng bộ thu gom
+Serial GC. Cấu hình này giữ phạm vi bộ nhớ của tiến trình tham chiếu
+ổn định giữa các ngưỡng. Các lượt lỗi bộ nhớ khi dùng cấu hình JVM mặc
+định được giữ riêng trong nhật ký khảo sát.
 
 \begin{figure}[t]
 \centering
@@ -148,14 +147,14 @@ Accidents & 7/7 & 7/7 & 15--1\,093 \\
 \end{table}
 
 \subsubsection{Bộ nhớ đỉnh của tiến trình}
-Loạt đối chiếu benchmark và loạt đo bộ nhớ dùng AMD Ryzen 5 6600H, Windows 11,
-Julia 1.13.2 với một luồng, và SPMF 2.66 trên Temurin 25.0.4.1. Trên mỗi bộ
+Loạt đối chiếu benchmark và loạt đo bộ nhớ dùng cả hai biến thể ở revision
+\texttt{d851169}, trên AMD Ryzen 5 6600H, Windows 11, Julia 1.13.2 với một
+luồng và SPMF 2.66 trên Temurin 25.0.4.1. Trên mỗi bộ
 dữ liệu, nhóm chạy CLI của mỗi biến thể năm lần trong tiến trình mới tại
 cùng một ngưỡng ở giữa dải khảo sát. Windows cung cấp peak RSS qua
 \texttt{PeakWorkingSetSize}. Phép đo bao gồm khởi động, đọc dữ liệu, khai thác
-và ghi toàn bộ đầu ra. Nhóm lặp lại loạt Accidents với tham chiếu SPMF đã
-xác minh mã băm sau khi JVM hết bộ nhớ. Các đối chiếu diễn ra sau khi đo và
-xác nhận cả 50 đầu ra dùng trong phân tích khớp hoàn toàn.
+và ghi toàn bộ đầu ra. Các đối chiếu diễn ra sau khi đo và xác nhận cả 50
+đầu ra dùng trong phân tích khớp hoàn toàn.
 
 \begin{table}[t]
 \centering
@@ -165,11 +164,11 @@ xác nhận cả 50 đầu ra dùng trong phân tích khớp hoàn toàn.
 \hline
 Dữ liệu & Minsup & Cơ bản & Tối ưu & $R$ \\
 \hline
-Chess & 0,75 & 191,0 & 150,0 & 1,274 \\
-Mushroom & 0,25 & 189,0 & 149,0 & 1,269 \\
-Retail & 0,0025 & 204,1 & 175,9 & 1,161 \\
-T10I4D100K & 0,001 & 204,0 & 181,7 & 1,123 \\
-Accidents & 0,8 & 479,6 & 313,4 & 1,530 \\
+Chess & 0,75 & 191,0 & 150,0 & 1,273 \\
+Mushroom & 0,25 & 188,9 & 149,0 & 1,268 \\
+Retail & 0,0025 & 204,0 & 175,9 & 1,160 \\
+T10I4D100K & 0,001 & 204,1 & 181,7 & 1,124 \\
+Accidents & 0,8 & 478,1 & 313,4 & 1,525 \\
 \hline
 \end{tabular}
 \end{table}
@@ -183,8 +182,10 @@ Accidents & 0,8 & 479,6 & 313,4 & 1,530 \\
 \end{figure*}
 
 Trong Bảng~\ref{tab:peak-rss} và Hình~\ref{fig:peak-rss}, $R$ là trung vị
-peak RSS của bản cơ bản chia cho trung vị của bản tối ưu. Mức giảm tại năm
-điểm đo nằm trong khoảng từ 11,0\% ở T10I4D100K đến 34,7\% ở Accidents.
+peak RSS của bản cơ bản chia cho trung vị của bản tối ưu. Từ các trung vị
+hiển thị trong bảng, phần trăm giảm là $100(1-M_o/M_b)$, với $M_b$ và $M_o$
+lần lượt là trung vị peak RSS của bản cơ bản và bản tối ưu. Mức giảm nằm
+trong khoảng từ 11,0\% ở T10I4D100K đến 34,4\% ở Accidents.
 Bản tối ưu dùng \emph{bitset} (mảng bit) và tái sử dụng vùng đệm khi giao
 các tidset trong tìm kiếm theo tiền tố của Eclat~\cite{zaki2000}. Với cơ sở
 dữ liệu có $N$ giao dịch, một tidset có $s$ mã chiếm $8s$ byte dưới dạng
