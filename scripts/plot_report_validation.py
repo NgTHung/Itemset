@@ -41,27 +41,13 @@ def read_process_rows(run):
         (series["dataset"], Decimal(str(minsup)), variant, repeat)
         for series in config["series"]
         for minsup in series["minsup"]
-        for variant in VARIANTS
+        for variant in config["variants"]
         for repeat in range(1, config["repeats"] + 1)
     )
     actual = Counter(map(attempt_key, rows))
     if actual != expected:
         raise ValueError(f"{run}: run does not contain exactly the planned attempts")
     return rows
-
-
-def apply_retry(rows, retry):
-    by_point = {attempt_key(row): row for row in rows}
-    for attempt in retry:
-        key = attempt_key(attempt)
-        original = by_point.get(key)
-        if original is None or exact(original) or not exact(attempt):
-            raise ValueError(f"Retry must verify a failed point: {attempt['attempt_id']}")
-        fields = ("input_sha256", "minsup_count", "code_revision", "mode", "threads", "julia_version", "cpu", "os")
-        if any(original[field] != attempt[field] for field in fields):
-            raise ValueError(f"Retry changed the comparison inputs: {attempt['attempt_id']}")
-        by_point[key] = attempt
-    return list(by_point.values())
 
 
 def require_exact(rows):
@@ -76,8 +62,13 @@ def require_exact(rows):
 
 def plot_coverage(rows, destination):
     thresholds = defaultdict(set)
+    variants = defaultdict(set)
     for row in rows:
-        thresholds[row["dataset"]].add(Decimal(row["minsup_relative"]))
+        minsup = Decimal(row["minsup_relative"])
+        thresholds[row["dataset"]].add(minsup)
+        variants[row["dataset"], minsup].add(row["variant"])
+    if any(choices != set(VARIANTS) for choices in variants.values()):
+        raise ValueError("Correctness coverage requires both Julia variants at every point")
     dataset_order = [name for name in DATASETS if name in thresholds]
     columns = max(map(len, thresholds.values()))
     fig, ax = plt.subplots(figsize=(4.4, 1.95), layout="constrained")
@@ -105,13 +96,15 @@ def plot_memory(rows, destination):
     samples = defaultdict(list)
     points = defaultdict(set)
     for row in rows:
-        peak = int(row["peak_rss_bytes"])
-        if peak <= 0:
+        value = row["peak_rss_bytes"]
+        if not value.isdecimal() or int(value) <= 0:
             raise ValueError(f"Invalid peak RSS for {row['attempt_id']}")
-        samples[row["dataset"], row["variant"]].append(peak / 2**20)
+        samples[row["dataset"], row["variant"]].append(int(value) / 2**20)
         points[row["dataset"]].add((row["minsup_count"], row["memory_tool"]))
     if any(len(values) != 1 for values in points.values()):
         raise ValueError("Expected one consistent peak RSS measurement point per dataset")
+    if any(not samples.get((name, variant)) for name in points for variant in VARIANTS):
+        raise ValueError("Peak RSS comparison requires both Julia variants per dataset")
     names = [name for name in DATASETS if (name, "baseline") in samples]
     fig, (left, right) = plt.subplots(1, 2, figsize=(8.0, 2.5), layout="constrained")
     medians = {}
@@ -146,16 +139,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("correctness", type=Path, help="report-correctness run directory")
     parser.add_argument("memory", type=Path, help="report-peak-memory run directory")
-    parser.add_argument("--correctness-retry", type=Path, help="retry of failed correctness points")
-    parser.add_argument("--memory-retry", type=Path, help="retry of failed memory points")
     parser.add_argument("--out", type=Path, default=Path("docs/report/figures"))
     args = parser.parse_args()
     exact_rows = read_process_rows(args.correctness)
-    if args.correctness_retry:
-        exact_rows = apply_retry(exact_rows, read_process_rows(args.correctness_retry))
     memory_rows = read_process_rows(args.memory)
-    if args.memory_retry:
-        memory_rows = apply_retry(memory_rows, read_process_rows(args.memory_retry))
     require_exact(exact_rows)
     require_exact(memory_rows)
     args.out.mkdir(parents=True, exist_ok=True)
