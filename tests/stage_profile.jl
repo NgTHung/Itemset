@@ -1,3 +1,14 @@
+using Profile: Profile
+
+function stage_test_busy(seconds)
+    deadline = time() + seconds
+    total = 0
+    while time() < deadline
+        total += sum(i -> i % 7, 1:1000)
+    end
+    return total
+end
+
 @testset "Stage profile of the optimized CLI path" begin
     @testset "A stack goes to the group of its innermost known function" begin
         group = Experiments.stage_group
@@ -8,39 +19,75 @@
         @test group([:put_digits!, :print_packed, :write_itemsets]) == "format"
         @test group([:jl_gc_collect, :mine_packed]) == "other"
         @test group(Symbol[]) == "other"
+        # A name that only starts like a listed one is not that function.
+        @test group([:intersect_bitsets_copy]) == "other"
     end
 
-    @testset "Idle threads are dropped, not counted as other" begin
-        @test Experiments.stage_group([:ZwWaitForAlertByThreadId, :SleepConditionVariableCS]) === nothing
-        @test Experiments.stage_group([:pthread_cond_wait, :uv_cond_wait]) === nothing
-    end
-
-    @testset "Every group names a function the package defines" begin
-        defined = String.(names(ItemsetMining; all=true, imported=false))
-        for (label, pattern) in Experiments.STAGE_GROUPS
-            @test any(name -> occursin(pattern, name), defined)
+    @testset "Every listed name is a function the package defines, once" begin
+        defined = Set(names(ItemsetMining; all=true, imported=false))
+        listed = [Symbol(name) for (_, group) in Experiments.STAGE_GROUPS for name in group]
+        for name in listed
+            @test name in defined
         end
+        @test allunique(listed)
         @test allunique(first.(Experiments.STAGE_GROUPS))
         @test !any(label -> label == "other", first.(Experiments.STAGE_GROUPS))
     end
 
-    @testset "Shares count samples, not idle time" begin
-        stacks = [[:intersect_bitsets!], [:intersect_bitsets!], [:count_items], [:ZwWaitForAlertByThreadId], [:mystery]]
-        shares = Experiments.stage_shares(stacks)
-        @test shares["bitset joins"] == 0.5
-        @test shares["item counts"] == 0.25
-        @test shares["other"] == 0.25
+    @testset "Counts and shares" begin
+        stacks = [[:intersect_bitsets!], [:intersect_bitsets!], [:count_items], [:mystery]]
+        counts = Experiments.stage_counts(stacks)
+        @test counts["bitset joins"] == 2 && counts["item counts"] == 1 && counts["other"] == 1
+        @test sum(values(counts)) == length(stacks)
+        shares = Experiments.stage_shares(counts)
+        @test shares["bitset joins"] == 0.5 && shares["item counts"] == 0.25 && shares["other"] == 0.25
         @test sum(values(shares)) ≈ 1
-        none = Experiments.stage_shares([[:ZwWaitForAlertByThreadId]])
+        none = Experiments.stage_shares(Experiments.stage_counts(Vector{Symbol}[]))
         @test all(iszero, values(none))
         @test keys(none) == keys(shares)
+    end
+
+    @testset "Only the samples of the running thread count" begin
+        # Two samples of thread 1 around one sample of thread 2, in the layout of Profile.fetch:
+        # the pointers, then thread, task, clock, sleep state, and two zeros.
+        data = UInt[11, 12, 1, 7, 100, 1, 0, 0,
+                    21, 2, 8, 101, 2, 0, 0,
+                    31, 1, 7, 102, 2, 0, 0]
+        @test Experiments.thread_blocks(data, 1) == [UInt[11, 12], UInt[31]]
+        @test Experiments.thread_blocks(data, 2) == [UInt[21]]
+        @test isempty(Experiments.thread_blocks(data, 3))
+        # A sample that sleeps on the running thread is kept, since the wait is part of the run.
+        @test UInt[31] in Experiments.thread_blocks(data, 1)
+        @test isempty(Experiments.thread_blocks(UInt[], 1))
+        @test_throws ArgumentError Experiments.thread_blocks(UInt[1, 2, 3], 1)
+    end
+
+    @testset "A real profile holds the running thread's work" begin
+        stacks = Experiments.with_profiler() do
+            Experiments.profile_stacks(() -> stage_test_busy(0.3))
+        end
+        @test length(stacks) > 50
+        @test count(s -> :stage_test_busy in s, stacks) >= 0.8 * length(stacks)
+    end
+
+    @testset "The profiler settings are restored" begin
+        before = Profile.init()
+        inside = Experiments.with_profiler(; n=2_000_000, delay=0.002) do
+            Profile.init()
+        end
+        @test inside == (2_000_000, 0.002)
+        @test Profile.init() == before
+        @test_throws ErrorException Experiments.with_profiler(() -> error("boom"); n=2_000_000, delay=0.002)
+        @test Profile.init() == before
     end
 
     @testset "Rows for a configured experiment" begin
         mktempdir() do dir
             manifest, data = toy_benchmark(dir)
             config = toy_config(; series=[Dict("dataset" => "baskets", "minsup" => [0.5, 0.75])])
+            before = Profile.init()
             rows = Experiments.stage_profile_rows(config, manifest, data; repeats=2)
+            @test Profile.init() == before
             @test [(r.dataset, r.minsup_relative, r.minsup_count) for r in rows] ==
                   [("baskets", "0.75", 3), ("baskets", "0.5", 2)]
             @test rows[2].transactions == 4 && rows[2].itemsets == 6 && rows[1].itemsets == 3
@@ -54,6 +101,7 @@
             missing_set = toy_config(; series=[Dict("dataset" => "nope", "minsup" => [0.5])])
             @test_throws ArgumentError Experiments.stage_profile_rows(missing_set, manifest, data; repeats=1)
             @test_throws ArgumentError Experiments.stage_profile_rows(config, manifest, data; repeats=0)
+            @test Profile.init() == before
         end
     end
 
@@ -108,11 +156,10 @@ end
             end
             @test !ispath(fresh)
         end
-        @testset "A manifest beside the benchmark one profiles a width database" begin
+        @testset "The manifest of the data folder is the default" begin
             settings = Experiments.WidthSettings(transactions=50, items=8, widths=[3])
             width_dir = mkpath(joinpath(dir, "width-data"))
-            width_manifest = joinpath(dir, "width-manifest.toml")
-            Experiments.freeze_width_manifest(width_manifest, settings, width_dir)
+            Experiments.freeze_width_manifest(joinpath(width_dir, "manifest.toml"), settings, width_dir)
             width_config = joinpath(dir, "width.toml")
             write(width_config, """
             name = "width"
@@ -124,8 +171,7 @@ end
             minsup = [0.5]
             """)
             out = joinpath(dir, "width-out")
-            @test quiet(() -> StageProfileScript.main(["--out", out, "--repeats", "2", "--manifest", width_manifest,
-                                                       width_config]; data_dir=width_dir)) == 0
+            @test quiet(() -> StageProfileScript.main(["--out", out, "--repeats", "2", width_config]; data_dir=width_dir)) == 0
             rows = Experiments.read_csv_rows(joinpath(out, "stage-profile.csv"))
             database = Experiments.width_database(settings, 3)
             @test only(rows)["dataset"] == "width-w03"
