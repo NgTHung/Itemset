@@ -319,33 +319,33 @@ Chess 0{,}9 và Mushroom 0{,}5 chỉ mất 3 đến 4\,ms nên không lấy mẫ
 \hline
 Điểm & Itemset & Lượt & Bố cục & Đếm cặp & Phép giao & Đầu ra \\
 \hline
-Chess 0{,}6 & 254\,944 & 0{,}073 & 3 & 0 & 9 & 88 \\
-Mushroom 0{,}1 & 574\,431 & 0{,}143 & 3 & 0 & 0 & 96 \\
-Mushroom 0{,}05 & 3\,755\,511 & 0{,}924 & 1 & 0 & 0 & 98 \\
-Retail 0{,}01 & 159 & 0{,}048 & 99 & 0 & 1 & 0 \\
-Retail 0{,}001 & 7\,589 & 0{,}168 & 47 & 44 & 3 & 6 \\
-T10I4D100K 0{,}01 & 385 & 0{,}080 & 64 & 36 & 0 & 0 \\
-T10I4D100K 0{,}00025 & 96\,959 & 0{,}613 & 10 & 7 & 78 & 5 \\
-Accidents 0{,}95 & 15 & 0{,}391 & 99 & 0 & 0 & 0 \\
-Accidents 0{,}65 & 1\,093 & 0{,}524 & 99 & 0 & 0 & 0 \\
+Chess 0{,}6 & 254\,944 & 0{,}077 & 4 & 0 & 14 & 82 \\
+Mushroom 0{,}1 & 574\,431 & 0{,}163 & 3 & 0 & 1 & 96 \\
+Mushroom 0{,}05 & 3\,755\,511 & 1{,}036 & 1 & 0 & 0 & 98 \\
+Retail 0{,}01 & 159 & 0{,}048 & 98 & 1 & 1 & 0 \\
+Retail 0{,}001 & 7\,589 & 0{,}148 & 50 & 46 & 3 & 1 \\
+T10I4D100K 0{,}01 & 385 & 0{,}073 & 68 & 32 & 0 & 0 \\
+T10I4D100K 0{,}00025 & 96\,959 & 0{,}570 & 12 & 7 & 76 & 5 \\
+Accidents 0{,}95 & 15 & 0{,}385 & 99 & 0 & 0 & 0 \\
+Accidents 0{,}65 & 1\,093 & 0{,}417 & 99 & 0 & 0 & 0 \\
 \hline
 \end{tabular}
 \end{table}
 
 Phép giao tidset, thao tác cốt lõi của Eclat, chỉ chiếm phần lớn ở một điểm, T10I4D100K
-0{,}00025. Ở ba điểm dày (Chess 0{,}6, Mushroom 0{,}1 và 0{,}05), đầu ra chiếm 88\% đến
+0{,}00025. Ở ba điểm dày (Chess 0{,}6, Mushroom 0{,}1 và 0{,}05), đầu ra chiếm 82\% đến
 98\%. Ở năm điểm còn lại, dựng bố cục dọc và đếm cặp chiếm phần lớn, và ở Accidents bước
 tìm kiếm chiếm dưới 1\% lượt chạy. Kết quả của hai đồng đội khớp với điều này. Hung đo
 trên BBQ rằng thời gian CLI của bản tối ưu tuyến tính theo số giao dịch, với hệ số góc
 0{,}195\,s mỗi 100\,000 giao dịch trên Accidents dù đầu ra gần như không đổi (khoảng
 1\,100 itemset), so với 0{,}544 của PrePost+ và 8{,}015 của SPMF Eclat. Phat đo peak
-RSS của bản tối ưu từ 149{,}0 đến 181{,}7\,MiB ở bốn bộ dữ liệu nhỏ và 313{,}4\,MiB ở
-Accidents, phần chênh cùng bậc với cơ sở dữ liệu đầu vào (105\,MiB theo
-\texttt{Base.summarysize}). Hung cũng ghi độ dài trung bình của itemset ở minsup thấp
-nhất là 8{,}02 ở Mushroom, 7{,}37 ở Chess và 4{,}00 ở Accidents, so với 2{,}07 ở Retail và
-3{,}10 ở T10I4D100K, và số itemset ở các CSDL dày tăng nhanh hơn 5 đến 14 lần trên
-thang log-log; bản ghi đó dùng cùng đợt đo với mục thời gian chạy và cho cùng số thời
-gian. Mọi lần chạy phía sau các số này đều khớp SPMF Eclat hoàn toàn.
+RSS của bản tối ưu (Bảng~\ref{tab:peak-rss}) từ 149{,}0 đến 181{,}7\,MiB ở bốn bộ dữ liệu
+nhỏ và 313{,}4\,MiB ở Accidents, phần chênh cùng bậc với cơ sở dữ liệu đầu vào (105\,MiB
+theo \texttt{Base.summarysize}). Hung cũng ghi độ dài trung bình của itemset ở minsup
+thấp nhất là 8{,}02 ở Mushroom, 7{,}37 ở Chess và 4{,}00 ở Accidents, so với 2{,}07 ở
+Retail và 3{,}10 ở T10I4D100K, và số itemset ở các CSDL dày tăng nhanh hơn 3 đến 9 lần
+trên thang log-log (tỉ số các hệ số góc, từ $5{,}23/1{,}68$ đến $14{,}33/1{,}55$); bản ghi
+đó dùng cùng đợt đo với mục thời gian chạy và cho cùng số thời gian. Mọi lần chạy phía sau các số này đều khớp SPMF Eclat hoàn toàn.
 
 So với SPMF, các điểm mạnh và yếu dưới đây dựa trên hành vi đã đo, vì nhóm chưa đọc mã
 nguồn SPMF nên không gán nguyên nhân bên trong SPMF. Về điểm mạnh, chi phí theo giao
@@ -354,15 +354,13 @@ số khởi động 0{,}19 đến 0{,}22\,s thấp hơn 0{,}48 đến 0{,}52\,s 
 khai thác chỉ tăng 1{,}8 lần khi độ dài giao dịch tăng từ 5 lên 40, vì phép giao bitset có
 chi phí 157 từ ở mọi độ dài (mục~\ref{sec:width}), còn thời gian lạnh của SPMF Eclat tăng
 21 lần. Về điểm yếu, tại Mushroom 0{,}05, điểm duy nhất bản tối ưu chậm hơn PrePost+
-(1{,}445 so với 1{,}378\,s), 98\% lượt chạy là đầu ra và riêng bước sắp xếp chiếm 32\%
+(1{,}445 so với 1{,}378\,s), 98\% lượt chạy là đầu ra và riêng bước sắp xếp chiếm 33\%
 số mẫu, trong khi SPMF ghi theo thứ tự khai thác nên không phải sắp xếp. Bộ nhớ chỉ so
-được giữa bản cơ bản và bản tối ưu (giảm từ 11{,}0\% đến 34{,}7\%), chưa có số đo so với
-SPMF. Lần kiểm chứng đầu của Phat mất 12 phép đối chiếu vì hết bộ nhớ ở Accidents và
-Retail 1\%, cho thấy áp lực bộ nhớ ở các điểm đó nhưng không cho biết chương trình nào cần
-nhiều hơn.
+được giữa bản cơ bản và bản tối ưu (giảm từ 11{,}0\% đến 34{,}4\%, mục~\ref{sec:exact-memory}),
+chưa có số đo so với SPMF.
 
 \paragraph{Đề xuất 1: kho số nguyên phẳng và dựng bố cục dọc bằng mảng.}
-\emph{Nút thắt.} Bố cục chiếm 99\% lượt chạy ở Accidents và Retail 0{,}01, và là thứ mà
+\emph{Nút thắt.} Bố cục chiếm 98\% đến 99\% lượt chạy ở Accidents và Retail 0{,}01, và là thứ mà
 hệ số góc của Hung và peak RSS của Phat đo. \texttt{count\_items} băm từng lần xuất hiện
 của item vào một \texttt{Dict}, \texttt{bitset\_tidsets} tra từng lần xuất hiện trong một
 \texttt{Dict} thứ hai, và bộ đọc cấp phát một \texttt{Vector} 8 byte mỗi item cho từng
@@ -371,9 +369,10 @@ vectơ vị trí, đếm item và ánh xạ item sang hạng bằng mảng đán
 đặt bit từ mảng đó; mã item vượt một ngưỡng vẫn dùng \texttt{Dict}. Phần tìm kiếm không
 đổi. \emph{Lợi ích kỳ vọng.} Một bản thử nhỏ thay hai lượt \texttt{Dict} bằng tra mảng
 trên cùng CSDL: trên Accidents 0{,}65 hai bước giảm từ 0{,}177 xuống 0{,}062\,s (nhanh
-hơn 2{,}9 lần), tiết kiệm 22\% lượt chạy, còn trên Retail 0{,}001 là 10\% và trên
-T10I4D100K 0{,}00025 là 1\%. Dự đoán kiểm chứng được là hệ số góc của Hung trên Accidents
-giảm khoảng 22\%, và các điểm bị phép giao chi phối không đổi. CSDL Accidents chiếm
+hơn 2{,}9 lần), tiết kiệm 28\% lượt chạy (22\% ở một lần đo khác của hồ sơ, vì số giây
+dao động đến 25\% giữa các lần chạy), còn trên Retail 0{,}001 là 11\% và trên
+T10I4D100K 0{,}00025 là 2\%. Dự đoán kiểm chứng được là hệ số góc của Hung trên
+Accidents giảm khoảng một phần tư, và các điểm bị phép giao chi phối không đổi. CSDL Accidents chiếm
 105\,MiB dưới dạng \texttt{Vector\{Vector\{Int\}\}}, 46\,MiB dạng \texttt{Int32} phẳng và
 23\,MiB dạng \texttt{UInt16} (mã lớn nhất là 468), tức giảm 59 đến 82\,MiB trên 313{,}4\,MiB
 peak RSS. \emph{Đánh đổi.} CLI có thêm một đường đọc và một bộ dựng bố cục song song với
@@ -385,8 +384,8 @@ tỉ lệ bố cục, hệ số góc và peak RSS, và chỉ giữ thay đổi n
 kế hoạch của Hung (tăng ít nhất 10\% ở điểm nhắm tới, không suy giảm quá 10\% nơi khác).
 
 \paragraph{Đề xuất 2: thứ tự đầu ra theo thứ tự tìm kiếm.}
-\emph{Nút thắt.} Ở Chess 0{,}6, Mushroom 0{,}1 và 0{,}05, đầu ra chiếm 88\% đến 98\% số
-mẫu và sắp xếp từ điển chiếm 31\% đến 34\%. Trên BBQ, bước sắp xếp ở Mushroom 0{,}05 tốn
+\emph{Nút thắt.} Ở Chess 0{,}6, Mushroom 0{,}1 và 0{,}05, đầu ra chiếm 82\% đến 98\% số
+mẫu và sắp xếp từ điển chiếm 25\% đến 34\%. Trên BBQ, bước sắp xếp ở Mushroom 0{,}05 tốn
 0{,}30\,s trong 1{,}445\,s, và in theo thứ tự lưu trữ rẻ hơn 0{,}18\,s so với in theo thứ
 tự đã sắp. \emph{Thay đổi.} Thêm tùy chọn \texttt{order=:search} cho \texttt{write\_itemsets}
 và \texttt{--order search} cho \texttt{demo.jl}: ghi các itemset theo thứ tự lưu trữ và bỏ
@@ -394,7 +393,7 @@ sắp xếp. Mặc định vẫn là thứ tự từ điển, phần tìm kiếm
 \emph{Lợi ích kỳ vọng.} Ở Mushroom 0{,}05 thời gian CLI giảm từ 1{,}445\,s xuống khoảng
 1{,}15\,s (chỉ bỏ sắp xếp) đến 0{,}97\,s (bỏ cả chi phí đọc không tuần tự), nên tỉ số $R$
 so với PrePost+ giảm từ 1{,}05 xuống 0{,}83 đến 0{,}70. Ở Chess 0{,}6 và Mushroom 0{,}1 dự
-đoán giảm 31\% đến 34\% lượt chạy, còn các điểm thưa không đổi. \emph{Đánh đổi.} Tệp theo
+đoán giảm 25\% đến 34\% lượt chạy, còn các điểm thưa không đổi. \emph{Đánh đổi.} Tệp theo
 thứ tự tìm kiếm không còn so sánh từng byte giữa các biến thể và các lần chạy khác mã,
 điều hợp đồng \texttt{docs/interface.md} dùng thứ tự cố định để bảo đảm. Bộ so sánh đọc
 cả hai tệp thành bản đồ nên không bị ảnh hưởng. Đợt đo chấm điểm phải ghi thứ tự đã dùng,
@@ -407,7 +406,7 @@ Mushroom 0{,}05 vẫn từ 1{,}0 trở lên.
 
 Nhóm không đề xuất ba hướng khác. Biểu diễn thích nghi và dừng sớm đã có, và bảng trên
 cho thấy phép giao chỉ chi phối ở T10I4D100K 0{,}00025, nơi chuyển bitset sang danh sách
-chiếm 16\% số mẫu so với 50\% của hai loại phép giao. Diffset thua hoặc hòa ở mọi điểm
+chiếm 15\% số mẫu so với 50\% của hai loại phép giao. Diffset thua hoặc hòa ở mọi điểm
 thử. Tìm kiếm song song theo lớp tương đương chưa có số đo về cách công việc phân bố giữa
 các lớp gốc, nên bằng chứng ở đây không ủng hộ cũng không bác bỏ. Giới hạn: hồ sơ
 chạy trên một máy Windows, ở trạng thái đã khởi động, chỉ cho đường CLI của bản tối ưu, và
