@@ -61,17 +61,9 @@ julia --project=. tools/spmf/compare.jl data/toy/spmf/baskets-0.5.txt results/pa
 
 ## Run on Colab
 
-`notebooks/demo.ipynb` runs on Colab's native Julia kernel, so it calls the package directly without a Python wrapper.
+Open the [public Colab notebook](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb) on a Python CPU runtime and select **Run all**. It checks out an exact commit, verifies Julia 1.13.2, Java 25 and the SPMF JAR, then runs every Julia demo cell. The last cell shows Semeion examples and gives the evidence ZIP path.
 
-Open the [public Colab notebook](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo.ipynb). To reproduce the report's seeded codebook, use Julia 1.13.2. The [CLI runner](notebooks/README.md#run-through-the-colab-cli) verifies the archive hash before installing Julia.
-
-The [13 November hosted verification](docs/phat-application2-colab-2026-11-13.md) records the tested revision, complete cell run, environment and image-map comparisons.
-
-1. Export the committed tree with `git archive --format=zip --output=../Itemset-colab.zip HEAD`.
-2. Open the notebook in [Google Colab](https://colab.research.google.com/) and select Runtime, Change runtime type, Julia.
-3. Upload the ZIP through the Files sidebar to `/content/Itemset-colab.zip` and run all cells.
-
-If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Julia 1.12.6) or newer. See [Colab runtime versions](https://research.google.com/colaboratory/runtime-version-faq.html). [notebooks/README.md](notebooks/README.md) covers the other source options.
+The [notebook guide](notebooks/README.md) explains how to pin a revision, inspect the evidence and run the original Julia cells directly.
 
 ## Layout
 
@@ -85,7 +77,7 @@ If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Juli
 - `experiments/`: the benchmark measurement protocol and result fields.
 - `tools/spmf/`: the procedure for independent SPMF reference runs.
 - `results/`: raw runs and figures, kept out of Git.
-- `notebooks/demo.ipynb`: the Colab demo.
+- `notebooks/colab.ipynb`: the Colab entry point for the Julia cells in `notebooks/demo.ipynb`.
 - `docs/report/`: the Vietnamese IEEE-format report, exported as `docs/Report.pdf`.
 
 ## Reproducibility

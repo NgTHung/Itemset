@@ -18,6 +18,7 @@ JULIA_URL = "https://julialang-s3.julialang.org/bin/linux/x64/1.13/julia-1.13.2-
 JULIA_SHA = "2ecdfc9890ab0a565fdd92404c915ba2a04a933dbd5d292cc224d13819d17d07"
 JAVA_URL = "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jre_x64_linux_hotspot_25.0.5_8.tar.gz"
 JAVA_SHA = "6fac98f0c8202efc3135a9e9e42aa61963ec42d1c5cbb40caf231e7b14a24ef6"
+SPMF_URL = "https://github.com/philfv9/spmf-software/releases/download/spmf2.67/spmf.jar"
 SPMF_SHA = "4aa468384693b2016b457ea310a08cc24aa83abd42d3169ad65b9027778dfe6a"
 
 
@@ -44,6 +45,15 @@ def install_archive(url, expected, parent, name):
             raise ValueError(f"archive has multiple roots: {archive}")
         package.extractall(destination, filter="data")
     return destination / roots.pop()
+
+
+def prepare_spmf(jar, destination):
+    if jar is None:
+        urllib.request.urlretrieve(SPMF_URL, destination)
+        verify_file(destination, SPMF_SHA)
+    else:
+        verify_file(jar, SPMF_SHA)
+        shutil.copy2(jar, destination)
 
 
 def notebook_script(notebook, evidence):
@@ -110,8 +120,7 @@ def execute(args):
         julia_root = install_archive(JULIA_URL, JULIA_SHA, evidence, "julia-runtime")
         java_root = install_archive(JAVA_URL, JAVA_SHA, evidence, "java-runtime")
         julia, java = julia_root / "bin/julia", java_root / "bin/java"
-        verify_file(args.spmf_jar, SPMF_SHA)
-        shutil.copy2(args.spmf_jar, root / "tools/spmf/spmf.jar")
+        prepare_spmf(args.spmf_jar, root / "tools/spmf/spmf.jar")
         record.update(julia_archive_sha256=JULIA_SHA, java_archive_sha256=JAVA_SHA,
                       spmf_sha256=SPMF_SHA,
                       julia_version=subprocess.check_output([julia, "--version"], text=True).strip(),
@@ -149,7 +158,7 @@ def execute(args):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--revision", default=os.environ.get("ITEMSET_REVISION"))
-    parser.add_argument("--spmf-jar", default="/content/itemset-spmf.jar")
+    parser.add_argument("--spmf-jar", help="Use a local copy of the pinned JAR instead of downloading it")
     parser.add_argument("--root", default="/content/Itemset-cleanrun")
     parser.add_argument("--evidence", default="/content/itemset-cleanrun-evidence")
     return execute(parser.parse_args(argv))

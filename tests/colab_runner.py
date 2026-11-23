@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 spec = importlib.util.spec_from_file_location("colab_runner", Path(__file__).parents[1] / "scripts/run_colab_notebook.py")
@@ -12,7 +13,6 @@ spec.loader.exec_module(runner)
 
 class RunnerTests(unittest.TestCase):
     def test_explicit_arguments_ignore_jupyter_kernel_flags(self):
-        from unittest.mock import patch
         with patch("sys.argv", ["ipykernel", "-f", "kernel.json"]), patch.object(runner, "execute", return_value=0) as execute:
             self.assertEqual(runner.main(["--revision", "a" * 40]), 0)
             self.assertEqual(execute.call_args.args[0].revision, "a" * 40)
@@ -25,6 +25,18 @@ class RunnerTests(unittest.TestCase):
             path.write_bytes(b"altered")
             with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
                 runner.verify_file(path, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+
+    def test_public_spmf_download_requires_the_pinned_hash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "spmf.jar"
+
+            def download(url, path):
+                self.assertEqual(url, runner.SPMF_URL)
+                path.write_bytes(b"replacement")
+
+            with patch.object(runner.urllib.request, "urlretrieve", side_effect=download):
+                with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
+                    runner.prepare_spmf(None, destination)
 
     def test_exact_cells_in_source_order(self):
         with tempfile.TemporaryDirectory() as directory:
