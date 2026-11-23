@@ -35,6 +35,7 @@ def verify_file(path, expected):
 
 def install_archive(url, expected, parent, name):
     archive = parent / (name + ".tar.gz")
+    print(f"Downloading {name}", flush=True)
     urllib.request.urlretrieve(url, archive)
     verify_file(archive, expected)
     destination = parent / name
@@ -49,6 +50,7 @@ def install_archive(url, expected, parent, name):
 
 def prepare_spmf(jar, destination):
     if jar is None:
+        print("Downloading pinned SPMF JAR", flush=True)
         urllib.request.urlretrieve(SPMF_URL, destination)
         verify_file(destination, SPMF_SHA)
     else:
@@ -129,9 +131,11 @@ def execute(args):
         record["notebook_sha256"] = file_sha(notebook)
         script, identifiers = notebook_script(notebook, evidence)
         artifact_manifest = evidence / "notebook-artifacts.toml"
+        # Keep the caches from the verified Julia archive and isolate the writable user depot.
+        depot_path = str(root.parent / (root.name + "-depot")) + os.pathsep
         env = dict(os.environ, ITEMSET_ROOT=str(root), ITEMSET_JAVA=str(java),
                    ITEMSET_ARTIFACT_MANIFEST=str(artifact_manifest),
-                   JULIA_NUM_THREADS="1", JULIA_DEPOT_PATH=str(root.parent / (root.name + "-depot")))
+                   JULIA_NUM_THREADS="1", JULIA_DEPOT_PATH=depot_path)
         env["PATH"] = str(java.parent) + os.pathsep + env.get("PATH", "")
         run([str(julia), "--startup-file=no", "--project=.", str(script)], evidence, cwd=root, env=env)
         collect_artifacts(artifact_manifest, evidence)
