@@ -62,6 +62,12 @@ Compare CLI `process` rows for end-to-end cost. The worker's own reporting code 
 
 Repeats run in separate processes, interleaved across variants and revisions. `runs.csv` preserves each sample and repeat identity. `summary.csv` reports medians, linearly interpolated IQRs, sorted samples, maximum process RSS, median allocations and GC time, and failure counts. It excludes failed or unverified samples from statistics without removing their counts. `gate_eligible` requires five exact samples and no failures; it does not establish the speed or memory targets. Development screens with three repeats cannot pass the scored gate.
 
+`scripts/stage_profile.jl` explains where the optimized CLI path spends its time, which the process timing above cannot show. It times the read, mine, and write stages in one warm process and samples the same passes with the profiler, grouping samples by the package function they run in. It reports shares of the pass, not scored times, so it needs no SPMF run:
+
+```sh
+julia --startup-file=no --project=. scripts/stage_profile.jl --out results/raw/stage-profile --repeats 5 experiments/configs/stage-profile.toml
+```
+
 ## Memory
 
 Peak memory is the OS-measured peak resident set size of the measured process in bytes, not Julia's allocation count, because only RSS is comparable with the Java process. `experiments/measure.jl` reads `PeakWorkingSetSize` on Windows and `getrusage(RUSAGE_CHILDREN)` on Linux and macOS, and each row names the tool. Measure the baseline and optimized variants at the same medium minsup.
