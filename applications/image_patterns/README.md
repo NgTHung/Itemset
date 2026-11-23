@@ -33,6 +33,25 @@ The output directory must not exist. `patterns-<minsup>.txt` holds complete base
 
 The runner selects the most supported singleton, most supported combination, and longest pattern, resolving ties by support then item IDs. `selected_patterns.tsv` records support and per-digit counts. `examples.tsv` and `example_patches.tsv` trace displayed source images and their actual accepted patches. The SVGs show up to three matches and three nonmatches; comparisons prefer the first match's digit label, then word overlap and source ID. Blue rectangles locate accepted patches in the original image. Missing words are labeled explicitly. The [Julia notebook](../../notebooks/demo.ipynb) displays these comparisons.
 
+## Reproduce the sensitivity study
+
+Run the miner for each vocabulary size. Every run records the itemset count and
+integer support threshold in `thresholds.tsv`. The encoding command also accepts
+`--vocabulary-size` for inspecting a codebook without mining.
+
+```sh
+for k in 16 24 32; do
+  julia --startup-file=no --project=. scripts/mine_image_patterns.jl data/raw/semeion/semeion.data "results/raw/semeion-k$k" --vocabulary-size "$k" --minsup '0.20,0.10,0.06,0.055,0.05'
+done
+uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_image_evidence.py data/raw/semeion/semeion.data results/raw/semeion-k24 results/figures/semeion-source-contrast.png
+```
+
+`manifest.toml` records each vocabulary's empty-transaction count. The figure
+verifies the original pixels, digit labels, and accepted patches before drawing
+images 44 and 41 from the run with a vocabulary of 24 words.
+
+`label_frequencies.tsv` gives each pattern's support, full denominator, fraction and all supporting source IDs per digit, including empty images in the denominator. `pattern_label_summary(images, transactions, itemset)` produces those rows. `itemset_features(transactions, patterns)` returns a binary image-by-pattern matrix in the supplied column order. A feature is true only when every word in the pattern occurs. Fit the codebook and mine the pattern list on training images before transforming held-out images. The all-data mining run is descriptive.
+
 ## Deliverables
 
 - Frequent visual-word sets with representative patches and supporting images.
