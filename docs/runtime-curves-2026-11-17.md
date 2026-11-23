@@ -46,6 +46,7 @@ The first command prints the geometric mean of each ratio per dataset and writes
 - Output counts agree across the four programs and with the earlier cohorts, and the SHA-256 of the five datasets equals theirs.
 - Within the run, the interquartile range over the median is at most 2.9% for the baseline, 1.9% for the optimized variant, 11.3% for SPMF, and 13.9% for PrePost+.
 - Across sessions, PrePost+ runs the same Java command in every cohort, so it measures drift. Against the cohorts of 2026-10-31, 2026-11-09, and 2026-11-12 the geometric mean of its time ratio is 1.030, 1.019, and 0.977, at most 14.4% at one point. The optimized variant against the 2026-11-12 run at the same revision has a geometric mean of 0.985 and at most 5.6% at one point.
+- The four programs run in one session, so a ratio between two of them has only the noise within the run. The report calls a ratio real when it exceeds the sum of the two largest interquartile ranges: about 5% between the Julia variants and about 16% when one side is a Java program. The drift between sessions applies only to a comparison with another cohort.
 
 ## Limits
 
