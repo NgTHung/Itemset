@@ -71,9 +71,34 @@ class NotebookTest(unittest.TestCase):
         for expected in ("[1, 2, 3]", "3 // 4", "21 // 16", "minconf=0.76", "@assert"):
             with self.subTest(expected=expected):
                 self.assertIn(expected, text)
-        # The same numbers appear in the project's rule tests, so the notebook and the suite agree.
+        # The Julia suite asserts the same case as real tests, which CI runs, so a change of the rule code
+        # fails there and the notebook cell is only a view of it.
         rules_test = (ROOT / "tests" / "market_basket_rules.jl").read_text(encoding="utf-8")
-        self.assertIn("confidence 3/4, lift 21/16", rules_test)
+        self.assertIn('@testset "A seven-basket case worked out by hand"', rules_test)
+        for expected in ("21 // 16", "3 // 4", "(9, 3)"):
+            with self.subTest(in_rules_test=expected):
+                self.assertIn(expected, rules_test)
+
+    def test_the_runtime_cell_asks_for_the_ratios_of_the_record(self):
+        text = {cell["id"]: source(cell) for cell in load()}["itemset-7d"]
+        record = (ROOT / "docs" / "runtime-curves-2026-11-17.md").read_text(encoding="utf-8")
+        for ratio in ("Baseline/Optimized", "SPMF/Optimized", "PrePost/Optimized", "Baseline/PrePost"):
+            with self.subTest(ratio=ratio):
+                self.assertIn(f'"--ratio", "{ratio}"', text)
+                self.assertIn(f"--ratio {ratio}", record)
+        for label in ("Baseline=", "Optimized=", "SPMF=", "PrePost="):
+            self.assertIn(f'"{label}$run_dir', text)
+
+    def test_an_empty_runtime_variable_counts_as_unset(self):
+        text = {cell["id"]: source(cell) for cell in load()}["itemset-7d"]
+        self.assertIn('configured = get(ENV, "ITEMSET_RUNTIME_RUN", "")', text)
+        self.assertIn("isempty(configured)", text)
+
+    def test_the_stage_profile_writes_where_the_documented_command_does(self):
+        text = {cell["id"]: source(cell) for cell in load()}["itemset-7f"]
+        self.assertIn('"results", "raw", "stage-profile"', text)
+        self.assertNotIn("results\", \"figures\", \"stage-profile", text)
+        self.assertIn("results/raw/stage-profile", (ROOT / "experiments" / "README.md").read_text(encoding="utf-8"))
 
     def test_the_runtime_cell_defaults_to_the_committed_cohort(self):
         by_id = {cell["id"]: source(cell) for cell in load()}
