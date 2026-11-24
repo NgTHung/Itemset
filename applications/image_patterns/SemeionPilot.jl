@@ -207,7 +207,7 @@ end
 Return the 1-based image positions whose transactions contain every item.
 The input itemset must be nonempty.
 """
-function supporting_images(transactions::AbstractVector{<:AbstractVector{Int}}, itemset)
+function supporting_images(transactions, itemset)
     isempty(itemset) && throw(ArgumentError("itemset must be nonempty"))
     [index for (index, transaction) in enumerate(transactions)
      if all(item -> item in transaction, itemset)]
@@ -353,6 +353,7 @@ end
 include("encoding.jl")
 include("encoding_artifacts.jl")
 include("mining.jl")
+include("analysis.jl")
 include("mining_visuals.jl")
 
 end
