@@ -9,65 +9,125 @@ function stage_test_busy(seconds)
     return total
 end
 
+frames(names...) = [(Symbol(name), :unknown_file) for name in names]
+info(group, read=false) = Experiments.IPInfo(group, read)
+
 @testset "Stage profile of the optimized CLI path" begin
     @testset "A stack goes to the group of its innermost known function" begin
         group = Experiments.stage_group
-        @test group([:intersect_bitsets!, :join_members!, :eclat_search!]) == "bitset joins"
-        @test group([:getindex, :count_items, :mine_optimized]) == "item counts"
+        @test group(frames("intersect_bitsets!", "join_members!", "eclat_search!")) == "bitset joins"
+        @test group(frames("getindex", "count_items", "mine_optimized")) == "item counts"
         # The innermost frame wins, so a sort called from the writer counts as the sort.
-        @test group([:sort!, :lexicographic_order, :write_itemsets]) == "sort"
-        @test group([:put_digits!, :print_packed, :write_itemsets]) == "format"
-        @test group([:jl_gc_collect, :mine_packed]) == "other"
-        @test group(Symbol[]) == "other"
+        @test group(frames("sort!", "lexicographic_order", "write_itemsets")) == "sort"
+        @test group(frames("put_digits!", "print_packed", "write_itemsets")) == "format"
+        @test group(frames("jl_gc_collect", "mine_packed")) == "other"
+        @test group(Tuple{Symbol,Symbol}[]) == "other"
         # A name that only starts like a listed one is not that function.
-        @test group([:intersect_bitsets_copy]) == "other"
+        @test group(frames("intersect_bitsets_copy")) == "other"
+    end
+
+    @testset "Expanding a node is not formatting, and the reader's check is reading" begin
+        group = Experiments.stage_group
+        # write_itemset! copies one itemset into the node result; the SPMF writer never calls it.
+        @test group(frames("write_itemset!", "write_subsets!", "expand_nodes")) == "expand"
+        @test group(frames("is_canonical", "canonical_database", "mine_packed")) == "canonical check"
+        @test group(frames("is_canonical", "canonical_copy", "read_transactions")) == "read"
+        @test group(frames("is_canonical", "read_transactions", "cli_main")) == "read"
+    end
+
+    @testset "A method is told apart by its file when its name is shared" begin
+        group = Experiments.stage_group
+        method(file) = [(:may_be_frequent, Symbol(file)), (:mine_optimized, Symbol("eclat_optimized.jl"))]
+        @test group(method("pair_counts.jl")) == "pair counts"
+        @test group(method("block_counts.jl")) == "block counts"
+        @test group(method("elsewhere.jl")) == "other"
     end
 
     @testset "Every listed name is a function the package defines, once" begin
         defined = Set(names(ItemsetMining; all=true, imported=false))
-        listed = [Symbol(name) for (_, group) in Experiments.STAGE_GROUPS for name in group]
-        for name in listed
-            @test name in defined
+        sources = joinpath(dirname(pathof(ItemsetMining)), "algorithm")
+        listed = String[name for (_, group) in Experiments.STAGE_GROUPS for name in group]
+        for entry in listed
+            name, file = occursin('@', entry) ? split(entry, '@') : (entry, "")
+            @test Symbol(name) in defined
+            isempty(file) || @test isfile(joinpath(sources, file))
         end
         @test allunique(listed)
         @test allunique(first.(Experiments.STAGE_GROUPS))
         @test !any(label -> label == "other", first.(Experiments.STAGE_GROUPS))
     end
 
+    @testset "A sample takes the first group on its stack, and reading overrides it" begin
+        block_group = Experiments.block_group
+        @test block_group([info(nothing), info("bitset joins"), info("search")]) == "bitset joins"
+        @test block_group([info(nothing), info(nothing)]) == "other"
+        @test block_group(Experiments.IPInfo[]) == "other"
+        @test block_group([info("canonical check"), info(nothing, true)]) == "read"
+        info_of = Experiments.ip_info
+        @test info_of(frames("count_items", "mine")) == info("item counts")
+        @test info_of(frames("is_canonical", "read_transactions")) == info("canonical check", true)
+    end
+
     @testset "Counts and shares" begin
-        stacks = [[:intersect_bitsets!], [:intersect_bitsets!], [:count_items], [:mystery]]
-        counts = Experiments.stage_counts(stacks)
+        counts = Experiments.stage_counts(["bitset joins", "bitset joins", "item counts", "other"])
         @test counts["bitset joins"] == 2 && counts["item counts"] == 1 && counts["other"] == 1
-        @test sum(values(counts)) == length(stacks)
+        @test sum(values(counts)) == 4
         shares = Experiments.stage_shares(counts)
         @test shares["bitset joins"] == 0.5 && shares["item counts"] == 0.25 && shares["other"] == 0.25
         @test sum(values(shares)) ≈ 1
-        none = Experiments.stage_shares(Experiments.stage_counts(Vector{Symbol}[]))
+        none = Experiments.stage_shares(Experiments.stage_counts(String[]))
         @test all(iszero, values(none))
         @test keys(none) == keys(shares)
     end
 
-    @testset "Only the samples of the running thread count" begin
+    @testset "Only the samples of the running thread count, found by their index range" begin
         # Two samples of thread 1 around one sample of thread 2, in the layout of Profile.fetch:
         # the pointers, then thread, task, clock, sleep state, and two zeros.
         data = UInt[11, 12, 1, 7, 100, 1, 0, 0,
                     21, 2, 8, 101, 2, 0, 0,
                     31, 1, 7, 102, 2, 0, 0]
-        @test Experiments.thread_blocks(data, 1) == [UInt[11, 12], UInt[31]]
-        @test Experiments.thread_blocks(data, 2) == [UInt[21]]
+        @test Experiments.thread_blocks(data, 1) == [1:2, 16:16]
+        @test Experiments.thread_blocks(data, 2) == [9:9]
         @test isempty(Experiments.thread_blocks(data, 3))
         # A sample that sleeps on the running thread is kept, since the wait is part of the run.
-        @test UInt[31] in Experiments.thread_blocks(data, 1)
+        @test 16:16 in Experiments.thread_blocks(data, 1)
         @test isempty(Experiments.thread_blocks(UInt[], 1))
         @test_throws ArgumentError Experiments.thread_blocks(UInt[1, 2, 3], 1)
     end
 
-    @testset "A real profile holds the running thread's work" begin
-        stacks = Experiments.with_profiler() do
-            Experiments.profile_stacks(() -> stage_test_busy(0.3))
+    @testset "A metadata layout that shifted is an error, not wrong shares" begin
+        # The thread field holds a clock value, as it would if the fields moved by one place.
+        shifted = UInt[11, 12, 123_456_789_012, 1, 7, 1, 0, 0]
+        err = try
+            Experiments.thread_blocks(shifted, 1)
+            nothing
+        catch e
+            e
         end
-        @test length(stacks) > 50
-        @test count(s -> :stage_test_busy in s, stacks) >= 0.8 * length(stacks)
+        @test err isa ArgumentError && occursin("layout", err.msg)
+        @test_throws ArgumentError Experiments.thread_blocks(UInt[11, 12, 99_999_999, 7, 100, 1, 0, 0], 1)
+    end
+
+    @testset "A real profile holds the running thread's work" begin
+        counts = Experiments.with_profiler() do
+            Experiments.profile_counts(() -> stage_test_busy(0.3))
+        end
+        total = sum(values(counts))
+        @test total > 10
+        @test counts["other"] >= 0.8 * total
+    end
+
+    @testset "A full profiler buffer is an error that names the point" begin
+        err = try
+            Experiments.with_profiler(; n=1_000, delay=0.0005) do
+                Experiments.profile_counts(() -> stage_test_busy(0.3); label="busy at 0.5")
+            end
+            nothing
+        catch e
+            e
+        end
+        @test err isa ArgumentError
+        @test occursin("buffer", err.msg) && occursin("busy at 0.5", err.msg)
     end
 
     @testset "The profiler settings are restored" begin
@@ -84,9 +144,9 @@ end
     @testset "Rows for a configured experiment" begin
         mktempdir() do dir
             manifest, data = toy_benchmark(dir)
-            config = toy_config(; series=[Dict("dataset" => "baskets", "minsup" => [0.5, 0.75])])
+            config = toy_config(; series=[Dict("dataset" => "baskets", "minsup" => [0.5, 0.75])], repeats=2)
             before = Profile.init()
-            rows = Experiments.stage_profile_rows(config, manifest, data; repeats=2)
+            rows = Experiments.stage_profile_rows(config, manifest, data)
             @test Profile.init() == before
             @test [(r.dataset, r.minsup_relative, r.minsup_count) for r in rows] ==
                   [("baskets", "0.75", 3), ("baskets", "0.5", 2)]
@@ -103,6 +163,13 @@ end
             @test_throws ArgumentError Experiments.stage_profile_rows(config, manifest, data; repeats=0)
             @test Profile.init() == before
         end
+    end
+
+    @testset "The repeats default to those of the configuration" begin
+        config = toy_config(; repeats=3)
+        @test Experiments.stage_repeats(config, nothing) == 3
+        @test Experiments.stage_repeats(config, 7) == 7
+        @test_throws ArgumentError Experiments.stage_repeats(config, 0)
     end
 
     @testset "Table file" begin
@@ -122,6 +189,7 @@ end
         config = Experiments.load_run_config(joinpath(dirname(@__DIR__), "experiments", "configs", "stage-profile.toml"))
         manifest = Experiments.load_manifest(joinpath(dirname(@__DIR__), "data", "benchmark", "manifest.toml"))
         @test !isempty(config.series)
+        @test config.repeats == 5
         @test all(s -> haskey(manifest, s.dataset), config.series)
     end
 end
@@ -164,14 +232,15 @@ end
             write(width_config, """
             name = "width"
             variants = ["optimized"]
-            repeats = 1
+            repeats = 2
             timeout_seconds = 60
             [[series]]
             dataset = "width-w03"
             minsup = [0.5]
             """)
             out = joinpath(dir, "width-out")
-            @test quiet(() -> StageProfileScript.main(["--out", out, "--repeats", "2", width_config]; data_dir=width_dir)) == 0
+            # No --repeats: the two repeats of the configuration apply.
+            @test quiet(() -> StageProfileScript.main(["--out", out, width_config]; data_dir=width_dir)) == 0
             rows = Experiments.read_csv_rows(joinpath(out, "stage-profile.csv"))
             database = Experiments.width_database(settings, 3)
             @test only(rows)["dataset"] == "width-w03"
