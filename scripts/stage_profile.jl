@@ -12,8 +12,8 @@ Usage:
 Time the read, mine, and write stages of the optimized CLI path at every dataset and minsup
 in CONFIG, such as experiments/configs/stage-profile.toml, and write DIR/stage-profile.csv. It
 also samples the same passes with the profiler and records the share of each part of the
-search, the root layout, and the output. The medians cover N warm passes (default 5), and the
-variants and repeats of CONFIG do not apply. It reads the verified files in data/benchmark and
+search, the root layout, and the output. The medians cover N warm passes, where N is --repeats or
+else the repeats of CONFIG, and the variants of CONFIG do not apply. It reads the verified files in data/benchmark and
 runs on one thread, so run it on a quiet machine. --manifest PATH names another manifest for the
 files in data/benchmark, such as experiments/configs/width-manifest.toml.
 """
@@ -27,7 +27,7 @@ function main(args; data_dir::AbstractString=DATA_DIR)
     isfile(args.config) || throw(ArgumentError("CONFIG $(args.config) does not exist"))
     isfile(args.manifest) || throw(ArgumentError("manifest $(args.manifest) does not exist"))
     rows = stage_profile_rows(load_run_config(args.config), load_manifest(args.manifest), data_dir;
-                              repeats=something(args.repeats, 5))
+                              repeats=args.repeats)
     mkpath(args.out)
     write_stage_profile(joinpath(args.out, "stage-profile.csv"), rows)
     for r in rows

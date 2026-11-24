@@ -20,27 +20,27 @@ The brief asks for at least two concrete next optimizations, based on the weakne
 
 | Point | Itemsets | Pass s | Read | Mine | Write | Layout | Pair counts | Joins | Output |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| chess 0.6 | 254,944 | 0.077 | 2% | 38% | 61% | 4% | 0% | 14% | 82% |
-| mushroom 0.1 | 574,431 | 0.163 | 1% | 21% | 78% | 3% | 0% | 1% | 96% |
-| mushroom 0.05 | 3,755,511 | 1.036 | 0% | 13% | 86% | 1% | 0% | 0% | 98% |
-| retail 0.01 | 159 | 0.048 | 38% | 62% | 0% | 98% | 1% | 1% | 0% |
-| retail 0.001 | 7,589 | 0.148 | 13% | 87% | 1% | 50% | 46% | 3% | 1% |
-| T10I4D100K 0.01 | 385 | 0.073 | 26% | 74% | 0% | 68% | 32% | 0% | 0% |
-| T10I4D100K 0.00025 | 96,959 | 0.570 | 4% | 94% | 3% | 12% | 7% | 76% | 5% |
-| accidents 0.95 | 15 | 0.385 | 56% | 44% | 0% | 99% | 0% | 0% | 0% |
-| accidents 0.65 | 1,093 | 0.417 | 51% | 49% | 0% | 99% | 0% | 0% | 0% |
+| chess 0.6 | 254,944 | 0.079 | 2% | 40% | 58% | 3% | 0% | 15% | 82% |
+| mushroom 0.1 | 574,431 | 0.175 | 2% | 19% | 79% | 3% | 0% | 1% | 96% |
+| mushroom 0.05 | 3,755,511 | 1.130 | 0% | 14% | 85% | 0% | 0% | 1% | 98% |
+| retail 0.01 | 159 | 0.060 | 41% | 58% | 0% | 100% | 0% | 0% | 0% |
+| retail 0.001 | 7,589 | 0.175 | 14% | 85% | 1% | 59% | 37% | 3% | 1% |
+| T10I4D100K 0.01 | 385 | 0.088 | 28% | 72% | 0% | 68% | 32% | 0% | 0% |
+| T10I4D100K 0.00025 | 96,959 | 0.571 | 4% | 94% | 2% | 13% | 6% | 76% | 4% |
+| accidents 0.95 | 15 | 0.496 | 56% | 44% | 0% | 99% | 0% | 0% | 0% |
+| accidents 0.65 | 1,093 | 0.393 | 50% | 49% | 0% | 99% | 0% | 0% | 0% |
 
-Read, Mine, and Write are shares of the timed pass. The last four columns are shares of the profiler samples, which cost time of their own, so the two views differ by a few points. Two runs of the profile gave 0.524 and 0.417 s for Accidents 0.65, so the seconds move by up to 25% between runs on this machine, and the shares are the steadier figures. Chess 0.9 and Mushroom 0.5 take 3 to 4 ms, too short to sample. Their 0.21 s on BBQ is process start-up.
+Read, Mine, and Write are shares of the timed pass. The last four columns are shares of the profiler samples, which cost time of their own, so the two views differ by a few points. Three runs of the profile gave 0.524, 0.417, and 0.393 s for Accidents 0.65, so the seconds move by up to 25% between runs on this machine, and the shares are the steadier figures. Chess 0.9 and Mushroom 0.5 take 3 to 4 ms, too short to sample. Their 0.21 s on BBQ is process start-up.
 
 Intersections, the core operation of Eclat, dominate at one point, T10I4D100K 0.00025. Output dominates the three dense points, and building the vertical layout and counting pairs dominates the other five. At Accidents the search takes under 1% of the pass.
 
 ### Scalability
 
-Hung's BBQ run of the four contenders on nested subsets of Accidents and Retail (`docs/bbq-scalability-runtime-2026-11-19.md` on branch `dat-21-scalability`, DAT-21) fits time as `a + bN`, with R² of at least 0.992. On Accidents the optimized CLI has `a = 0.188 s` and `b = 0.195 s` per 100,000 transactions, against 0.544 for PrePost+, 1.896 for the baseline, and 8.015 for SPMF Eclat. The output stays near 1,100 itemsets at every size, so the slope is the cost of reading and laying out the database. On Retail `b` is 0.182 for the optimized CLI, 0.685 for SPMF Eclat, and 3.510 for PrePost+.
+Hung's BBQ run of the four contenders on nested subsets of Accidents and Retail ([bbq-scalability-runtime-2026-11-19.md](https://github.com/NgTHung/Itemset/blob/4a4f7733daa29748468b33c9d181a103baa7280c/docs/bbq-scalability-runtime-2026-11-19.md) on branch `dat-21-scalability`, DAT-21) fits time as `a + bN`, with R² of at least 0.992. On Accidents the optimized CLI has `a = 0.188 s` and `b = 0.195 s` per 100,000 transactions, against 0.544 for PrePost+, 1.896 for the baseline, and 8.015 for SPMF Eclat. The output stays near 1,100 itemsets at every size, so the slope is the cost of reading and laying out the database. On Retail `b` is 0.182 for the optimized CLI, 0.685 for SPMF Eclat, and 3.510 for PrePost+.
 
 ### Output size
 
-Hung's count record (`docs/output-size-2026-11-19.md` on branch `dat-31-output-size`, DAT-31) reads the counts from the same cohort as the runtime record, run `bbq-all-variants-cli-5repeat-20261117T041922Z`, and checks that all four programs report the same count at all 33 thresholds. Its times for Retail 0.001 (baseline 12.59 s), Chess 0.6 (baseline 3.07 s), Mushroom 0.1 (optimized 0.41 s), and T10I4D100K 0.00025 (optimized 0.96 s) equal the ones in this record, so the two analyses cross-check each other. The dense datasets end at long itemsets. The mean length at the lowest minsup is 8.02 on Mushroom, 7.37 on Chess, and 4.00 on Accidents, against 2.07 on Retail and 3.10 on T10I4D100K, and the count grows 3 to 9 times faster on the log-log scale on the dense datasets (slopes of 5.23 to 14.33 against 1.55 to 1.68, so ratios of 5.23/1.68 to 14.33/1.55). The bytes the CLI formats grow with the count times the length, so the dense points are where output is the largest cost.
+Hung's count record ([output-size-2026-11-19.md](https://github.com/NgTHung/Itemset/blob/c1e41a72948eb9211090e049c616b6e4017f3ed7/docs/output-size-2026-11-19.md) on branch `dat-31-output-size`, DAT-31) reads the counts from the same cohort as the runtime record, run `bbq-all-variants-cli-5repeat-20261117T041922Z`, and checks that all four programs report the same count at all 33 thresholds. Its times for Retail 0.001 (baseline 12.59 s), Chess 0.6 (baseline 3.07 s), Mushroom 0.1 (optimized 0.41 s), and T10I4D100K 0.00025 (optimized 0.96 s) equal the ones in this record, so the two analyses cross-check each other. The dense datasets end at long itemsets. The mean length at the lowest minsup is 8.02 on Mushroom, 7.37 on Chess, and 4.00 on Accidents, against 2.07 on Retail and 3.10 on T10I4D100K, and the count grows 3 to 9 times faster on the log-log scale on the dense datasets (slopes of 5.23 to 14.33 against 1.55 to 1.68, so ratios of 5.23/1.68 to 14.33/1.55). The bytes the CLI formats grow with the count times the length, so the dense points are where output is the largest cost.
 
 ### Memory
 
@@ -58,12 +58,12 @@ The comparison rests on measured behavior. This record does not inspect SPMF's s
 - Start-up. The optimized intercept of 0.19 to 0.22 s is Julia start-up and package load. It is below the 0.48 to 0.52 s of PrePost+ and the 1.0 s of SPMF Eclat on Retail. SPMF Eclat's intercept on Accidents is negative, because its series bends upward, so it says nothing about start-up.
 - Width. The bitset join costs 157 words at every width of the synthetic databases, so mining grows 1.8 times, while SPMF Eclat's cold time grows 21 times over the same widths.
 - Work that is Eclat's own. At Retail 0.001 the baseline merges 2.17 billion tid-list elements and takes 12.59 s, while SPMF Eclat takes 1.57 s. The optimized variant avoids most of that work with pair counts and tid lists and takes 0.38 s.
-- Output. At Mushroom 0.05, the only required or stress point where PrePost+ is faster, the optimized CLI takes 1.445 s against 1.378 s ([BBQ record](bbq-io-emission-runtime-2026-11-09.md)). The profile puts 98% of that pass in output, and the sort alone is 32% of the samples. SPMF writes its output in mining order, so the CLI does a sort that the SPMF programs do not.
+- Output. At Mushroom 0.05, the only required or stress point where PrePost+ is faster, the optimized CLI takes 1.445 s against 1.378 s ([BBQ record](bbq-io-emission-runtime-2026-11-09.md)). The profile puts 98% of that pass in output, and the sort alone is 35% of the samples. SPMF writes its output in mining order, so the CLI does a sort that the SPMF programs do not.
 - Memory. Phat measured peak RSS for the baseline and the optimized variant only, so no number compares our memory with SPMF's.
 
 ## Proposal 1: a flat integer store and an array-indexed vertical layout
 
-Bottleneck. Layout is 99% of the pass at Accidents 0.95 and 0.65, 98% at Retail 0.01, 68% at T10I4D100K 0.01, and 50% at Retail 0.001. It is also what Hung's slope and Phat's Accidents peak RSS measure. `count_items` hashes every item occurrence into a `Dict{Int,Int}`, `bitset_tidsets` looks every occurrence up in a second `Dict`, `read_transactions` allocates one `Vector{Int}` per transaction at 8 bytes per item, and `canonical_database` scans each transaction again.
+Bottleneck. Layout is 99% of the pass at Accidents 0.95 and 0.65, 100% at Retail 0.01, 68% at T10I4D100K 0.01, and 59% at Retail 0.001. It is also what Hung's slope and Phat's Accidents peak RSS measure. `count_items` hashes every item occurrence into a `Dict{Int,Int}`, `bitset_tidsets` looks every occurrence up in a second `Dict`, `read_transactions` allocates one `Vector{Int}` per transaction at 8 bytes per item, and `canonical_database` scans each transaction again.
 
 Change. Read the database into one flat vector of `Int32` items and an offsets vector, count items in an array indexed by item ID, map frequent items to ranks in an array, and set the bitset bits from that array. IDs above an array bound take the current `Dict` path. The search, the item order, and the bitsets stay the same, and `mine(transactions)` keeps its contract for the applications. Only the CLI path reads into the flat store.
 
@@ -71,11 +71,11 @@ Expected benefit. A scratch prototype (see Reproduce) replaces the two `Dict` pa
 
 | Point | `count_items` + `bitset_tidsets` s | Array-indexed s | Faster | Share of the pass saved |
 |---|---:|---:|---:|---:|
-| accidents 0.65 | 0.177 | 0.062 | 2.9 times | 28% |
-| retail 0.001 | 0.051 | 0.034 | 1.5 times | 11% |
+| accidents 0.65 | 0.177 | 0.062 | 2.9 times | 29% |
+| retail 0.001 | 0.051 | 0.034 | 1.5 times | 10% |
 | T10I4D100K 0.00025 | 0.030 | 0.021 | 1.4 times | 2% |
 
-Each time is the median of three runs of the snippet in Reproduce, whose runs differ by at most 0.012 s. The shares use the pass times of the table above. At Accidents 0.95 the same 0.115 s is 30% of the pass. With the earlier profile run of Accidents 0.65 (0.524 s) the share is 22%. The prediction for Hung's scalability run is a slope `b` about a quarter lower on Accidents, between 0.14 and 0.15 s per 100,000 transactions, and no change on the join-bound points. For memory, the Accidents database takes 105 MiB as `Vector{Vector{Int}}`, 46 MiB as flat `Int32`, and 23 MiB as `UInt16`, since its largest ID is 468. That is 59 to 82 MiB of the 313.4 MiB peak RSS, or 19% to 26%. The prototype leaves out the saving from reading into the flat store, which is unmeasured.
+Each time is the median of three runs of the snippet in Reproduce, whose runs differ by at most 0.012 s. The shares use the pass times of the table above. At Accidents 0.95 the same 0.115 s is 23% of the pass. With the earlier profile runs of Accidents 0.65 (0.524 and 0.417 s) the share is 22% and 28%. The prediction for Hung's scalability run is a slope `b` about a quarter lower on Accidents, between 0.14 and 0.15 s per 100,000 transactions, and no change on the join-bound points. For memory, the Accidents database takes 105 MiB as `Vector{Vector{Int}}`, 46 MiB as flat `Int32`, and 23 MiB as `UInt16`, since its largest ID is 468. That is 59 to 82 MiB of the 313.4 MiB peak RSS, or 19% to 26%. The prototype leaves out the saving from reading into the flat store, which is unmeasured.
 
 Tradeoff. The CLI gains a second reading path and a second layout builder next to the generic ones, which duplicates logic that must stay equivalent. An array indexed by ID needs a bound, because SPMF files allow large sparse IDs, so the `Dict` fallback stays. The canonical check moves into the parser. More code is more to explain at the oral defense.
 
@@ -87,13 +87,13 @@ Test.
 
 ## Proposal 2: an output order that follows the search
 
-Bottleneck. At Chess 0.6, Mushroom 0.1, and Mushroom 0.05, output is 82% to 98% of the samples, and the lexicographic sort is 25% to 34%. On BBQ the sort of Mushroom 0.05 takes 0.30 s of the 1.445 s CLI run, and printing in storage order costs 0.18 s less than printing in sorted order ([BBQ I/O record](bbq-io-pass-2026-11-09.md)). A hand-written radix sort gained 10%, which Hung judged too little for the code. The contract fixes the file order so that outputs are byte-comparable across variants and runs, while the order of itemsets in a result is unspecified (`docs/interface.md`).
+Bottleneck. At Chess 0.6, Mushroom 0.1, and Mushroom 0.05, output is 82% to 98% of the samples, and the lexicographic sort is 28% to 37%. On BBQ the sort of Mushroom 0.05 takes 0.30 s of the 1.445 s CLI run, and printing in storage order costs 0.18 s less than printing in sorted order ([BBQ I/O record](bbq-io-pass-2026-11-09.md)). A hand-written radix sort gained 10%, which Hung judged too little for the code. The contract fixes the file order so that outputs are byte-comparable across variants and runs, while the order of itemsets in a result is unspecified (`docs/interface.md`).
 
 Change. `write_itemsets(path, packed; order=:search)` and `demo.jl --order search` write the packed itemsets in storage order and skip `lexicographic_order`. The default stays lexicographic, and the search and the `SupportMap` do not change.
 
-Expected benefit. At Mushroom 0.05 the CLI falls from 1.445 s to between 1.15 s (the sort alone) and 0.97 s (the sort and the out-of-order reads), so R against PrePost+ falls from 1.05 to between 0.83 and 0.70. The profile predicts 25% to 34% of the pass at Chess 0.6 and Mushroom 0.1. Sparse points have no output to sort, so they do not change.
+Expected benefit. At Mushroom 0.05 the CLI falls from 1.445 s to between 1.15 s (the sort alone) and 0.97 s (the sort and the out-of-order reads), so R against PrePost+ falls from 1.05 to between 0.83 and 0.70. The profile predicts 28% to 37% of the pass at Chess 0.6 and Mushroom 0.1. Sparse points have no output to sort, so they do not change.
 
-Tradeoff. A file written in search order is not byte-comparable across variants or runs of different code. The comparator parses both files into maps, so it is unaffected. The scored cohort has to record the order it used, because the CLI time then excludes a sort, as the times of the SPMF programs do. The team must decide whether the scored CLI uses the default or the search order.
+Tradeoff. A file written in search order is not byte-comparable across variants or runs of different code. The comparator parses both files into maps, so it is unaffected. The scored cohort has to record the order it used, because the CLI time then excludes a sort, as the times of the SPMF programs do. The team must decide whether the scored CLI uses the default or the search order. Hung considered dropping the sort and did not do it, because the contract was in use by the applications and because the code to maintain grows while the gain, outside the dense points, is small (see "Confirmed with Hung").
 
 Test.
 1. A search-order file, sorted externally, equals the default output byte for byte.
@@ -103,30 +103,30 @@ Test.
 
 ## Directions not proposed
 
-- Adaptive representation and early termination exist already, and the profile shows intersections dominating only at T10I4D100K 0.00025, where the conversion from bitsets to lists is 15% of the samples next to 50% for the two kinds of join.
+- Adaptive representation and early termination exist already, and the profile shows intersections dominating only at T10I4D100K 0.00025, where the conversion from bitsets to lists is 15% of the samples next to 49% for the two kinds of join.
 - Diffsets lost or tied on every point of the probe, and perfect-extension pruning removes the members where they save most.
 - Parallel search over equivalence classes has no measurement of how work spreads over the root classes, so the evidence here neither supports nor rules it out.
 
-## To confirm with Hung
+## Confirmed with Hung
 
-These claims rest on reading the code and the records. Hung has not confirmed them.
+Hung answered the five claims on 2026-11-24.
 
-1. `count_items` and `bitset_tidsets` still hash through a `Dict` on every unmerged branch, and no work in progress replaces them.
-2. The sort is `lexicographic_order` only for byte-comparable output, and no consumer other than the comparison scripts reads the file order.
-3. Skipping the sort was not considered and rejected on grounds other than the contract.
-4. SPMF input IDs can be large and sparse, so an array indexed by ID needs the fallback described.
-5. The peak RSS of Accidents above the other points is the input database, as the diffset probe says, and no other structure of that size is alive during the search.
+1. `count_items` and `bitset_tidsets` still hash through a `Dict`. Confirmed.
+2. On the sort, Hung had already thought about dropping it. He did not want to change `docs/interface.md` while the applications were being written.
+3. Skipping the sort was considered, and Hung judged it not good enough: the code to maintain grows while the gain is not significant. Proposal 2 keeps its measured gain, which is concentrated on the dense points and clearest at Mushroom 0.05, and the tradeoff states his reason.
+4. The current datasets look suitable for an array indexed by ID. The `Dict` fallback stays in the proposal for sparse or large IDs.
+5. The peak RSS of Accidents above the other points is the input database. Confirmed.
 
 ## Reproduce
 
 Run from the repository root at the revision of the PR that adds `scripts/stage_profile.jl`, on a machine that is otherwise idle.
 
 ```sh
-julia --startup-file=no --project=. scripts/stage_profile.jl --out results/raw/stage-profile-20261124 \
+julia --startup-file=no --project=. scripts/stage_profile.jl --out results/raw/stage-profile-20261124b \
   --repeats 5 experiments/configs/stage-profile.toml
 ```
 
-The profile ran on a Windows 11 laptop with an AMD Ryzen 7 H 260, 16 logical CPUs, 31.3 GiB, and Julia 1.13.2 with one thread, on package revision `992c3a7`. Its `stage-profile.csv` has SHA-256 `c57631e4015a37d2247ef15451391f2ac74ca9fa2a299f4f0bd840cb4c8d0805`. Git ignores the folder. A rerun gives different seconds and the same shares within sampling noise.
+The profile ran on a Windows 11 laptop with an AMD Ryzen 7 H 260, 16 logical CPUs, 31.3 GiB, and Julia 1.13.2 with one thread, on package revision `992c3a7`. Its `stage-profile.csv` has SHA-256 `d86d44ee29aa1b289913c907c90b79d72b627ba336a6ccf4dfc2c94316b3e101`. Git ignores the folder. A rerun gives different seconds and the same shares within sampling noise.
 
 The prototype times the two layout steps and an array-indexed version over the same database. It calls internal functions, so it stays out of the repository's experiments:
 

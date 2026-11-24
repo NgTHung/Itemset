@@ -40,6 +40,32 @@
         end
     end
 
+    @testset "for_each_point takes the transaction count from the manifest unless it must keep the database" begin
+        mktempdir() do dir
+            manifest, data = toy_benchmark(dir)
+            entry = manifest["baskets"]
+            stats = Experiments.DatasetStats(transactions=100, items=3, total_items=9, max_width=3, min_item=1, max_item=3)
+            stated = Dict("baskets" => Experiments.DatasetEntry(name=entry.name, version=entry.version, file=entry.file,
+                                                                sha256=entry.sha256, sources=entry.sources, stats=stats))
+            config = toy_config(; series=[Dict("dataset" => "baskets", "minsup" => [0.5])])
+            # The manifest says 100 transactions and the file holds 4, so which one is used shows in the count.
+            @test only(Experiments.for_each_point(p -> p.minsup_count, config, stated, data)) == 50
+            @test only(Experiments.for_each_point(p -> p.minsup_count, config, stated, data; keep=true)) == 2
+            unstated = Dict("baskets" => Experiments.DatasetEntry(name=entry.name, version=entry.version, file=entry.file,
+                                                                  sha256=entry.sha256, sources=entry.sources, stats=nothing))
+            @test only(Experiments.for_each_point(p -> p.minsup_count, config, unstated, data)) == 2
+        end
+    end
+
+    @testset "A table of a summary or of ratios leaves no partial file" begin
+        mktempdir() do dir
+            path = joinpath(dir, "summary.csv")
+            bad = [Dict("dataset" => "d")]
+            @test_throws Exception Experiments.write_summary(bad, path)
+            @test !ispath(path)
+        end
+    end
+
     @testset "Command-line options" begin
         usage = "USAGE"
         parse = (args; kw...) -> Experiments.parse_table_args(args, usage, "data"; kw...)

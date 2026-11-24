@@ -28,20 +28,23 @@ For every series of `config` and every minsup in it, from the highest down, call
 collect the results. `point` is `(; dataset, path, minsup_relative, minsup_count, transactions)`,
 where `path` is the file `prepare_dataset` verifies in `data_dir` and `minsup_count` is
 `support_threshold` of the minsup on that file's transaction count. The file is read once per
-dataset, and `transactions` holds the database only when `keep` is true, so a caller that times
-its own reading does not keep a second copy alive. Throws `ArgumentError` for a dataset the
-manifest lacks.
+dataset only when it needs the database, and `transactions` holds the database only when `keep` is
+true, so a caller that times its own reading neither parses the file for its size nor keeps a copy
+alive. The count comes from the manifest's statistics when the entry has them. Throws `ArgumentError`
+for a dataset the manifest lacks.
 """
 function for_each_point(f, config::RunConfig, manifest::AbstractDict{String,DatasetEntry},
                         data_dir::AbstractString; keep::Bool=false)
     results = []
     for series in config.series
         haskey(manifest, series.dataset) || throw(ArgumentError("unknown dataset $(repr(series.dataset))"))
-        path = prepare_dataset(manifest[series.dataset], data_dir)
-        transactions = read_transactions(path)
-        size = length(transactions)
-        kept = keep ? transactions : nothing
-        transactions = nothing
+        entry = manifest[series.dataset]
+        path = prepare_dataset(entry, data_dir)
+        # The verified manifest already states the transaction count, so the file is parsed only when
+        # the caller keeps the database or the entry lacks its statistics.
+        kept = keep || entry.stats === nothing ? read_transactions(path) : nothing
+        size = kept === nothing ? entry.stats.transactions : length(kept)
+        keep || (kept = nothing)
         for minsup in sort(series.minsup; rev=true)
             point = (; dataset=series.dataset, path, minsup_relative=string(minsup),
                      minsup_count=support_threshold(minsup, size), transactions=kept)
