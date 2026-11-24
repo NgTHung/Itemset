@@ -51,6 +51,24 @@ end
         @test rule_pairs(MarketBasket.top_rule_groups(rules, 1)) == [rule_pairs(rules)[1]]
     end
 
+    @testset "A seven-basket case worked out by hand" begin
+        # Baskets {2} {2} {1,2} {1,2,3} {1,2,3} {2,3} {1,2,3}, so N = 7. For the rule 1 => 2,3 the supports are
+        # support(1,2,3) = 3, support(1) = 4, and support(2,3) = 4, so confidence is 3/4 and lift is (3/4)/(4/7) = 21/16.
+        # The notebook cell itemset-7c-check shows the same case.
+        baskets = [[2], [2], [1, 2], [1, 2, 3], [1, 2, 3], [2, 3], [1, 2, 3]]
+        patterns = mine(baskets; minsup=1)
+        rules = MarketBasket.association_rules(patterns, 7; minconf=0.7)
+        rule = only(r for r in rules if r.antecedent == (1,) && r.consequent == (2, 3))
+        @test (rule.support, rule.antecedent_support, rule.consequent_support) == (3, 4, 4)
+        @test MarketBasket.confidence(rule) == 3 // 4
+        @test MarketBasket.lift(rule) == 21 // 16
+        # At minconf 0.76 the rule fails because 3/4 < 0.76, while 1,3 => 2 (confidence 1) still passes.
+        strict = MarketBasket.association_rules(patterns, 7; minconf=0.76)
+        @test !any(r -> r.antecedent == (1,) && r.consequent == (2, 3), strict)
+        @test MarketBasket.confidence(only(r for r in strict if r.antecedent == (1, 3) && r.consequent == (2,))) == 1
+        @test (length(rules), length(strict)) == (9, 3)
+    end
+
     @testset "minconf is the exact decimal fraction" begin
         @test MarketBasket.decimal_fraction(0.1 + 0.2) == 30000000000000004 // 100000000000000000
         @test_throws ArgumentError MarketBasket.decimal_fraction(NaN)
