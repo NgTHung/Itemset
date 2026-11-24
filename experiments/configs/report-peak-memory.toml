@@ -5,7 +5,6 @@ repeats = 5
 timeout_seconds = 300
 keep_outputs = false
 verify_outputs = true
-spmf_version = "2.66"
 java_options = ["-Xms64m", "-Xmx3g", "-XX:+UseSerialGC"]
 
 [[series]]

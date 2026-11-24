@@ -1,8 +1,10 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -11,64 +13,68 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("colab_runner", ROOT / "scripts/run_colab_notebook.py")
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
+COLAB_CELL = "".join(next(
+    cell["source"] for cell in json.loads((ROOT / "notebooks/colab.ipynb").read_text(encoding="utf-8"))["cells"]
+    if cell["id"] == "itemset-colab-run"
+))
+RELEASE = (ROOT / "tools/spmf/release.toml").read_text(encoding="utf-8")
 
 
 class RunnerTests(unittest.TestCase):
     def test_explicit_arguments_ignore_jupyter_kernel_flags(self):
         with patch("sys.argv", ["ipykernel", "-f", "kernel.json"]), patch.object(runner, "execute", return_value=0) as execute:
-            self.assertEqual(runner.main(["--revision", "a" * 40]), 0)
+            self.assertEqual(runner.main(["--repository", "https://github.com/example/Itemset", "--revision", "a" * 40]), 0)
             self.assertEqual(execute.call_args.args[0].revision, "a" * 40)
 
-    def test_hash_rejects_modified_input(self):
+    def test_invalid_local_jar_leaves_the_previous_file_untouched(self):
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "file"
-            path.write_bytes(b"abc")
-            runner.verify_file(path, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
-            path.write_bytes(b"altered")
+            source = Path(directory) / "uploaded.jar"
+            source.write_bytes(b"altered")
+            destination = Path(directory) / "spmf.jar"
+            destination.write_bytes(b"abc")
+            release = {"sha256": runner.file_sha(destination)}
             with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
-                runner.verify_file(path, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+                runner.prepare_spmf(release, source, destination)
+            self.assertEqual(destination.read_bytes(), b"abc")
 
     def test_public_spmf_download_requires_the_pinned_hash(self):
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory) / "spmf.jar"
+            release = {"url": "https://example.com/spmf.jar", "sha256": "0" * 64}
             with patch.object(runner.urllib.request, "urlopen", return_value=io.BytesIO(b"replacement")):
                 with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
-                    runner.prepare_spmf(None, destination)
+                    runner.prepare_spmf(release, None, destination)
+            self.assertEqual(list(Path(directory).iterdir()), [])
 
     def test_prepares_the_verified_spmf_jar_from_either_source(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             local_jar = root / "uploaded.jar"
             local_jar.write_bytes(b"abc")
-            sha = runner.file_sha(local_jar)
-            with patch.object(runner, "SPMF_SHA", sha), patch.object(
-                runner.urllib.request, "urlopen", return_value=io.BytesIO(b"abc")
-            ) as download:
+            release = {"url": "https://example.com/spmf.jar", "sha256": runner.file_sha(local_jar)}
+            with patch.object(runner.urllib.request, "urlopen", return_value=io.BytesIO(b"abc")) as download:
                 public_destination = root / "downloaded.jar"
-                self.assertEqual(runner.prepare_spmf(None, public_destination), runner.SPMF_URL)
+                self.assertEqual(runner.prepare_spmf(release, None, public_destination), release["url"])
                 self.assertEqual(public_destination.read_bytes(), b"abc")
-                download.assert_called_once_with(runner.SPMF_URL, timeout=60)
+                download.assert_called_once_with(release["url"], timeout=60)
                 download.reset_mock()
 
                 local_destination = root / "copied.jar"
-                self.assertEqual(runner.prepare_spmf(local_jar, local_destination), "local copy")
+                self.assertEqual(runner.prepare_spmf(release, local_jar, local_destination), str(local_jar.resolve()))
                 self.assertEqual(local_destination.read_bytes(), b"abc")
                 download.assert_not_called()
 
     def test_public_notebook_uses_runner_cli_and_one_repository(self):
-        notebook = json.loads((ROOT / "notebooks/colab.ipynb").read_text(encoding="utf-8"))
-        cell = next(cell for cell in notebook["cells"] if cell["id"] == "itemset-colab-run")
-        source = "".join(cell["source"])
         repository = "https://github.com/example/Itemset.git"
         sha = "a" * 40
         for supplied_revision in ("", sha):
             with self.subTest(supplied_revision=supplied_revision), tempfile.TemporaryDirectory() as directory:
                 workspace = Path(directory)
-                configured = source.replace('ITEMSET_REVISION = ""', f'ITEMSET_REVISION = "{supplied_revision}"')
+                configured = COLAB_CELL.replace('ITEMSET_REVISION = ""', f'ITEMSET_REVISION = "{supplied_revision}"')
                 with (
                     patch.dict("os.environ", {"ITEMSET_REPOSITORY": repository}, clear=True),
                     patch("tempfile.mkdtemp", return_value=directory),
-                    patch("subprocess.check_output", return_value=f"{sha}\trefs/heads/main\n") as remote,
+                    patch("subprocess.check_output", return_value=f"{sha}\tHEAD\n") as remote,
                     patch("urllib.request.urlopen", return_value=io.BytesIO(b"runner")) as download,
                     patch("runpy.run_path", return_value={"main": runner.main}),
                     patch.object(runner, "execute", return_value=0) as execute,
@@ -78,7 +84,7 @@ class RunnerTests(unittest.TestCase):
                     remote.assert_not_called()
                 else:
                     remote.assert_called_once_with(
-                        ["git", "ls-remote", "--exit-code", repository, "refs/heads/main"],
+                        ["git", "ls-remote", "--exit-code", repository, "HEAD"],
                         text=True, timeout=60,
                     )
                 download.assert_called_once_with(
@@ -89,6 +95,54 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual((args.repository, args.revision), (repository, sha))
                 self.assertEqual(Path(args.root), workspace / "repo")
                 self.assertEqual(Path(args.evidence), workspace / "evidence")
+
+    def test_public_notebook_rejects_bad_inputs_before_network_access(self):
+        repository = "https://github.com/example/Itemset"
+        for url, revision, message in (
+            (repository + "/tree/main", "a" * 40, "GitHub HTTPS clone URL"),
+            (repository + "?tab=readme", "a" * 40, "GitHub HTTPS clone URL"),
+            (repository, "main", "40-character commit SHA"),
+        ):
+            with (
+                self.subTest(url=url, revision=revision),
+                patch.dict("os.environ", {"ITEMSET_REPOSITORY": url, "ITEMSET_REVISION": revision}, clear=True),
+                patch("subprocess.check_output") as remote,
+                patch("urllib.request.urlopen") as download,
+                self.assertRaisesRegex(ValueError, message),
+            ):
+                exec(compile(COLAB_CELL, "notebooks/colab.ipynb", "exec"), {})
+            remote.assert_not_called()
+            download.assert_not_called()
+
+    def test_julia_process_uses_a_fresh_depot_and_bundled_caches(self):
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory).resolve()
+            root = workspace / "repo"
+
+            def checkout(command, _, **kwargs):
+                if command[:2] == ["git", "clone"]:
+                    (root / "tools/spmf").mkdir(parents=True)
+                    (root / ".julia-version").write_text("1.13.2\n", encoding="utf-8")
+                    (root / "tools/spmf/release.toml").write_text(RELEASE, encoding="utf-8")
+                if command[0] != "git":
+                    self.assertEqual(kwargs["env"]["JULIA_DEPOT_PATH"], str(workspace / "repo-depot") + os.pathsep)
+
+            with (
+                patch.dict("os.environ", {"JULIA_DEPOT_PATH": "existing-user-depot"}),
+                patch.object(runner, "run", side_effect=checkout) as run,
+                patch.object(runner, "install_archive", return_value=workspace),
+                patch.object(runner, "prepare_spmf", return_value="example.jar"),
+                patch.object(runner, "notebook_script", return_value=("demo.jl", ["one"])),
+                patch.object(runner, "collect_artifacts"),
+                patch.object(runner, "file_sha", return_value="hash"),
+                patch("subprocess.check_output", return_value="1.13.2"),
+                patch("subprocess.run", return_value=SimpleNamespace(stderr="java 25")),
+            ):
+                self.assertEqual(runner.main([
+                    "--repository", "https://github.com/example/Itemset", "--revision", "a" * 40,
+                    "--root", str(root), "--evidence", str(workspace / "evidence"),
+                ]), 0)
+            self.assertEqual(run.call_count, 3)
 
     def test_download_timeout_writes_failure_evidence(self):
         from zipfile import ZipFile
@@ -102,8 +156,9 @@ class RunnerTests(unittest.TestCase):
             def git(command, _, **kwargs):
                 if command[:2] == ["git", "clone"]:
                     self.assertEqual(command[2:], ["--", repository, str(root)])
-                    root.mkdir()
+                    (root / "tools/spmf").mkdir(parents=True)
                     (root / ".julia-version").write_text("1.13.2\n", encoding="utf-8")
+                    (root / "tools/spmf/release.toml").write_text(RELEASE, encoding="utf-8")
 
             with patch.object(runner, "run", side_effect=git), patch.object(
                 runner.urllib.request, "urlopen", side_effect=TimeoutError("download stalled")

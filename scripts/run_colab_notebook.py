@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import tarfile
+import tempfile
 import tomllib
 import traceback
 import urllib.request
@@ -19,8 +20,6 @@ JULIA_URL = "https://julialang-s3.julialang.org/bin/linux/x64/1.13/julia-1.13.2-
 JULIA_SHA = "2ecdfc9890ab0a565fdd92404c915ba2a04a933dbd5d292cc224d13819d17d07"
 JAVA_URL = "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jre_x64_linux_hotspot_25.0.5_8.tar.gz"
 JAVA_SHA = "6fac98f0c8202efc3135a9e9e42aa61963ec42d1c5cbb40caf231e7b14a24ef6"
-SPMF_URL = "https://github.com/philfv9/spmf-software/releases/download/spmf2.67/spmf.jar"
-SPMF_SHA = "4aa468384693b2016b457ea310a08cc24aa83abd42d3169ad65b9027778dfe6a"
 
 
 def file_sha(path):
@@ -28,16 +27,23 @@ def file_sha(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def verify_file(path, expected):
-    actual = file_sha(path)
-    if actual != expected:
-        raise ValueError(f"SHA-256 mismatch for {path}: {actual}, expected {expected}")
+def copy_verified(source, destination, expected):
+    digest = hashlib.sha256()
+    with tempfile.TemporaryDirectory(dir=destination.parent) as directory:
+        staged = Path(directory) / destination.name
+        with staged.open("wb") as stream:
+            while chunk := source.read(1024 * 1024):
+                stream.write(chunk)
+                digest.update(chunk)
+        actual = digest.hexdigest()
+        if actual != expected:
+            raise ValueError(f"SHA-256 mismatch for {destination}: {actual}, expected {expected}")
+        staged.replace(destination)
 
 
 def download_verified(url, destination, expected):
-    with urllib.request.urlopen(url, timeout=60) as response, destination.open("wb") as stream:
-        shutil.copyfileobj(response, stream)
-    verify_file(destination, expected)
+    with urllib.request.urlopen(url, timeout=60) as source:
+        copy_verified(source, destination, expected)
 
 
 def install_archive(url, expected, parent, name):
@@ -54,14 +60,15 @@ def install_archive(url, expected, parent, name):
     return destination / roots.pop()
 
 
-def prepare_spmf(jar, destination):
+def prepare_spmf(release, jar, destination):
     if jar is None:
         print("Downloading pinned SPMF JAR", flush=True)
-        download_verified(SPMF_URL, destination, SPMF_SHA)
-        return SPMF_URL
-    verify_file(jar, SPMF_SHA)
-    shutil.copy2(jar, destination)
-    return "local copy"
+        download_verified(release["url"], destination, release["sha256"])
+        return release["url"]
+    source = Path(jar).resolve()
+    with source.open("rb") as stream:
+        copy_verified(stream, destination, release["sha256"])
+    return str(source)
 
 
 def notebook_script(notebook, evidence):
@@ -125,12 +132,14 @@ def execute(args):
         run(["git", "checkout", "--detach", args.revision], evidence, cwd=root)
         if (root / ".julia-version").read_text().strip() != "1.13.2":
             raise ValueError("runner archive pin differs from .julia-version")
+        with (root / "tools/spmf/release.toml").open("rb") as stream:
+            release = tomllib.load(stream)
         julia_root = install_archive(JULIA_URL, JULIA_SHA, evidence, "julia-runtime")
         java_root = install_archive(JAVA_URL, JAVA_SHA, evidence, "java-runtime")
         julia, java = julia_root / "bin/julia", java_root / "bin/java"
-        spmf_source = prepare_spmf(args.spmf_jar, root / "tools/spmf/spmf.jar")
+        spmf_source = prepare_spmf(release, args.spmf_jar, root / "tools/spmf/spmf.jar")
         record.update(julia_archive_sha256=JULIA_SHA, java_archive_sha256=JAVA_SHA,
-                      spmf_sha256=SPMF_SHA, spmf_source=spmf_source,
+                      spmf_sha256=release["sha256"], spmf_version=release["version"], spmf_source=spmf_source,
                       julia_version=subprocess.check_output([julia, "--version"], text=True).strip(),
                       java_version=subprocess.run([java, "-version"], capture_output=True, text=True).stderr.strip())
         notebook = root / "notebooks/demo.ipynb"
@@ -166,7 +175,7 @@ def execute(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repository", default="https://github.com/NgTHung/Itemset")
+    parser.add_argument("--repository", required=True, help="Git URL of the notebook checkout")
     parser.add_argument("--revision", default=os.environ.get("ITEMSET_REVISION"))
     parser.add_argument("--spmf-jar", help="Use a local copy of the pinned JAR instead of downloading it")
     parser.add_argument("--root", default="/content/Itemset-cleanrun")

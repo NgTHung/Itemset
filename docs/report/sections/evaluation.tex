@@ -62,7 +62,7 @@ peak RSS (resident set size, lượng bộ nhớ vật lý lớn nhất mà ti�
 hệ điều hành đo, vì chỉ đại lượng này so sánh được giữa tiến trình Julia và Java.
 
 Môi trường đo mặc định dùng máy AMD Ryzen 7 H 260 (16 luồng logic, 31,3 GiB
-RAM), Windows 11, Julia 1.13.2 với một luồng và SPMF 2.66~\cite{spmf2016}
+RAM), Windows 11, Julia 1.13.2 với một luồng và bản SPMF đã ghim~\cite{spmf2016}
 trên Java Temurin 25.0.4.1. Các mục thực nghiệm ghi riêng cấu hình nếu dùng
 máy khác.
 \subsection{Độ đúng và bộ nhớ}
@@ -149,7 +149,7 @@ Accidents & 7/7 & 7/7 & 15--1\,093 \\
 \subsubsection{Bộ nhớ đỉnh của tiến trình}
 Loạt đối chiếu benchmark và loạt đo bộ nhớ dùng cả hai biến thể ở revision
 \texttt{d851169}, trên AMD Ryzen 5 6600H, Windows 11, Julia 1.13.2 với một
-luồng và SPMF 2.66 trên Temurin 25.0.4.1. Trên mỗi bộ
+luồng và bản SPMF đã ghim trên Temurin 25.0.4.1. Trên mỗi bộ
 dữ liệu, nhóm chạy CLI của mỗi biến thể năm lần trong tiến trình mới tại
 cùng một ngưỡng ở giữa dải khảo sát. Windows cung cấp peak RSS qua
 \texttt{PeakWorkingSetSize}. Phép đo bao gồm khởi động, đọc dữ liệu, khai thác

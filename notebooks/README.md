@@ -1,14 +1,14 @@
 # Colab notebook
 
-Open [colab.ipynb on Colab](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb) on a Python CPU runtime and run all cells. It resolves `main` to an exact commit, checks the downloaded Julia, Java and SPMF files against pinned SHA-256 hashes, and runs every code cell from `demo.ipynb` in one Julia process.
+Open [colab.ipynb on Colab](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb) on a Python CPU runtime and run all cells. It resolves the repository's default branch to an exact commit, checks the downloaded Julia, Java and SPMF files against pinned SHA-256 hashes, and runs every code cell from `demo.ipynb` in one Julia process.
 
-To replay a run, replace the empty `ITEMSET_REVISION = ""` in the first code cell with the full commit SHA. Choose a commit that contains this notebook and its companion runner, which accepts `--repository`. For earlier commits, use the runner and setup in the [dated verification record](../docs/phat-application2-colab-2026-11-13.md). To run a GitHub fork, set the `ITEMSET_REPOSITORY` environment variable to its HTTPS clone URL.
+To replay a run, replace the empty `ITEMSET_REVISION = ""` in the first code cell with the full 40-character lowercase commit SHA. Choose a commit that contains this notebook, its companion runner and `tools/spmf/release.toml`. For earlier commits, use the runner and setup in the [dated verification record](../docs/phat-application2-colab-2026-11-13.md). To run a GitHub fork, set the `ITEMSET_REPOSITORY` environment variable to its HTTPS clone URL, such as `https://github.com/owner/repo`.
 
 The first code cell prints the evidence ZIP path as `EVIDENCE_ARCHIVE`. Download it through the Colab Files sidebar. `result.json` records the repository, revision, versions, SPMF source, completed cell IDs and artifact hashes. `commands.log` holds the execution log. The ZIP also contains complete application outputs and the two exact-map comparisons and memory measurements on Chess at 90% minsup. The [report guide](../docs/report/README.md) gives the commands for the full experimental series.
 
 ## Use the Julia notebook directly
 
-On a Julia kernel, open `demo.ipynb` and set `REPO_URL` and `REVISION` in its setup cell. You can also upload a committed ZIP to `/content/Itemset-colab.zip`, created with `git archive --format=zip --output=../Itemset-colab.zip HEAD`. The package supports Julia 1.12 or later within 1.x. Use 1.13.2 to reproduce the pinned Semeion codebook. The live SPMF comparison requires Java 25 and the JAR from the [reference protocol](../tools/spmf/README.md).
+On a Julia kernel, open `demo.ipynb` and set `REPO_URL` and `REVISION` in its setup cell. You can also upload a committed ZIP to `/content/Itemset-colab.zip`, created with `git archive --format=zip --output=../Itemset-colab.zip HEAD`. Select Colab runtime 2026.07 (Julia 1.12.6) or a newer runtime with Julia 1.x. Use 1.13.2 to reproduce the pinned Semeion codebook. The live SPMF comparison requires Java 25 and the JAR from the [reference protocol](../tools/spmf/README.md).
 
 ## Run through the Colab CLI
 
@@ -29,7 +29,9 @@ Create a local Python launcher with an exact pushed commit:
 import os, runpy
 os.environ["ITEMSET_REVISION"] = "REPLACE_WITH_EXACT_40_CHARACTER_COMMIT_SHA"
 runner = runpy.run_path("/content/run_colab_notebook.py")
-if runner["main"]([]) != 0:
+args = ["--repository", "https://github.com/NgTHung/Itemset"]
+# For an uploaded JAR, add ["--spmf-jar", "/content/itemset-spmf.jar"] to args.
+if runner["main"](args) != 0:
     raise RuntimeError("Notebook execution failed; inspect the evidence ZIP")
 ```
 
@@ -47,6 +49,7 @@ The notebook writes an artifact manifest for the runner. The evidence ZIP contai
 that manifest, cell sources, logs, application outputs, comparisons, measurements
 and `result.json` with versions, revision and artifact hashes. Require
 `status=success`, every cell completion marker and both SPMF comparisons before
-accepting a run. A failure retains its log and creates an evidence ZIP. If the CLI
+accepting a run. Once the runner starts a run, failures retain their logs and create an evidence ZIP.
+Bootstrap errors such as an invalid URL or SHA appear in the first cell's output. If the CLI
 disconnects, inspect the remote log and session state before retrying. Download
 evidence before stopping the session. Use fresh root and evidence paths for another attempt.

@@ -8,7 +8,6 @@ timeout_seconds = 300
 keep_outputs = true
 verify_outputs = true
 skip_after_timeout = false
-spmf_version = "2.66"
 
 [[series]]
 dataset = "chess"
