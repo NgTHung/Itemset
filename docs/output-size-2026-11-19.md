@@ -23,7 +23,7 @@ All 33 thresholds pass the three checks, including all 28 adjacent pairs.
 | Retail | sparse | 0.01 to 0.001 | 159 | 7,589 | 1.68 | 5 | 1.79 to 2.07 |
 | T10I4D100K | sparse | 0.01 to 0.00025 | 385 | 96,959 | 1.55 | 11 | 1.03 to 3.10 |
 
-Dense databases grow 5 to 14 times faster on the log-log scale than sparse ones, because their frequent itemsets are long and every frequent k-itemset brings 2^k - 1 frequent subsets. Mushroom grows 9.7 times between minsup 0.25 and 0.2, the step where its longest itemset goes from 11 to 15 items. On T10I4D100K 0.00025, 47% of the itemsets are pairs.
+Dense databases grow 3 to 9 times faster on the log-log scale than sparse ones, since their slopes of 5.23 to 14.33 against 1.55 to 1.68 give ratios from 5.23/1.68 to 14.33/1.55. They grow faster because their frequent itemsets are long and every frequent k-itemset brings 2^k - 1 frequent subsets. Mushroom grows 9.7 times between minsup 0.25 and 0.2, the step where its longest itemset goes from 11 to 15 items. On T10I4D100K 0.00025, 47% of the itemsets are pairs.
 
 Output size does not set runtime alone. In the same run, the baseline takes 12.59 s on Retail 0.001 with 7,589 itemsets and 3.07 s on Chess 0.6 with 254,944, because Retail's 2,117 frequent items give over two million root intersections that mostly fail. The optimized CLI takes 0.41 s on Mushroom 0.1 with 574,431 itemsets and 0.96 s on T10I4D100K 0.00025 with 96,959.
 
