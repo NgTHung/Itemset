@@ -1,23 +1,16 @@
 # Colab notebook
 
-Graders run the project through one public Colab notebook, and a section that fails at runtime earns no marks. `demo.ipynb` therefore runs top to bottom from a clean runtime, on Colab's native Julia kernel, and calls the package directly.
+Open [colab.ipynb on Colab](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb) on a Python CPU runtime and run all cells. It resolves `main` to an exact commit, checks the downloaded Julia, Java and SPMF files against pinned SHA-256 hashes, and runs every code cell from `demo.ipynb` in one Julia process. To replay a particular run, set `ITEMSET_REVISION` to its full commit SHA in the first code cell.
 
-## Provide the source
+The notebook shows Semeion images and the path to the evidence ZIP. Download it through the Colab Files sidebar. `result.json` records the revision, versions, completed cell IDs and artifact hashes. `commands.log` holds the execution log. The ZIP also contains complete application outputs and the two exact-map comparisons and memory measurements on Chess at 90% minsup. The [report guide](../docs/report/README.md) gives the commands for the full experimental series.
 
-The first cell takes the repository from one of two sources:
+## Use the Julia notebook directly
 
-- a public Git URL with an explicit commit, so the run is pinned to a revision,
-- a ZIP of the committed tree uploaded to `/content/Itemset-colab.zip`, made with `git archive --format=zip --output=../Itemset-colab.zip HEAD`.
-
-The notebook then activates and instantiates the repository environment, which needs network access. Select runtime version 2026.07 (Julia 1.12.6) or a newer compatible runtime; see [Colab runtime versions](https://research.google.com/colaboratory/runtime-version-faq.html). The steps to open the notebook are in the [root README](../README.md#run-on-colab).
-
-## Record the run
-
-The notebook prints its Julia version, thread count, project path, and seed. Record those values with every result it produces, because Colab runtimes change between sessions.
+On a Julia kernel, open `demo.ipynb` and set `REPO_URL` and `REVISION` in its setup cell. You can also upload a committed ZIP to `/content/Itemset-colab.zip`, created with `git archive --format=zip --output=../Itemset-colab.zip HEAD`. The package supports Julia 1.12 or later within 1.x. Use 1.13.2 to reproduce the pinned Semeion codebook. The live SPMF comparison requires Java 25 and the JAR from the [reference protocol](../tools/spmf/README.md).
 
 ## Run through the Colab CLI
 
-The CLI executes Python. `scripts/run_colab_notebook.py` installs hash-verified Julia 1.13.2 and Java 25 on a Linux CPU runtime, clones an exact commit and executes every code cell from `demo.ipynb` in source order in one fresh Julia subprocess. This checks hosted computation; interactive rendering in the native Julia frontend is separate. The SPMF JAR must match the hash in [the reference protocol](../tools/spmf/README.md).
+The CLI runs the same Python script on a hosted CPU runtime. For a local copy of the JAR, upload it and pass its path with `--spmf-jar`. The script checks that copy against the same SHA-256.
 
 After authenticating the installed `google-colab-cli`, enable UTF-8 in Windows PowerShell. For the Microsoft Store Python installation:
 
@@ -43,7 +36,6 @@ Run these commands from the repository root, replacing `launcher.py` with that f
 ```sh
 colab new --session itemset-cleanrun
 colab upload --session itemset-cleanrun scripts/run_colab_notebook.py /content/run_colab_notebook.py
-colab upload --session itemset-cleanrun tools/spmf/spmf.jar /content/itemset-spmf.jar
 colab exec --session itemset-cleanrun --timeout 3600 --file launcher.py
 colab download --session itemset-cleanrun /content/itemset-cleanrun-evidence.zip results/raw/colab-cleanrun.zip
 colab stop --session itemset-cleanrun
