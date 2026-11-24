@@ -10,7 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOK = ROOT / "notebooks" / "demo.ipynb"
-THIEN = ["itemset-7a", "itemset-7b", "itemset-7c", "itemset-7-figure", "itemset-7d", "itemset-7e", "itemset-7f"]
+THIEN = ["itemset-7a", "itemset-7b", "itemset-7c", "itemset-7c-check", "itemset-7-figure", "itemset-7d",
+         "itemset-7e", "itemset-7f"]
 
 
 def load():
@@ -63,6 +64,16 @@ class NotebookTest(unittest.TestCase):
                      "runtime-curves.png", "width-curves.png"):
             with self.subTest(named=name):
                 self.assertIn(name, text)
+
+    def test_the_hand_checked_cell_states_its_numbers_and_checks_them(self):
+        text = {cell["id"]: source(cell) for cell in load()}["itemset-7c-check"]
+        # Seven baskets and the rule 1 => 2, 3: support 3, antecedent support 4, consequent support 4.
+        for expected in ("[1, 2, 3]", "3 // 4", "21 // 16", "minconf=0.76", "@assert"):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, text)
+        # The same numbers appear in the project's rule tests, so the notebook and the suite agree.
+        rules_test = (ROOT / "tests" / "market_basket_rules.jl").read_text(encoding="utf-8")
+        self.assertIn("confidence 3/4, lift 21/16", rules_test)
 
     def test_the_runtime_cell_defaults_to_the_committed_cohort(self):
         by_id = {cell["id"]: source(cell) for cell in load()}
