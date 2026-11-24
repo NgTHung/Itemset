@@ -4,7 +4,7 @@ Hand-derived fixtures can share the same mistake as the miner they test. An inde
 
 ## Run SPMF
 
-1. Download the executable JAR from [SPMF](https://www.philippe-fournier-viger.com/spmf/download.php) into this folder. Git ignores `*.jar` files here. Use v2.66 (2026-06-15) or later, because its release notes fix an Eclat bug introduced in v2.65. The v2.66 JAR has SHA-256 `4aa468384693b2016b457ea310a08cc24aa83abd42d3169ad65b9027778dfe6a` and needs Java 25 or later; Java 21 rejects its class files.
+1. Download [`spmf.jar` from the publisher's `spmf2.67` release](https://github.com/philfv9/spmf-software/releases/download/spmf2.67/spmf.jar) into this folder. The Colab runner uses this asset and requires SHA-256 `4aa468384693b2016b457ea310a08cc24aa83abd42d3169ad65b9027778dfe6a`. If the publisher replaces the asset, the runner stops on a checksum mismatch. This JAR reports version 2.67. Use the checksum to identify the binary in experiment records that label the same digest as 2.66. Git ignores `*.jar` files here.
 2. Install Java 25, or unpack a portable [Temurin](https://adoptium.net/) JRE into `.tools/`, which Git ignores.
 3. Run SPMF through the harness, `experiments/run.jl` with the `spmf` variant, so each run records the JAR's SHA-256, `java -version`, and the exact command. The command it runs is:
 

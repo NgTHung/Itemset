@@ -12,6 +12,7 @@ import tarfile
 import tomllib
 import traceback
 import urllib.request
+import zipfile
 
 
 JULIA_URL = "https://julialang-s3.julialang.org/bin/linux/x64/1.13/julia-1.13.2-linux-x86_64.tar.gz"
@@ -33,11 +34,16 @@ def verify_file(path, expected):
         raise ValueError(f"SHA-256 mismatch for {path}: {actual}, expected {expected}")
 
 
+def download_verified(url, destination, expected):
+    with urllib.request.urlopen(url, timeout=60) as response, destination.open("wb") as stream:
+        shutil.copyfileobj(response, stream)
+    verify_file(destination, expected)
+
+
 def install_archive(url, expected, parent, name):
     archive = parent / (name + ".tar.gz")
     print(f"Downloading {name}", flush=True)
-    urllib.request.urlretrieve(url, archive)
-    verify_file(archive, expected)
+    download_verified(url, archive, expected)
     destination = parent / name
     destination.mkdir()
     with tarfile.open(archive) as package:
@@ -51,11 +57,11 @@ def install_archive(url, expected, parent, name):
 def prepare_spmf(jar, destination):
     if jar is None:
         print("Downloading pinned SPMF JAR", flush=True)
-        urllib.request.urlretrieve(SPMF_URL, destination)
-        verify_file(destination, SPMF_SHA)
-    else:
-        verify_file(jar, SPMF_SHA)
-        shutil.copy2(jar, destination)
+        download_verified(SPMF_URL, destination, SPMF_SHA)
+        return SPMF_URL
+    verify_file(jar, SPMF_SHA)
+    shutil.copy2(jar, destination)
+    return "local copy"
 
 
 def notebook_script(notebook, evidence):
@@ -112,19 +118,19 @@ def execute(args):
     if root.exists() or evidence.exists():
         raise ValueError("root and evidence directories must both be fresh")
     evidence.mkdir(parents=True)
-    record = {"revision": args.revision, "status": "started", "execution":
-              "hosted Colab CLI; exact notebook cells in one Julia subprocess"}
+    record = {"repository": args.repository, "revision": args.revision, "status": "started",
+              "execution": "Colab CPU runtime running the exact notebook cells in one Julia subprocess"}
     try:
-        run(["git", "clone", "https://github.com/NgTHung/Itemset", str(root)], evidence)
+        run(["git", "clone", "--", args.repository, str(root)], evidence)
         run(["git", "checkout", "--detach", args.revision], evidence, cwd=root)
         if (root / ".julia-version").read_text().strip() != "1.13.2":
             raise ValueError("runner archive pin differs from .julia-version")
         julia_root = install_archive(JULIA_URL, JULIA_SHA, evidence, "julia-runtime")
         java_root = install_archive(JAVA_URL, JAVA_SHA, evidence, "java-runtime")
         julia, java = julia_root / "bin/julia", java_root / "bin/java"
-        prepare_spmf(args.spmf_jar, root / "tools/spmf/spmf.jar")
+        spmf_source = prepare_spmf(args.spmf_jar, root / "tools/spmf/spmf.jar")
         record.update(julia_archive_sha256=JULIA_SHA, java_archive_sha256=JAVA_SHA,
-                      spmf_sha256=SPMF_SHA,
+                      spmf_sha256=SPMF_SHA, spmf_source=spmf_source,
                       julia_version=subprocess.check_output([julia, "--version"], text=True).strip(),
                       java_version=subprocess.run([java, "-version"], capture_output=True, text=True).stderr.strip())
         notebook = root / "notebooks/demo.ipynb"
@@ -151,7 +157,6 @@ def execute(args):
                              for part in p.relative_to(evidence).parts)]
         record["artifact_sha256"] = {p.relative_to(evidence).as_posix(): file_sha(p) for p in files}
         (evidence / "result.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
-        import zipfile
         with zipfile.ZipFile(str(evidence) + ".zip", "w", zipfile.ZIP_DEFLATED) as archive:
             for path in files + [evidence / "result.json"]:
                 archive.write(path, path.relative_to(evidence))
@@ -161,6 +166,7 @@ def execute(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repository", default="https://github.com/NgTHung/Itemset")
     parser.add_argument("--revision", default=os.environ.get("ITEMSET_REVISION"))
     parser.add_argument("--spmf-jar", help="Use a local copy of the pinned JAR instead of downloading it")
     parser.add_argument("--root", default="/content/Itemset-cleanrun")

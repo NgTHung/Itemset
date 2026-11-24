@@ -61,7 +61,7 @@ julia --project=. tools/spmf/compare.jl data/toy/spmf/baskets-0.5.txt results/pa
 
 ## Run on Colab
 
-Open the [public Colab notebook](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb) on a Python CPU runtime and select **Run all**. It checks out an exact commit, verifies Julia 1.13.2, Java 25 and the SPMF JAR, then runs every Julia demo cell. The last cell shows Semeion examples and gives the evidence ZIP path.
+Open the [public Colab notebook](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb) on a Python CPU runtime and select `Run all`. It checks out an exact commit, verifies Julia 1.13.2, Java 25 and the SPMF JAR, then runs every Julia demo cell. The first code cell prints the evidence ZIP path and the last cell shows Semeion examples.
 
 The [notebook guide](notebooks/README.md) explains how to pin a revision, inspect the evidence and run the original Julia cells directly.
 
