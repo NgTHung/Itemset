@@ -42,11 +42,4 @@ function summarize_rows(rows)
     return summaries
 end
 
-function write_summary(rows, path::AbstractString)
-    open(path, "w") do io
-        println(io, join(SUMMARY_FIELDS, ','))
-        for row in summarize_rows(rows)
-            println(io, join((csv_field(row[k]) for k in SUMMARY_FIELDS), ','))
-        end
-    end
-end
+write_summary(rows, path::AbstractString) = write_rows(path, SUMMARY_FIELDS, summarize_rows(rows))

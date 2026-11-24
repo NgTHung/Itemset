@@ -1,5 +1,5 @@
 # Stage profile of the optimized CLI path at a high and a low minsup of each benchmark.
-# scripts/stage_profile.jl reads only the series below. The other keys complete the run configuration.
+# scripts/stage_profile.jl reads the series and the repeats below. The other keys complete the run configuration.
 name = "stage-profile"
 variants = ["optimized"]
 mode = "cli"
