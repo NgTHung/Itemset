@@ -24,7 +24,7 @@ The statistics are computed from the files. Retail has 16,470 items; the brief's
 
 ## Choice of copies
 
-All five datasets come from the [FIMI repository](http://fimi.uantwerpen.be/data/), which also serves them from its [RPI mirror](https://cs.rpi.edu/~zaki/Workshops/FIMI/data/). SPMF republishes them in its [dataset catalog](https://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php), but not every copy matches FIMI:
+All five datasets come from the [FIMI repository](https://fimi.uantwerpen.be/data/), which also serves them from its [RPI mirror](https://cs.rpi.edu/~zaki/Workshops/FIMI/data/). Mushroom uses the FIMI HTTPS source first; its uncompressed bytes must match the pinned SHA-256. SPMF republishes the datasets in its [dataset catalog](https://www.philippe-fournier-viger.com/spmf/index.php?link=datasets.php), but not every copy matches FIMI:
 
 - Chess and Accidents: the SPMF copies are byte-identical to FIMI's `chess.dat` and `accidents.dat`.
 - Retail and T10I4D100K: FIMI uses item 0, which SPMF rejects because it requires positive item IDs. The SPMF copies add 1 to every ID, which leaves every support unchanged, so the experiments use them.
