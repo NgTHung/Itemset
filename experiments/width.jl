@@ -252,12 +252,4 @@ function pilot_rows(settings::WidthSettings, databases::AbstractDict; fixed_coun
 end
 
 """Write the rows of `pilot_rows` as CSV."""
-function write_pilot(path::AbstractString, rows)
-    open(path, "w") do io
-        println(io, join(PILOT_FIELDS, ','))
-        for row in rows
-            println(io, join((csv_field(getfield(row, Symbol(f))) for f in PILOT_FIELDS), ','))
-        end
-    end
-    return nothing
-end
+write_pilot(path::AbstractString, rows) = write_rows(path, PILOT_FIELDS, rows)

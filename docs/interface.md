@@ -110,6 +110,10 @@ The market basket application derives rules from the `SupportMap` with these def
 
 The hand-derived fixtures in [data/toy](../data/toy/README.md) let you test rule logic and result rendering against known maps.
 
+## Profiling
+
+`experiments/stage_profile.jl` is the one place where an experiment names internal functions of the package. It groups the samples of the sampling profiler by the functions listed in `STAGE_GROUPS`, so that a report can say how much of the optimized CLI path goes to reading, the root layout, joins, and output. `tests/stage_profile.jl` checks that every listed function and file exists, so a rename fails that test and a sample never moves silently to another group. The profile also reads the thread id that `Profile.fetch(include_meta=true)` records with each sample, and it throws when that layout is not recognized. Every other experiment uses only the API above.
+
 ## Example
 
 The grocery fixture runs through the whole contract, so you can check each value by hand against [data/toy/groceries.expected.txt](../data/toy/groceries.expected.txt).

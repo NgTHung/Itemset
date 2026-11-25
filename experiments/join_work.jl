@@ -78,30 +78,14 @@ within each dataset, on the files `prepare_dataset` verifies in `data_dir`.
 Throws `ArgumentError` for a dataset the manifest lacks.
 """
 function join_work_rows(config::RunConfig, manifest::AbstractDict{String,DatasetEntry}, data_dir::AbstractString)
-    rows = NamedTuple[]
-    for series in config.series
-        haskey(manifest, series.dataset) || throw(ArgumentError("unknown dataset $(repr(series.dataset))"))
-        entry = manifest[series.dataset]
-        transactions = read_transactions(prepare_dataset(entry, data_dir))
-        for minsup in sort(series.minsup; rev=true)
-            count = support_threshold(minsup, length(transactions))
-            work = join_work(transactions, count)
-            push!(rows, (dataset=series.dataset, minsup_relative=string(minsup), minsup_count=count, work...))
-        end
+    return for_each_point(config, manifest, data_dir; keep=true) do point
+        work = join_work(point.transactions, point.minsup_count)
+        (dataset=point.dataset, minsup_relative=point.minsup_relative, minsup_count=point.minsup_count, work...)
     end
-    return rows
 end
 
 const JOIN_WORK_FIELDS = ["dataset", "minsup_relative", "minsup_count", "itemsets", "frequent_items", "joins",
                           "successful_joins", "merged_elements"]
 
 """Write the rows of `join_work_rows` as CSV."""
-function write_join_work(path::AbstractString, rows)
-    open(path, "w") do io
-        println(io, join(JOIN_WORK_FIELDS, ','))
-        for row in rows
-            println(io, join((csv_field(getfield(row, Symbol(f))) for f in JOIN_WORK_FIELDS), ','))
-        end
-    end
-    return nothing
-end
+write_join_work(path::AbstractString, rows) = write_rows(path, JOIN_WORK_FIELDS, rows)
