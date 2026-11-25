@@ -278,13 +278,23 @@ function capture_environment(config::RunConfig)
 end
 
 """
+Return `command` with `JULIA_LOAD_PATH` set to the active project and the
+standard libraries. A parent such as `Pkg.test()` exports a load path whose
+sandbox provides `ItemsetMining`, and a child that inherits it could load that
+package instead of its own checkout's.
+"""
+isolate_load_path(command::Cmd) =
+    addenv(command, "JULIA_LOAD_PATH" => join(["@", "@stdlib"], Sys.iswindows() ? ';' : ':'))
+
+"""
 Load each revision's package once, untimed, so a stale package image is rebuilt
 before timing instead of inside the first attempt. Throws `ArgumentError` naming
 the stage whose checkout cannot load `ItemsetMining`.
 """
 function load_revisions(config::RunConfig)
     for revision in config.revisions
-        command = `$(Base.julia_cmd()) --startup-file=no --project=$(revision.project) -e "using ItemsetMining"`
+        command = isolate_load_path(
+            `$(Base.julia_cmd()) --startup-file=no --project=$(revision.project) -e "using ItemsetMining"`)
         log = IOBuffer()
         success(pipeline(command; stdout=log, stderr=log)) || throw(ArgumentError(
             "stage $(revision.stage) cannot load ItemsetMining from $(revision.project): " *
