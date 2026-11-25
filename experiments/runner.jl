@@ -80,9 +80,10 @@ function run_attempt(attempt::Attempt, config::RunConfig, input::String, dir::St
     paths = Dict(name => joinpath(dir, name) for name in
                  ("stdout.txt", "stderr.txt", "measure.toml", "worker.toml", "output.txt"))
     command = measured_command(attempt, config, input, paths["output.txt"], paths["worker.toml"])
-    wrapper = `$(Base.julia_cmd()) --startup-file=no $MEASURE_SCRIPT --timeout $(config.timeout_seconds)
+    # The measured command inherits the wrapper's environment, so the wrapper carries the pinned load path.
+    wrapper = isolate_load_path(`$(Base.julia_cmd()) --startup-file=no $MEASURE_SCRIPT --timeout $(config.timeout_seconds)
                --stdout $(paths["stdout.txt"]) --stderr $(paths["stderr.txt"])
-               --report $(paths["measure.toml"]) -- $command`
+               --report $(paths["measure.toml"]) -- $command`)
     write(joinpath(dir, "command.txt"), string(command), "\n")
     # The wrapper exits nonzero only for its own bad arguments, which is a harness bug.
     run(wrapper)
