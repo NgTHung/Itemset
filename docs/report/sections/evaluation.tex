@@ -202,6 +202,157 @@ phép so sánh cùng số liệu gốc.
 \subsection{Thời gian, số lượng kết quả và khả năng mở rộng}
 Thien viết runtime/độ dài giao dịch; Hung viết output size và tập con lồng nhau
 10\%, 25\%, 50\%, 75\%, 100\%. Dẫn chiếu hình và dữ liệu thô khi có kết quả.
+\subsubsection{Thời gian chạy theo ngưỡng hỗ trợ}
+\label{sec:minsup}
+Nhóm đo bốn chương trình trong một phiên duy nhất trên máy chấm điểm BBQ (Linux,
+Intel i7-11800H cố định 2,3\,GHz, 7,4\,GiB RAM, Julia 1.13.2 một luồng, Temurin
+25.0.4.1 cho các chương trình Java): bản cơ bản, bản tối ưu, Eclat của SPMF 2.66
+và PrePost+ cũng của SPMF. Hai bản Julia chạy qua giao diện dòng lệnh
+\texttt{demo.jl} ở cùng một revision (\texttt{ca60f43}), nên thời gian là phạm vi
+\emph{process}: từ lúc khởi chạy tiến trình đến lúc ghi xong tệp, gồm cả khởi động
+Julia hoặc JVM, đọc và ghi. Lưới có 33 điểm (benchmark, minsup) trên năm benchmark
+của Bảng~\ref{tab:datasets}, mỗi điểm lặp năm lần. Cả 660 lần chạy đều được đối
+chiếu toàn bộ tập mục với một lần chạy SPMF Eclat độc lập và khớp hoàn toàn.
+
+Mỗi điểm lấy trung vị của năm lần lặp. Độ rộng tứ phân vị so với trung vị không quá
+2{,}9\% ở bản cơ bản và 1{,}9\% ở bản tối ưu trên mọi điểm; ở SPMF và PrePost+ nó
+lớn nhất là 11{,}3\% và 13{,}9\%, và chỉ một điểm của SPMF cùng ba điểm của PrePost+
+vượt 10\%. Để ước lượng độ trôi giữa các phiên, nhóm so với ba phiên đo khác của cùng
+máy. Thời gian PrePost+ (cùng một lệnh Java) của phiên này lệch $+3{,}0\%$, $+1{,}9\%$
+và $-2{,}3\%$ theo trung bình nhân, và lớn nhất 14{,}4\% ở một điểm. Bản tối ưu đo ở
+một phiên khác cùng revision lệch $-1{,}5\%$ trung bình, lớn nhất 5{,}6\%. Bốn chương
+trình trong bảng chạy trong cùng một phiên, nên tỉ số giữa hai chương trình chỉ chịu
+nhiễu trong phiên. Nhóm coi một tỉ số là khác biệt có thật khi nó vượt tổng hai độ rộng
+tứ phân vị lớn nhất: khoảng 5\% giữa hai bản Julia và khoảng 16\% khi một bên là chương
+trình Java. Độ trôi giữa các phiên chỉ dùng khi so với một đợt đo khác, với mức 5{,}6\%
+cho bản tối ưu và 14{,}4\% cho PrePost+.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/runtime-curves.png}
+\caption{Thời gian \emph{process} theo minsup của bốn chương trình trên năm
+benchmark; trục tung theo thang log, điểm là trung vị của năm lần lặp và thanh là
+khoảng tứ phân vị. Dưới mỗi nhãn trục hoành là số tập phổ biến. ``SPMF'' là Eclat
+của SPMF.}
+\label{fig:runtime}
+\end{figure*}
+
+Bản tối ưu nhanh nhất ở cả 33 điểm, với thời gian từ 0{,}21 đến 0{,}96\,s. Ở minsup
+thấp nhất của mỗi benchmark (Bảng~\ref{tab:runtime-low}) nó nhanh hơn bản cơ bản
+khoảng 7{,}9 lần ở Accidents, 10{,}4 lần ở Chess, 11{,}3 lần ở T10I4D100K, 15{,}1 lần
+ở Mushroom và 33{,}3 lần ở Retail. Bảng~\ref{tab:runtime-ratio} cho trung bình nhân
+của tỉ số này trên mọi điểm của từng benchmark, cùng tỉ số của SPMF Eclat và PrePost+
+so với bản tối ưu.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Thời gian \emph{process} (giây) ở minsup thấp nhất của mỗi benchmark,
+trung vị của năm lần lặp. ``Tập'' là số tập phổ biến.}
+\label{tab:runtime-low}
+\begin{tabular}{lrrrrrr}
+\hline
+Dữ liệu / minsup & Tập & Cơ bản & Tối ưu & SPMF & PrePost+ \\
+\hline
+Chess / 0{,}6 & 254\,944 & 3{,}07 & 0{,}30 & 16{,}07 & 0{,}62 \\
+Mushroom / 0{,}1 & 574\,431 & 6{,}15 & 0{,}41 & 6{,}93 & 0{,}74 \\
+Retail / 0{,}001 & 7\,589 & 12{,}59 & 0{,}38 & 1{,}57 & 3{,}52 \\
+T10I4D100K / 0{,}00025 & 96\,959 & 10{,}86 & 0{,}96 & 8{,}11 & 4{,}36 \\
+Accidents / 0{,}65 & 1\,093 & 6{,}76 & 0{,}86 & 26{,}70 & 2{,}36 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Trung bình nhân của tỉ số thời gian \emph{process} trên mọi điểm của từng
+benchmark: thời gian của biến thể ghi ở đầu cột chia cho thời gian của bản tối ưu.
+Giá trị lớn hơn 1 nghĩa là chậm hơn bản tối ưu.}
+\label{tab:runtime-ratio}
+\begin{tabular}{lrrr}
+\hline
+Dữ liệu & Cơ bản & SPMF & PrePost+ \\
+\hline
+Chess & 2{,}83 & 10{,}33 & 2{,}08 \\
+Mushroom & 2{,}73 & 6{,}01 & 2{,}22 \\
+Retail & 5{,}89 & 4{,}34 & 5{,}01 \\
+T10I4D100K & 13{,}14 & 4{,}53 & 4{,}76 \\
+Accidents & 2{,}62 & 10{,}76 & 2{,}39 \\
+\hline
+\end{tabular}
+\end{table}
+
+Hình dạng đường cong của bản cơ bản giải thích được bằng khối lượng việc. Bản cơ
+bản giao hai tidset đã sắp xếp bằng phép trộn, nên mỗi phép giao tốn công tỉ lệ với
+tổng độ dài hai tidset. Nhóm chạy lại phép tìm kiếm của bản cơ bản trên một luồng
+và đếm số phép giao (join), số phép giao cho ra tập phổ biến, và tổng độ dài hai
+tidset qua mọi phép giao, gọi là số phần tử trộn (Bảng~\ref{tab:join-work}). Trừ
+thời gian ở minsup cao nhất (chủ yếu là khởi động và đọc tệp) khỏi thời gian ở
+minsup thấp nhất rồi chia cho phần chênh của số phần tử trộn, bản cơ bản tốn từ 2{,}0
+đến 6{,}9\,ns mỗi phần tử trên cả năm benchmark, cùng bậc với 5{,}4 đến 7{,}4\,ns của
+thực nghiệm về độ dài giao dịch ở mục~\ref{sec:width}.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{Công việc của bản cơ bản ở minsup thấp nhất của mỗi benchmark. ``Thành
+công'' là tỉ lệ phép giao cho ra tập phổ biến, ``Phần tử'' là tổng độ dài hai
+tidset trên mọi phép giao (tỉ phần tử), và ns/pt là thời gian mỗi phần tử trộn sau
+khi trừ thời gian ở minsup cao nhất.}
+\label{tab:join-work}
+\begin{tabular}{lrrrr}
+\hline
+Dữ liệu / minsup & Phép giao & Thành công & Phần tử & ns/pt \\
+\hline
+Chess / 0{,}6 & 326\,545 & 78{,}1\% & 1{,}43 & 2{,}0 \\
+Mushroom / 0{,}1 & 722\,721 & 79{,}5\% & 1{,}66 & 3{,}6 \\
+Retail / 0{,}001 & 3\,932\,582 & 0{,}14\% & 2{,}17 & 5{,}7 \\
+T10I4D100K / 0{,}00025 & 4\,192\,075 & 2{,}3\% & 1{,}48 & 6{,}9 \\
+Accidents / 0{,}65 & 2\,333 & 46{,}1\% & 1{,}22 & 4{,}8 \\
+\hline
+\end{tabular}
+\end{table}
+
+Cấu trúc dữ liệu quyết định phần việc đó. Ở Chess và Mushroom, số phép giao chỉ
+bằng 1{,}26 đến 1{,}28 lần số tập phổ biến và khoảng 78\% đến 80\% phép giao thành
+công, nên công việc tăng cùng số tập phổ biến. Ở Retail, minsup 0{,}001 sinh
+3{,}93 triệu phép giao nhưng chỉ 5\,472 phép thành công, tức mỗi tập phổ biến kéo
+theo khoảng 286\,000 phần tử trộn, và bản cơ bản mất 12{,}59\,s, gấp 8{,}0 lần SPMF
+Eclat (1{,}57\,s) và 3{,}6 lần PrePost+ (3{,}52\,s) ở cùng điểm. Ở T10I4D100K, ngay
+minsup 0{,}01 có 70\,127 phép giao tốn 297{,}7 triệu phần tử trộn để cho ra đúng 10
+tập hai item, nên tỉ số cơ bản trên tối ưu đã là 8{,}5 ở điểm đầu tiên. Đường cong
+của bản tối ưu gần như phẳng và chỉ tăng rõ ở các điểm có đầu ra lớn nhất (Mushroom
+0{,}1, T10I4D100K 0{,}00025). Nguyên nhân bên trong bản tối ưu được phân tích ở mục
+``Phân tích và hướng phát triển''.
+
+Ở minsup cao nhất của Chess, Mushroom, Accidents và Retail, tỉ số cơ bản trên tối
+ưu chỉ là 1{,}09, 1{,}06, 1{,}27 và 1{,}46. Cả bốn đều vượt nhiễu trong phiên giữa hai
+bản Julia (khoảng 5\%), nên là khác biệt có thật, nhưng nhỏ: ở Chess và Mushroom chênh
+lệch chỉ vài phần trăm của một lượt chạy mà phần lớn là khởi động và đọc tệp, còn ở
+Accidents và Retail chênh lệch tuyệt đối chỉ 0{,}21\,s và 0{,}13\,s, cùng bậc với thời
+gian khởi động và đọc tệp (khoảng 0{,}21\,s ở Chess, minsup 0{,}9, điểm gần như chỉ gồm
+các bước đó). Vì vậy đó không phải bằng chứng rằng hai thuật toán ngang nhau. Ở minsup
+thấp nhất, SPMF Eclat nhanh hơn bản cơ bản ở Retail (8{,}0 lần) và T10I4D100K (1{,}3
+lần), nhưng chậm hơn ở Chess (5{,}2 lần) và Accidents (4{,}0 lần). Ở Mushroom, SPMF Eclat
+mất 6{,}93\,s và bản cơ bản 6{,}15\,s; chênh lệch 13\% nằm trong nhiễu của chương trình
+Java (khoảng 16\%) nên hai chương trình không phân biệt được. Nhóm chưa đọc mã nguồn
+SPMF nên không giải thích nguyên nhân của sự đảo chiều ở các điểm kia.
+
+Giới hạn của các kết luận: một máy, năm lần lặp mỗi điểm, phạm vi \emph{process}
+gồm cả khởi động Julia hoặc JVM (các chương trình Java chịu thêm khởi động JVM),
+và bản cơ bản là bản hiện có ở revision \texttt{ca60f43}, đã hưởng phần đọc và ghi
+nhanh hơn của các giai đoạn sau, nên không phải bản cơ bản của lần đo ngày 31/10.
+Số đếm phép giao chạy riêng, không nằm trong lần đo thời gian. Dữ liệu thô của lần
+đo (thư mục \texttt{bbq-all-variants-cli-5repeat-20261117T041922Z}) không đưa vào Git; bảng và
+hình dựng lại bằng \texttt{scripts/runtime\_curves.jl},
+\texttt{scripts/plot\_runtime\_curves.py} và \texttt{scripts/join\_work.jl}. Mã băm của
+thư mục đó, các lệnh tái lập và các kiểm tra nằm trong
+\texttt{docs/runtime-curves-2026-11-17.md}.
+
 \subsubsection{Ảnh hưởng của độ dài giao dịch}
 \label{sec:width}
 Để tách độ dài giao dịch khỏi mật độ và khối lượng đầu ra vốn lẫn trong các
