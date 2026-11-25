@@ -71,6 +71,16 @@ def use_log_x(minsups):
     return max(minsups) / min(minsups) > 5
 
 
+def ylabel(rows):
+    """Name the bars only where a point has two or more samples, because one sample has no quartiles."""
+    counts = [int(r["exact_samples"]) for r in rows if r["median_seconds"]]
+    if all(n >= 2 for n in counts):
+        return "Median seconds (log), IQR bars"
+    if all(n < 2 for n in counts):
+        return "Median seconds (log), one sample per point"
+    return "Median seconds (log), IQR bars where 2 or more samples"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("curves", type=Path)
@@ -131,7 +141,7 @@ def main():
     for ax in flat[:len(datasets)]:
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
     for ax in flat[0::columns]:
-        ax.set_ylabel("Median seconds (log), IQR bars", fontsize=8)
+        ax.set_ylabel(ylabel(rows), fontsize=8)
 
     legend_ax = flat[len(datasets)]
     legend_ax.axis("off")
