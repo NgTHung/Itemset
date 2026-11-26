@@ -1,4 +1,4 @@
-"""Checks notebooks/market_basket.ipynb without a Colab runtime.
+"""Checks notebooks/market_basket_colab.ipynb without a Colab runtime.
 
 The notebook runs on Colab's Python kernel and calls Julia through the shell, so these checks cover what a
 hosted run needs: the pins, the order of the steps, and the repository paths the cells name.
@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-NOTEBOOK = ROOT / "notebooks" / "market_basket.ipynb"
+NOTEBOOK = ROOT / "notebooks" / "market_basket_colab.ipynb"
 STEPS = ["itemset-setup", "itemset-mb-instantiate", "itemset-mb-tests", "itemset-mb-prepare",
          "itemset-mb-rules", "itemset-mb-show", "itemset-mb-evidence"]
 

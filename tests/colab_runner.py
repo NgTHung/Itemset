@@ -14,7 +14,7 @@ spec = importlib.util.spec_from_file_location("colab_runner", ROOT / "scripts/ru
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
 COLAB_CELL = "".join(next(
-    cell["source"] for cell in json.loads((ROOT / "notebooks/colab.ipynb").read_text(encoding="utf-8"))["cells"]
+    cell["source"] for cell in json.loads((ROOT / "notebooks/demo_colab.ipynb").read_text(encoding="utf-8"))["cells"]
     if cell["id"] == "itemset-colab-run"
 ))
 RELEASE = (ROOT / "tools/spmf/release.toml").read_text(encoding="utf-8")
@@ -79,7 +79,7 @@ class RunnerTests(unittest.TestCase):
                     patch("runpy.run_path", return_value={"main": runner.main}),
                     patch.object(runner, "execute", return_value=0) as execute,
                 ):
-                    exec(compile(configured, "notebooks/colab.ipynb", "exec"), {})
+                    exec(compile(configured, "notebooks/demo_colab.ipynb", "exec"), {})
                 if supplied_revision:
                     remote.assert_not_called()
                 else:
@@ -110,7 +110,7 @@ class RunnerTests(unittest.TestCase):
                 patch("urllib.request.urlopen") as download,
                 self.assertRaisesRegex(ValueError, message),
             ):
-                exec(compile(COLAB_CELL, "notebooks/colab.ipynb", "exec"), {})
+                exec(compile(COLAB_CELL, "notebooks/demo_colab.ipynb", "exec"), {})
             remote.assert_not_called()
             download.assert_not_called()
 

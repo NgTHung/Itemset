@@ -1,4 +1,4 @@
-"""Checks notebooks/image_patterns.ipynb without a Colab runtime.
+"""Checks notebooks/image_patterns_colab.ipynb without a Colab runtime.
 
 The notebook runs on Colab's Python kernel and calls Julia through the shell, so these checks cover the step
 order, the pins shared with the market basket notebook, and the repository paths and outputs the cells name.
@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-NOTEBOOK = ROOT / "notebooks" / "image_patterns.ipynb"
+NOTEBOOK = ROOT / "notebooks" / "image_patterns_colab.ipynb"
 STEPS = ["itemset-setup", "itemset-ip-instantiate", "itemset-ip-tests", "itemset-ip-mine", "itemset-ip-show",
          "itemset-ip-evidence"]
 

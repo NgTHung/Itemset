@@ -1,4 +1,4 @@
-"""Checks the benchmark, runtime, width, and stage profile cells of notebooks/demo.ipynb without running Julia.
+"""Checks the benchmark, runtime, width, and stage profile cells of notebooks/demo_local.ipynb without running Julia.
 
 The cells themselves run in a Julia kernel, and the runner in scripts/run_colab_notebook.py executes them
 by ID. These checks cover what that runner relies on and what the cells name in the repository.
@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-NOTEBOOK = ROOT / "notebooks" / "demo.ipynb"
+NOTEBOOK = ROOT / "notebooks" / "demo_local.ipynb"
 THIEN = ["itemset-7a", "itemset-7-figure", "itemset-7d", "itemset-7e", "itemset-7f"]
 
 
