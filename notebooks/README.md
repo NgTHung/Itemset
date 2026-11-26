@@ -1,14 +1,29 @@
-# Colab notebook
+# Colab notebooks
 
-Open [colab.ipynb on Colab](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb) on a Python CPU runtime and run all cells. It resolves the repository's default branch to an exact commit, checks the downloaded Julia, Java and SPMF files against pinned SHA-256 hashes, and runs every code cell from `demo.ipynb` in one Julia process.
+The Eclat demo and each application have their own notebook, so a failure in one does not hide the others and each file has one purpose. The notebooks call Julia code that lives in `applications/` and `scripts/`, so a notebook holds only the steps that run it.
+
+## Eclat demo
+
+Open [demo_colab.ipynb on Colab](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo_colab.ipynb) on a Python CPU runtime and run all cells. It resolves the repository's default branch to an exact commit, checks the downloaded Julia, Java and SPMF files against pinned SHA-256 hashes, and runs every code cell from `demo_local.ipynb` in one Julia process. These cells show the engine: toy mining, benchmarks, runtime against minsup, transaction width, the stage profile, and the exact comparison with SPMF.
 
 To replay a run, replace the empty `ITEMSET_REVISION = ""` in the first code cell with the full 40-character lowercase commit SHA. Choose a commit that contains this notebook, its companion runner and `tools/spmf/release.toml`. For earlier commits, use the runner and setup in the [dated verification record](../docs/phat-application2-colab-2026-11-13.md). To run a GitHub fork, set the `ITEMSET_REPOSITORY` environment variable to its HTTPS clone URL, such as `https://github.com/owner/repo`.
 
-The first code cell prints the evidence ZIP path as `EVIDENCE_ARCHIVE`. Download it through the Colab Files sidebar. `result.json` records the repository, revision, versions, SPMF source, completed cell IDs and artifact hashes. `commands.log` holds the execution log. The ZIP also contains complete application outputs and the two exact-map comparisons and memory measurements on Chess at 90% minsup. The [report guide](../docs/report/README.md) gives the commands for the full experimental series.
+The first code cell prints the evidence ZIP path as `EVIDENCE_ARCHIVE`. Download it through the Colab Files sidebar. `result.json` records the repository, revision, versions, SPMF source, completed cell IDs and artifact hashes. `commands.log` holds the execution log. The ZIP also contains the two exact-map comparisons and memory measurements on Chess at 90% minsup. The [report guide](../docs/report/README.md) gives the commands for the full experimental series.
 
-## Use the Julia notebook directly
+## Run an application
 
-On a Julia kernel, open `demo.ipynb` and set `REPO_URL` and `REVISION` in its setup cell. You can also upload a committed ZIP to `/content/Itemset-colab.zip`, created with `git archive --format=zip --output=../Itemset-colab.zip HEAD`. Select Colab runtime 2026.07 (Julia 1.12.6) or a newer runtime with Julia 1.x. Use 1.13.2 to reproduce the pinned Semeion codebook. The live SPMF comparison requires Java 25 and the JAR from the [reference protocol](../tools/spmf/README.md).
+[market_basket_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/market_basket_colab.ipynb) and [image_patterns_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb) each run one application on a Python CPU runtime and need no Java. Both share one setup cell, which installs Julia 1.13.2 with the same pinned SHA-256 as the runner and checks out an exact commit. `tests/test_notebook_split.py` keeps the two copies identical. Both then run the package tests and one application script. Set `ITEMSET_REVISION` in the first code cell to replay a commit.
+
+- `market_basket_colab.ipynb` cleans Online Retail II, mines the baskets, and shows the top-10 rules by lift. It takes about ten minutes. The evidence ZIP `/content/itemset-market-basket-evidence.zip` holds the result tables, `cleaning.tsv`, and `result.json` with the revision, the Julia version, and the SHA-256 of every file.
+- `image_patterns_colab.ipynb` encodes the Semeion digits, mines three thresholds, builds the pattern features, and shows the tables and the images that match a pattern next to those that do not. The evidence ZIP `/content/itemset-image-patterns-evidence.zip` has the same layout and adds the SHA-256 of `semeion.data`.
+
+`tests/test_notebook_market_basket.py` and `tests/test_notebook_image_patterns.py` check the pins, the step order, and the repository paths and outputs of each notebook without a Colab runtime.
+
+## Run locally
+
+`demo_local.ipynb`, `market_basket_local.ipynb` and `image_patterns_local.ipynb` run on a Julia kernel in an IDE, from a checkout you already have. They differ from the Colab notebooks in setup only. The first cell finds the checkout, from the repository root or from `notebooks/`, or from `ITEMSET_ROOT` when you set it. The second cell activates the project and installs its dependencies. Nothing is cloned and no Julia is installed. A Colab notebook adds those steps because a Colab runtime starts empty, so the cells after setup and their results stay the same.
+
+Use Julia 1.13.2, the version of the pins and of every recorded result. The setup accepts any 1.x from 1.12. The SPMF comparison in `demo_local.ipynb` needs Java 25 and the JAR from the [reference protocol](../tools/spmf/README.md).
 
 ## Run through the Colab CLI
 

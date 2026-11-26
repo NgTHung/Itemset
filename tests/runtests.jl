@@ -114,6 +114,7 @@ include(joinpath(dirname(@__DIR__), "applications", "market_basket", "MarketBask
     include("image_mining.jl")
     include("image_analysis.jl")
     include("image_pilot_cli.jl")
+    include("image_features_cli.jl")
     include("harness.jl")
     include("measurement_stages.jl")
     include("revisions.jl")

@@ -93,7 +93,7 @@ def notebook_script(notebook, evidence):
 def collect_artifacts(manifest, evidence):
     with manifest.open("rb") as stream:
         folders = tomllib.load(stream)
-    required = {"encoding", "semeion", "spmf-smoke", "market_basket"}
+    required = {"spmf-smoke"}
     missing = required.difference(folders)
     if missing:
         raise ValueError(f"Notebook artifacts missing: {', '.join(sorted(missing))}")
@@ -142,7 +142,7 @@ def execute(args):
                       spmf_sha256=release["sha256"], spmf_version=release["version"], spmf_source=spmf_source,
                       julia_version=subprocess.check_output([julia, "--version"], text=True).strip(),
                       java_version=subprocess.run([java, "-version"], capture_output=True, text=True).stderr.strip())
-        notebook = root / "notebooks/demo.ipynb"
+        notebook = root / "notebooks/demo_local.ipynb"
         record["notebook_sha256"] = file_sha(notebook)
         script, identifiers = notebook_script(notebook, evidence)
         artifact_manifest = evidence / "notebook-artifacts.toml"

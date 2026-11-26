@@ -1,4 +1,4 @@
-"""Checks the Thien cells of notebooks/demo.ipynb without running Julia.
+"""Checks the benchmark, runtime, width, and stage profile cells of notebooks/demo_local.ipynb without running Julia.
 
 The cells themselves run in a Julia kernel, and the runner in scripts/run_colab_notebook.py executes them
 by ID. These checks cover what that runner relies on and what the cells name in the repository.
@@ -9,9 +9,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-NOTEBOOK = ROOT / "notebooks" / "demo.ipynb"
-THIEN = ["itemset-7a", "itemset-7b", "itemset-7c", "itemset-7c-check", "itemset-7-figure", "itemset-7d",
-         "itemset-7e", "itemset-7f"]
+NOTEBOOK = ROOT / "notebooks" / "demo_local.ipynb"
+THIEN = ["itemset-7a", "itemset-7-figure", "itemset-7d", "itemset-7e", "itemset-7f"]
 
 
 def load():
@@ -64,20 +63,6 @@ class NotebookTest(unittest.TestCase):
                      "runtime-curves.png", "width-curves.png"):
             with self.subTest(named=name):
                 self.assertIn(name, text)
-
-    def test_the_hand_checked_cell_states_its_numbers_and_checks_them(self):
-        text = {cell["id"]: source(cell) for cell in load()}["itemset-7c-check"]
-        # Seven baskets and the rule 1 => 2, 3: support 3, antecedent support 4, consequent support 4.
-        for expected in ("[1, 2, 3]", "3 // 4", "21 // 16", "minconf=0.76", "@assert"):
-            with self.subTest(expected=expected):
-                self.assertIn(expected, text)
-        # The Julia suite asserts the same case as real tests, which CI runs, so a change of the rule code
-        # fails there and the notebook cell is only a view of it.
-        rules_test = (ROOT / "tests" / "market_basket_rules.jl").read_text(encoding="utf-8")
-        self.assertIn('@testset "A seven-basket case worked out by hand"', rules_test)
-        for expected in ("21 // 16", "3 // 4", "(9, 3)"):
-            with self.subTest(in_rules_test=expected):
-                self.assertIn(expected, rules_test)
 
     def test_the_runtime_cell_asks_for_the_ratios_of_the_record(self):
         text = {cell["id"]: source(cell) for cell in load()}["itemset-7d"]
