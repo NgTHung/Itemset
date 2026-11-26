@@ -31,7 +31,7 @@ thay toàn bộ nhóm. Phat ghép notebook; Hung kiểm tra repository cuối c�
 
 ## Tạo lại biểu đồ độ đúng và bộ nhớ
 
-Chạy từ thư mục gốc trên Julia 1.13.2 với [SPMF 2.66 và Java 25](../../tools/spmf/README.md).
+Chạy từ thư mục gốc trên Julia 1.13.2 với [JAR SPMF đã ghim và Java 25](../../tools/spmf/README.md).
 Hai cấu hình đo cả hai biến thể qua CLI và đối chiếu toàn bộ đầu ra với cùng
 tham chiếu SPMF ở mỗi ngưỡng. Dùng các thư mục kết quả mới.
 Mỗi cấu hình chạy JVM với heap tối đa 3 GiB và bộ thu gom Serial GC.
