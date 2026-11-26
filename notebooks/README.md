@@ -4,6 +4,12 @@ Open [colab.ipynb on Colab](https://colab.research.google.com/github/NgTHung/Ite
 
 The notebook shows Semeion images and the path to the evidence ZIP. Download it through the Colab Files sidebar. `result.json` records the revision, versions, completed cell IDs and artifact hashes. `commands.log` holds the execution log. The ZIP also contains complete application outputs and the two exact-map comparisons and memory measurements on Chess at 90% minsup. The [report guide](../docs/report/README.md) gives the commands for the full experimental series.
 
+## Run only the market basket application
+
+[market_basket.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/market_basket.ipynb) runs the market basket application alone on a Python CPU runtime, so a failure there does not depend on the Semeion or SPMF steps of `colab.ipynb`. It needs no Java. It installs Julia 1.13.2 with the same pinned SHA-256 as the runner, checks out an exact commit, runs the package tests, cleans Online Retail II, mines the baskets, and shows the top-10 rules by lift. It takes about ten minutes. Set `ITEMSET_REVISION` in the first code cell to replay a commit. The evidence ZIP `/content/itemset-market-basket-evidence.zip` holds the result tables, `cleaning.tsv`, and `result.json` with the revision, the Julia version, and the SHA-256 of every file.
+
+`tests/test_notebook_market_basket.py` checks the pins, the step order, and the repository paths of its cells without a Colab runtime.
+
 ## Use the Julia notebook directly
 
 On a Julia kernel, open `demo.ipynb` and set `REPO_URL` and `REVISION` in its setup cell. You can also upload a committed ZIP to `/content/Itemset-colab.zip`, created with `git archive --format=zip --output=../Itemset-colab.zip HEAD`. The package supports Julia 1.12 or later within 1.x. Use 1.13.2 to reproduce the pinned Semeion codebook. The live SPMF comparison requires Java 25 and the JAR from the [reference protocol](../tools/spmf/README.md).
