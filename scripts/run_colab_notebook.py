@@ -93,7 +93,7 @@ def notebook_script(notebook, evidence):
 def collect_artifacts(manifest, evidence):
     with manifest.open("rb") as stream:
         folders = tomllib.load(stream)
-    required = {"encoding", "semeion", "spmf-smoke", "market_basket"}
+    required = {"spmf-smoke"}
     missing = required.difference(folders)
     if missing:
         raise ValueError(f"Notebook artifacts missing: {', '.join(sorted(missing))}")

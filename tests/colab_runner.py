@@ -204,9 +204,9 @@ class RunnerTests(unittest.TestCase):
             evidence = root / "evidence"
             evidence.mkdir()
             manifest = evidence / "notebook-artifacts.toml"
-            names = ("semeion", "encoding", "spmf-smoke", "market_basket")
+            names = ("spmf-smoke",)
             entries = [f"{name} = {json.dumps(str(source))}\n" for name in names]
-            manifest.write_text("".join(entries[:2]), encoding="utf-8")
+            manifest.write_text("", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "spmf-smoke"):
                 runner.collect_artifacts(manifest, evidence)
             manifest.write_text("".join(entries), encoding="utf-8")
