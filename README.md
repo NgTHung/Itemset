@@ -63,11 +63,11 @@ julia --project=. tools/spmf/compare.jl data/toy/spmf/baskets-0.5.txt results/pa
 
 Three notebooks run on a Python CPU runtime, one purpose each. Select `Run all` in each. Every notebook checks out an exact commit and verifies Julia 1.13.2, then writes an evidence ZIP.
 
-- [colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb): the Eclat demo. It also verifies Java 25 and the SPMF JAR, runs the Julia cells of `demo.ipynb`, and compares both variants with SPMF on Chess.
-- [market_basket.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/market_basket.ipynb): the market basket application on Online Retail II.
-- [image_patterns.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/image_patterns.ipynb): the image pattern application on Semeion.
+- [demo_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo_colab.ipynb): the Eclat demo. It also verifies Java 25 and the SPMF JAR, runs the Julia cells of `demo_local.ipynb`, and compares both variants with SPMF on Chess.
+- [market_basket_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/market_basket_colab.ipynb): the market basket application on Online Retail II.
+- [image_patterns_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb): the image pattern application on Semeion.
 
-The [notebook guide](notebooks/README.md) explains how to pin a revision, inspect the evidence and run the original Julia cells directly.
+The [notebook guide](notebooks/README.md) explains how to pin a revision, inspect the evidence and run the local Julia notebooks.
 
 ## Layout
 
@@ -81,7 +81,7 @@ The [notebook guide](notebooks/README.md) explains how to pin a revision, inspec
 - `experiments/`: the benchmark measurement protocol and result fields.
 - `tools/spmf/`: the procedure for independent SPMF reference runs.
 - `results/`: raw runs and figures, kept out of Git.
-- `notebooks/`: `colab.ipynb` is the Colab entry point for the Eclat demo cells of `demo.ipynb`. `market_basket.ipynb` and `image_patterns.ipynb` each run one application. They hold no helper code, which lives in `applications/` and `scripts/`.
+- `notebooks/`: the demo and each application have two notebooks, and the file name says where it runs. `*_local.ipynb` runs on a Julia kernel in your IDE from a checkout. `*_colab.ipynb` runs on Colab's Python kernel and clones the repository and installs Julia first. The cells and the results are the same. `demo_colab.ipynb` runs the cells of `demo_local.ipynb` through `scripts/run_colab_notebook.py`.
 - `docs/report/`: the Vietnamese IEEE-format report, exported as `docs/Report.pdf`.
 
 ## Reproducibility
