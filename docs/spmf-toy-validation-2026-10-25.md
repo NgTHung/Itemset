@@ -5,7 +5,7 @@ The [24 October record](spmf-toy-validation-2026-10-24.md) kept its raw SPMF out
 ## Environment
 
 - Windows 11 x86-64; Julia 1.13.2; Temurin Java 25.0.4.1+1.
-- SPMF JAR SHA-256 `4aa468384693b2016b457ea310a08cc24aa83abd42d3169ad65b9027778dfe6a`, the v2.66 checksum in [tools/spmf](../tools/spmf/README.md). Eclat prints `ECLAT v2.65` in its statistics.
+- SPMF JAR SHA-256 `4aa468384693b2016b457ea310a08cc24aa83abd42d3169ad65b9027778dfe6a`, matching the [release pin](../tools/spmf/release.toml). Eclat prints `ECLAT v2.65` in its statistics.
 - Outputs committed in `6740e6a` on the DAT-9 branch, generated with `julia --startup-file=no --project=. tools/spmf/toy_reference.jl .tools/jdk-25.0.4.1+1-jre/bin/java`.
 
 ## Results

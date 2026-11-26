@@ -122,7 +122,7 @@ function parse_revisions(table::AbstractDict, resolve)
     return revisions
 end
 
-"""SPMF's support count: `ceil(minsup * N)` in Float64, measured on SPMF v2.66."""
+"""SPMF's support count: `ceil(minsup * N)` in Float64, measured with the pinned JAR."""
 float_support_count(minsup::Float64, n::Integer) = ceil(Int, minsup * n)
 
 """True when SPMF and `support_threshold` turn `minsup` into the same count."""
@@ -250,6 +250,11 @@ function java_version(java::AbstractString)
     return first_line(String(take!(buffer)))
 end
 
+function spmf_release_version(sha256::AbstractString, configured::AbstractString)
+    release = TOML.parsefile(joinpath(REPO_ROOT, "tools", "spmf", "release.toml"))
+    return sha256 == release["sha256"] ? release["version"] : configured
+end
+
 """Facts shared by every row of a run. Throws `ArgumentError` when SPMF cannot run."""
 function capture_environment(config::RunConfig)
     os_release = Sys.iswindows() ? string(Sys.windows_version()) : readchomp(`uname -r`)
@@ -272,7 +277,8 @@ function capture_environment(config::RunConfig)
             throw(ArgumentError("cannot run $(config.java) -version: $(sprint(showerror, err))"))
         end
         env["spmf_jar_sha256"] = file_sha256(config.spmf_jar)
-        env["reference_version"] = strip("SPMF $(config.spmf_version) jar-sha256=$(env["spmf_jar_sha256"])")
+        version = spmf_release_version(env["spmf_jar_sha256"], config.spmf_version)
+        env["reference_version"] = join(filter(!isempty, ("SPMF", version, "jar-sha256=$(env["spmf_jar_sha256"])")), ' ')
     end
     return env
 end

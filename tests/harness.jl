@@ -31,6 +31,11 @@ toy_config(; kw...) = Experiments.parse_run_config(merge(Dict{String,Any}(
     Dict{String,Any}(string(k) => v for (k, v) in kw)))
 
 @testset "Measurement harness" begin
+    @testset "Reference version follows the pinned JAR" begin
+        release = TOML.parsefile(joinpath(dirname(@__DIR__), "tools", "spmf", "release.toml"))
+        @test Experiments.spmf_release_version(release["sha256"], "2.66") == release["version"]
+        @test Experiments.spmf_release_version(repeat("0", 64), "other") == "other"
+    end
     @testset "Measure one process" begin
         report, out = measured("println(\"hi\")")
         @test report["status"] == "ok" && report["exit_code"] == 0
