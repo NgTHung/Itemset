@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOK = ROOT / "notebooks" / "market_basket.ipynb"
-STEPS = ["itemset-mb-setup", "itemset-mb-instantiate", "itemset-mb-tests", "itemset-mb-prepare",
+STEPS = ["itemset-setup", "itemset-mb-instantiate", "itemset-mb-tests", "itemset-mb-prepare",
          "itemset-mb-rules", "itemset-mb-show", "itemset-mb-evidence"]
 
 
@@ -43,7 +43,7 @@ class MarketBasketNotebookTest(unittest.TestCase):
         self.assertEqual(ids, STEPS)
 
     def test_julia_is_the_pinned_version_and_checked_against_its_hash(self):
-        text = code()["itemset-mb-setup"]
+        text = code()["itemset-setup"]
         pinned = (ROOT / ".julia-version").read_text(encoding="utf-8").strip()
         self.assertIn(f"julia-{pinned}-linux-x86_64.tar.gz", text)
         self.assertIn(f"/{'.'.join(pinned.split('.')[:2])}/julia-{pinned}", text)
@@ -54,7 +54,7 @@ class MarketBasketNotebookTest(unittest.TestCase):
 
     def test_the_julia_pin_equals_the_one_of_the_colab_runner(self):
         runner = (ROOT / "scripts" / "run_colab_notebook.py").read_text(encoding="utf-8")
-        text = code()["itemset-mb-setup"]
+        text = code()["itemset-setup"]
         for runner_name, notebook_name in (("JULIA_URL", "JULIA_URL"), ("JULIA_SHA", "JULIA_SHA256")):
             with self.subTest(pin=notebook_name):
                 value = re.search(rf'^{runner_name} = "([^"]+)"', runner, re.MULTILINE)
@@ -62,7 +62,7 @@ class MarketBasketNotebookTest(unittest.TestCase):
                 self.assertIn(f'{notebook_name} = "{value[1]}"', text)
 
     def test_the_revision_is_resolved_to_a_full_commit_before_anything_runs(self):
-        text = code()["itemset-mb-setup"]
+        text = code()["itemset-setup"]
         self.assertIn("ITEMSET_REVISION", text)
         self.assertIn("[0-9a-f]{40}", text)
         self.assertIn("git", text)
@@ -79,7 +79,7 @@ class MarketBasketNotebookTest(unittest.TestCase):
 
     def test_every_julia_call_goes_through_one_helper_that_fails_the_cell(self):
         by_id = code()
-        helper = by_id["itemset-mb-setup"]
+        helper = by_id["itemset-setup"]
         for expected in ('"--startup-file=no"', '"--project=."', "raise RuntimeError"):
             with self.subTest(expected=expected):
                 self.assertIn(expected, helper)
@@ -101,6 +101,16 @@ class MarketBasketNotebookTest(unittest.TestCase):
         for expected in ("sha256", "revision", "results/raw/market_basket", "zipfile"):
             with self.subTest(expected=expected):
                 self.assertIn(expected, text)
+
+    def test_the_hand_checked_case_is_a_julia_test_and_the_notebook_runs_the_suite(self):
+        rules_test = (ROOT / "tests" / "market_basket_rules.jl").read_text(encoding="utf-8")
+        self.assertIn('@testset "A seven-basket case worked out by hand"', rules_test)
+        for expected in ("21 // 16", "3 // 4", "(9, 3)"):
+            with self.subTest(in_rules_test=expected):
+                self.assertIn(expected, rules_test)
+        self.assertIn('include("market_basket_rules.jl")', (ROOT / "test" / "runtests.jl").read_text(encoding="utf-8")
+                      + (ROOT / "tests" / "runtests.jl").read_text(encoding="utf-8"))
+        self.assertIn("test/runtests.jl", code()["itemset-mb-tests"])
 
     def test_the_data_stays_out_of_the_notebook_and_out_of_git(self):
         text = NOTEBOOK.read_text(encoding="utf-8")
