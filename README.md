@@ -61,7 +61,11 @@ julia --project=. tools/spmf/compare.jl data/toy/spmf/baskets-0.5.txt results/pa
 
 ## Run on Colab
 
-Open the [public Colab notebook](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb) on a Python CPU runtime and select `Run all`. It checks out an exact commit, verifies Julia 1.13.2, Java 25 and the SPMF JAR, then runs every Julia demo cell. The first code cell prints the evidence ZIP path and the last cell shows Semeion examples.
+Three notebooks run on a Python CPU runtime, one purpose each. Select `Run all` in each. Every notebook checks out an exact commit and verifies Julia 1.13.2, then writes an evidence ZIP.
+
+- [colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/colab.ipynb): the Eclat demo. It also verifies Java 25 and the SPMF JAR, runs the Julia cells of `demo.ipynb`, and compares both variants with SPMF on Chess.
+- [market_basket.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/market_basket.ipynb): the market basket application on Online Retail II.
+- [image_patterns.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/image_patterns.ipynb): the image pattern application on Semeion.
 
 The [notebook guide](notebooks/README.md) explains how to pin a revision, inspect the evidence and run the original Julia cells directly.
 
@@ -77,7 +81,7 @@ The [notebook guide](notebooks/README.md) explains how to pin a revision, inspec
 - `experiments/`: the benchmark measurement protocol and result fields.
 - `tools/spmf/`: the procedure for independent SPMF reference runs.
 - `results/`: raw runs and figures, kept out of Git.
-- `notebooks/colab.ipynb`: the Colab entry point for the Julia cells in `notebooks/demo.ipynb`.
+- `notebooks/`: `colab.ipynb` is the Colab entry point for the Eclat demo cells of `demo.ipynb`. `market_basket.ipynb` and `image_patterns.ipynb` each run one application. They hold no helper code, which lives in `applications/` and `scripts/`.
 - `docs/report/`: the Vietnamese IEEE-format report, exported as `docs/Report.pdf`.
 
 ## Reproducibility
