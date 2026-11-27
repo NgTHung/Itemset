@@ -22,8 +22,10 @@ tectonic -X compile main.tex
 
 Bản tiếng Anh `main-en.tex` dịch cùng nội dung trong `sections-en/` cho người đọc
 không đọc tiếng Việt. Bản nộp chấm điểm vẫn là bản tiếng Việt theo đề. Bản tiếng Anh
-dùng chung `references.bib` và các hình, trừ hai hình có nhãn tiếng Việt đã có bản tiếng
-Anh trong `figures/en/`. Khi sửa một mục, sửa cả hai bản. Biên dịch:
+dùng chung `references.bib`. Mỗi hình có nhãn chữ có hai bản: bản tiếng Việt trong
+`figures/` cho `main.tex` và bản tiếng Anh trong `figures/en/` cho `main-en.tex`. Mỗi kịch
+bản vẽ nhận `--language vi` cho bản tiếng Việt và mặc định là tiếng Anh. Khi sửa một mục,
+sửa cả hai bản. Biên dịch:
 
 ```sh
 tectonic -X compile main-en.tex
@@ -56,5 +58,20 @@ uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_
 Lệnh thứ nhất tạo hình có nhãn tiếng Việt cho `main.tex`. Lệnh thứ hai tạo bản nhãn
 tiếng Anh cho `main-en.tex`.
 
+## Tạo lại hình thời gian chạy và hình độ dài giao dịch
+
+[Bản ghi đợt đo thời gian](../runtime-curves-2026-11-17.md#reproduce) tạo
+`results/figures/runtime/curves.csv`. Từ tệp đó, hai lệnh sau vẽ hai bản của hình thời gian
+chạy:
+
+```sh
+uv run --no-project --python 3.12 --with matplotlib==3.11.2 python scripts/plot_runtime_curves.py results/figures/runtime/curves.csv --language vi --out docs/report/figures
+uv run --no-project --python 3.12 --with matplotlib==3.11.2 python scripts/plot_runtime_curves.py results/figures/runtime/curves.csv --out docs/report/figures/en
+```
+
+[Bản ghi độ dài giao dịch qua dòng lệnh](../bbq-width-cli-2026-11-28.md#reproduce) có lệnh
+vẽ `width-curves.png` với `--language vi` và mặc định tiếng Anh theo cùng cách.
+
 [Hướng dẫn ứng dụng ảnh](../../applications/image_patterns/README.md#reproduce-the-sensitivity-study)
-có lệnh tạo bảng độ nhạy và hình đối chiếu Semeion.
+có lệnh tạo bảng độ nhạy và hình đối chiếu Semeion. Thêm `--language vi` vào lệnh
+`plot_image_evidence.py` để tạo bản tiếng Việt.
