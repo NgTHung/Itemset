@@ -16,11 +16,11 @@ julia --startup-file=no --project=. test/runtests.jl
 
 `test/runtests.jl` includes `tests/runtests.jl`, so the brief's command `julia --project test/runtests.jl` and `Pkg.test()` run the same suite.
 
-Latest local test run, 2026-11-12, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
+Latest local test run, 2026-11-22, Windows x86_64, Julia 1.13.2. [docs/setup-validation.md](docs/setup-validation.md) records the environment validation.
 
 ```text
 Test Summary: | Pass  Total     Time
-Itemset setup | 1091   1091  1m42.8s
+Itemset setup | 1251   1251  1m49.3s
 ```
 
 ## Use the API
@@ -61,13 +61,13 @@ julia --project=. tools/spmf/compare.jl data/toy/spmf/baskets-0.5.txt results/pa
 
 ## Run on Colab
 
-`notebooks/demo.ipynb` runs on Colab's native Julia kernel, so it calls the package directly without a Python wrapper.
+Three notebooks run on a Python CPU runtime, one purpose each. Select `Run all` in each. Every notebook checks out an exact commit and verifies Julia 1.13.2, then writes an evidence ZIP.
 
-1. Export the committed tree with `git archive --format=zip --output=../Itemset-colab.zip HEAD`.
-2. Open the notebook in [Google Colab](https://colab.research.google.com/) and select Runtime, Change runtime type, Julia.
-3. Upload the ZIP through the Files sidebar to `/content/Itemset-colab.zip` and run all cells.
+- [demo_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo_colab.ipynb): the Eclat demo. It also verifies Java 25 and the SPMF JAR, runs the Julia cells of `demo_local.ipynb`, and compares both variants with SPMF on Chess.
+- [market_basket_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/market_basket_colab.ipynb): the market basket application on Online Retail II.
+- [image_patterns_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb): the image pattern application on Semeion.
 
-If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Julia 1.12.6) or newer. See [Colab runtime versions](https://research.google.com/colaboratory/runtime-version-faq.html). [notebooks/README.md](notebooks/README.md) covers the other source options.
+The [notebook guide](notebooks/README.md) explains how to pin a revision, inspect the evidence and run the local Julia notebooks.
 
 ## Layout
 
@@ -81,7 +81,7 @@ If the runtime ships Julia older than 1.12, select runtime version 2026.07 (Juli
 - `experiments/`: the benchmark measurement protocol and result fields.
 - `tools/spmf/`: the procedure for independent SPMF reference runs.
 - `results/`: raw runs and figures, kept out of Git.
-- `notebooks/demo.ipynb`: the Colab demo.
+- `notebooks/`: the demo and each application have two notebooks, and the file name says where it runs. `*_local.ipynb` runs on a Julia kernel in your IDE from a checkout. `*_colab.ipynb` runs on Colab's Python kernel and clones the repository and installs Julia first. The cells and the results are the same. `demo_colab.ipynb` runs the cells of `demo_local.ipynb` through `scripts/run_colab_notebook.py`.
 - `docs/report/`: the Vietnamese IEEE-format report, exported as `docs/Report.pdf`.
 
 ## Reproducibility

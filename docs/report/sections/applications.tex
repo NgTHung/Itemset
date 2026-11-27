@@ -1,4 +1,5 @@
 \section{Ứng dụng thực tế}
+\label{sec:applications}
 \subsection{Market Basket Analysis — Thien}
 \label{sec:basket}
 Phân tích giỏ hàng (market basket analysis) tìm các nhóm sản phẩm thường được mua
@@ -196,71 +197,49 @@ chung. Giỏ hàng chỉ ghi sản phẩm có mặt, bỏ qua số lượng và 
 tiên các sản phẩm ít gặp, vì vậy bảng xếp hạng theo lift cần đọc cùng số hóa
 đơn hỗ trợ. Cuối cùng, mô tả sản phẩm là nhãn do cửa hàng nhập, có thể khác nhau
 giữa các mã gần giống nhau.
-\subsection{Khai thác mẫu hình ảnh — Phat}
+\subsection{Khai thác mẫu hình ảnh}
+\label{sec:visual-patterns}
+\subsubsection{Từ ảnh đến giao dịch}
 Bộ dữ liệu Semeion từ UCI gồm 1.593 ảnh chữ số viết tay nhị phân kích thước
 $16\times16$ pixel, có nhãn từ 0 đến 9~\cite{semeionUCI}. Câu hỏi khảo sát là
-những nét cục bộ nào xuất hiện lặp lại giữa các ảnh. Mỗi ảnh được chia thành
-16 mảnh ảnh (patch) $4\times4$ không chồng lấp. Chúng tôi bỏ mảnh có dưới hai
-pixel nét, rồi dùng k-means với seed 42 để học codebook (từ điển mã) gồm
-24 visual words (từ thị giác). Một từ có mặt trong transaction (giao dịch)
-của ảnh khi khoảng cách Euclid bình phương giữa patch và tâm gần nhất không
-vượt quá 1,0. Mỗi từ chỉ xuất hiện một lần trong transaction, kể cả khi ảnh
-có nhiều patch cùng từ.
+những tổ hợp nét cục bộ nào lặp lại giữa các ảnh. Biểu diễn \emph{bag of
+visual words} (túi từ thị giác) đưa mỗi ảnh về một tập mục để Eclat đếm số ảnh
+chứa từng tổ hợp nét. Nhóm chia ảnh thành 16 mảnh $4\times4$ không chồng lấp.
+Mỗi mảnh ảnh (patch) có ít nhất hai pixel nét được trải theo hàng thành
+vector nhị phân 16 chiều. Nhóm dùng k-means với seed (hạt giống ngẫu nhiên)
+42 và tối đa 25 vòng lặp để học codebook (từ điển mã) mặc định gồm 24 tâm cụm.
+Mỗi tâm là một từ thị giác. Một patch được gán vào tâm gần nhất nếu khoảng
+cách Euclid bình phương không vượt quá 1,0. Giao dịch ảnh lưu mỗi từ được
+gán đúng một lần, nên vị trí và số lần lặp của patch không tham gia vào support.
+Lưới $4\times4$ giữ được các đoạn nét cục bộ trong khi giới hạn mỗi ảnh ở
+16 patch trước lọc. Ngưỡng khoảng cách loại các patch ở xa mọi tâm cụm để
+hạn chế gán các hình nét khác biệt vào cùng một từ.
 
-Bản mã hóa sinh 18.386 patch từ 1.593 ảnh. Độ rộng transaction nhỏ nhất,
-trung vị và lớn nhất lần lượt là 0, 4 và 8; 11 ảnh không có từ nào. Cả
-24 từ đều được sử dụng. Hình ảnh nguồn theo nhãn và patch quan sát gần mỗi
-tâm, đồng thời được gán vào đúng từ và đạt ngưỡng khoảng cách, được lưu trong
-\texttt{digits.svg} và \texttt{visual\_words.svg}; đường
-dẫn và lệnh tái tạo nằm trong bản ghi thực nghiệm của kho mã nguồn.
+Trong số 18.386 patch qua bước lọc pixel nét, các patch đạt ngưỡng khoảng cách
+tạo 5.767 lượt hiện diện từ, trung bình 3,62 từ mỗi ảnh. Giao dịch chứa từ 0
+đến 8 từ, trung vị là 4. Nhóm giữ 11 giao dịch rỗng trong mẫu số khi đổi minsup
+sang ngưỡng nguyên theo Mục~\ref{sec:protocol}. Tệp \texttt{visual\_words.svg}
+lưu patch quan sát đại diện cho từng tâm. Tệp \texttt{manifest.toml} lưu seed,
+tham số và mã băm đầu vào để tái lập bộ mã hóa. Nhóm học từ điển trên toàn bộ
+Semeion để phân tích mô tả.
 
-Tổng số lần hiện diện từ trong các transaction là 5.767; độ rộng trung bình
-là 3,6202 từ/ảnh. Mật độ giao dịch (transaction density) được tính bằng
-\(D=M/(NV)=0{,}150842\), trong đó \(M=5.767\) là tổng số lần hiện diện,
-\(N=1.593\) là số ảnh kể cả ảnh rỗng và \(V=24\) là kích thước từ điển.
-Các đại lượng này đếm mỗi từ một lần trong một ảnh. Tệp
-\texttt{manifest.toml} ghi seed, tham số, revision mã nguồn và mã băm
-SHA-256 của dữ liệu cùng từng artifact để kiểm tra tái lập. Codebook dùng
-toàn bộ dữ liệu cho phân tích mô tả; nhóm không suy luận khả năng tổng quát
-hóa trên ảnh chưa quan sát từ phép khớp này.
+\subsubsection{Mẫu phổ biến và ảnh hỗ trợ}
+Nhóm khai thác các giao dịch bằng Eclat cơ bản của nhóm. Với 24 từ và minsup
+20\%, 10\% và 5\%, toàn bộ 6, 18 và 46 tập mục tương ứng khớp support với
+SPMF. Đầu vào SPMF có 1.582 giao dịch sau khi bỏ 11 dòng rỗng. Nhóm điều chỉnh
+ngưỡng tương đối của SPMF để giữ nguyên số ảnh tối thiểu lần lượt là 319, 160
+và 80. Giao dịch rỗng không đóng góp support cho tập mục khác rỗng.
 
-\begin{table}[ht]
-\centering
-\caption{Số tập từ thị giác phổ biến trên Semeion với Eclat cơ bản}
-\label{tab:semeion-pilot}
-\begin{tabular}{r r r}
-\hline
-Minsup & Số ảnh tối thiểu & Số itemset \\
-\hline
-0,20 & 319 & 6 \\
-0,10 & 160 & 18 \\
-0,05 & 80 & 46 \\
-\hline
-\end{tabular}
-\end{table}
-
-Bảng~\ref{tab:semeion-pilot} dùng toàn bộ ảnh và biến thể Eclat cơ bản.
-Từ 13 xuất hiện trong 863 ảnh; patch đại diện của nó là một nét ngang ngắn.
-Cặp từ \{8, 13\} xuất hiện trong 330 ảnh. Đây là mẫu đồng xuất hiện, chưa
-chứng minh khả năng phân biệt nhãn. Phép đổi ảnh thành tập từ cũng làm mất
-vị trí và số lần lặp của patch. Đối chiếu toàn bộ đầu ra với SPMF Eclat cho
-6/6, 18/18 và 46/46 itemset khớp chính xác support tại ba ngưỡng trên.
-Đầu vào SPMF bỏ 11 ảnh rỗng, còn 1.582 giao dịch; nhóm dùng các ngưỡng
-tương ứng cùng số ảnh tối thiểu 319, 160 và 80 để giữ nguyên bài toán.
-Tệp \texttt{supporting\_images.tsv} lưu ID và nhãn của mọi ảnh hỗ trợ
-từng itemset, kèm các montage ảnh nguồn để kiểm tra trước khi diễn giải.
-
-Tập từ \{4, 8, 13\} có support 90 tại minsup 0,05. Bảng~\ref{tab:image-evidence}
-đưa ra ID ảnh nguồn để đối chiếu trực tiếp các mẫu. Trong cùng nhãn chữ số 0,
-ảnh 3 có cả từ 8 và 13, còn ảnh 2 chỉ có từ 13 trong cặp này. Với chữ số 2,
-ảnh 44 có đủ bộ ba, còn ảnh 41 thiếu từ 4. Các patch quan sát cho thấy mảng
-đậm cục bộ của từ 8 và nét ngang của từ 13, nhưng phép đồng xuất hiện không
-xác định quan hệ vị trí giữa các patch trên toàn ảnh. Các so sánh này hỗ trợ
-diễn giải nét cục bộ, chưa chứng minh đặc trưng phân loại chữ số.
+Bảng~\ref{tab:image-evidence} trình bày ba mẫu ở minsup 5\%. Từ 13 có patch
+đại diện là nét ngang ngắn. Mẫu $\{8,13\}$ mô tả các ảnh đồng thời chứa patch
+của hai cụm. Tệp \texttt{supporting\_images.tsv} liệt kê ID và nhãn của từng
+ảnh hỗ trợ. Nhóm đối chiếu ảnh có cùng nhãn để diễn giải sự khác biệt ở mức
+patch. Trong Hình~\ref{fig:semeion-contrast}, hai ảnh đều mang nhãn chữ số 2.
+Ảnh 44 có cả ba từ. Ảnh 41 có từ 8 và 13 nhưng thiếu từ 4.
 
 \begin{table}[ht]
 \centering
-\caption{ID ảnh minh họa khớp và không khớp các tập từ thị giác}
+\caption{Support và ID ảnh minh họa cho ba mẫu thị giác ở minsup 5\%}
 \label{tab:image-evidence}
 \begin{tabular}{l r l l}
 \hline
@@ -273,9 +252,59 @@ Tập từ & Support & Khớp & Không khớp \\
 \end{tabular}
 \end{table}
 
-Các tệp \texttt{examples.tsv} và \texttt{example\_patches.tsv} lưu từ hiện
-diện, từ thiếu và tọa độ patch cho từng ảnh được hiển thị. Bộ đếm theo nhãn
-cho thấy cặp \{8,13\} xuất hiện trong 69/159 ảnh chữ số 3 và 9/161 ảnh chữ
-số 4. Đây là tần suất mô tả trên cùng tập dùng để học codebook. Thời gian,
-ngưỡng support nguyên, revision, mã băm nguồn miner và dung lượng đầu ra
-được lưu trong \texttt{mining\_manifest.toml}; không giới hạn độ dài itemset.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/semeion-source-contrast.png}
+\caption{Hai ảnh nguồn cùng nhãn chữ số 2. Các ô đánh dấu patch được gán
+vào từ tương ứng. Ảnh 44 chứa đủ bộ ba $\{4,8,13\}$. Ảnh 41 thiếu từ 4.}
+\label{fig:semeion-contrast}
+\end{figure}
+
+\subsubsection{Độ nhạy theo từ điển và minsup}
+Bảng~\ref{tab:semeion-sensitivity} so sánh số tập mục theo kích thước từ điển
+$K$ và minsup, với cùng seed, lưới patch, số vòng lặp tối đa và ngưỡng khoảng
+cách. Số ảnh rỗng là số ảnh không có patch được gán từ. Với $K=24$, từ 13 và
+cặp $\{8,13\}$ đạt cả năm ngưỡng. Bộ ba $\{4,8,13\}$ có support 90, đạt
+ngưỡng 5,5\% (88 ảnh) và nằm dưới ngưỡng 6\% (96 ảnh).
+
+\begin{table}[t]
+\centering
+\caption{Số tập mục theo kích thước từ điển $K$ và minsup trên Semeion}
+\label{tab:semeion-sensitivity}
+\begin{tabular}{rrrrrrr}
+\hline
+$K$ & Ảnh rỗng & 20\% & 10\% & 6\% & 5,5\% & 5\% \\
+\hline
+16 & 99 & 4 & 12 & 19 & 21 & 25 \\
+24 & 11 & 6 & 18 & 35 & 43 & 46 \\
+32 & 2 & 5 & 24 & 45 & 52 & 63 \\
+\hline
+\end{tabular}
+\end{table}
+
+Khi $K$ tăng từ 16 lên 32, độ rộng trung bình tăng từ 2,27 lên 4,31 từ mỗi
+ảnh. Ở ngưỡng 20\%, từ điển 24 từ cho nhiều mẫu nhất trong ba cấu hình.
+Tâm cụm được học lại ở mỗi $K$, nên cần so patch đại diện khi diễn giải từ
+giữa các cấu hình. Mức phổ biến của một nét còn phụ thuộc vào cách đặt lưới
+và độ phân giải của ảnh nhị phân.
+
+\subsubsection{Ứng dụng và giới hạn}
+Mẫu thị giác có thể làm truy vấn theo tổ hợp nét. Chẳng hạn, truy vấn
+$\{8,13\}$ trả về 330 ảnh. Khi chuẩn hóa theo số ảnh mỗi nhãn, mẫu này có mặt
+ở 69/159 ảnh chữ số 3 (43,4\%) và 9/161 ảnh chữ số 4 (5,6\%). Chênh lệch
+mô tả tần suất theo nhãn trong chính bộ dữ liệu dùng để học từ điển. Hai từ
+có thể hiện diện ở các vị trí bất kỳ trong ảnh.
+
+Mỗi tập mục cũng có thể tạo một đặc trưng nhị phân. Với danh sách mẫu
+$(\{13\},\{8,13\},\{4,8,13\})$, ảnh có giao dịch $\{8,13\}$ nhận vector
+$(1,1,0)$. Notebook tạo ma trận gồm 1.593 hàng ảnh và 46 cột tập mục ở minsup
+5\%. Tổng mỗi cột bằng support của tập mục tương ứng. Để đánh giá hiệu quả
+phân loại của đặc trưng này, cần học từ điển và khai thác mẫu trên tập huấn
+luyện, rồi giữ cố định cả hai khi mã hóa tập kiểm tra. Phân tích ở đây mô tả
+tần suất trên Semeion.
+
+\href{https://github.com/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb}
+{Notebook khai thác mẫu hình ảnh} dùng Julia 1.13.2 và seed 42 để tái lập pipeline
+mặc định. Manifest của lượt chạy ghi revision, seed và mã băm của từ điển
+cùng đầu ra tại minsup 20\%, 10\% và 5\%. Lưới trong
+Bảng~\ref{tab:semeion-sensitivity} dùng cùng bộ mã hóa ở 15 cấu hình.

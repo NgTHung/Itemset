@@ -29,13 +29,22 @@ two_revisions(other; kw...) = toy_config(; revisions=[
     end
 
     @testset "A revision that cannot load stops the run before timing" begin
-        mktempdir() do dir
-            manifest, data = toy_benchmark(dir)
-            empty = mkpath(joinpath(dir, "empty"))
-            out = joinpath(dir, "run")
-            @test_throws "candidate" Experiments.run_experiment(two_revisions(empty), manifest;
-                                                                data_dir=data, out_dir=out)
-            @test !isfile(joinpath(out, "runs.csv"))
+        # Pkg.test() exports a load path like this one, whose second entry provides ItemsetMining.
+        inherited = join(["@", Experiments.REPO_ROOT], Sys.iswindows() ? ';' : ':')
+        withenv("JULIA_LOAD_PATH" => inherited) do
+            mktempdir() do dir
+                manifest, data = toy_benchmark(dir)
+                empty = mkpath(joinpath(dir, "empty"))
+                out = joinpath(dir, "run")
+                @test_throws "candidate" Experiments.run_experiment(two_revisions(empty), manifest;
+                                                                    data_dir=data, out_dir=out)
+                @test !isfile(joinpath(out, "runs.csv"))
+            end
         end
+    end
+
+    @testset "A revision process ignores the inherited load path" begin
+        command = Experiments.isolate_load_path(`julia`)
+        @test "JULIA_LOAD_PATH=" * join(["@", "@stdlib"], Sys.iswindows() ? ';' : ':') in command.env
     end
 end

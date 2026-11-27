@@ -1,0 +1,36 @@
+\section{Giới thiệu}
+Khai thác tập phổ biến (frequent itemset mining, FIM) tìm các tập item cùng xuất hiện
+trong ít nhất $\sigma$ giao dịch của một cơ sở dữ liệu, trong đó $\sigma$ là ngưỡng hỗ
+trợ (minimum support, viết tắt minsup khi tính theo tỉ lệ). Đây là bước đầu của khai
+thác luật kết hợp và là nền của nhiều bài toán khai thác mẫu. Số tập phổ biến có thể tăng
+rất nhanh khi ngưỡng giảm, nên cách biểu diễn dữ liệu và cách đếm support quyết định thuật
+toán chạy được ở ngưỡng nào.
+
+Eclat~\cite{zaki2000} biểu diễn cơ sở dữ liệu theo chiều dọc: mỗi item đi kèm tidset,
+tức tập mã giao dịch chứa nó. Support của một tập item bằng kích thước giao của các
+tidset, và Eclat tìm kiếm theo chiều sâu trên các lớp tương đương (equivalence class)
+chia theo tiền tố. Nhóm cài đặt lại thuật toán này từ bài báo gốc bằng Julia, chỉ dùng thư
+viện chuẩn, so với Eclat và PrePost+ của SPMF~\cite{spmf2016}, và dùng nó cho hai ứng dụng
+thực tế. Bài báo gồm ba phần chính theo đề:
+\begin{itemize}
+\item Mục~\ref{sec:implementation} trình bày bản cơ bản bám sát bài báo gốc và bản tối ưu
+(bitset, thứ tự duyệt theo support tăng dần, tỉa phần mở rộng hoàn hảo, đếm cặp và danh
+sách tid cho dữ liệu thưa), cùng chứng minh tính đúng và cách kiểm thử.
+\item Mục~\ref{sec:evaluation} nêu giao thức đo chung (Mục~\ref{sec:protocol}), đối chiếu
+toàn bộ tập mục với SPMF và bộ nhớ đỉnh (Mục~\ref{sec:exact-memory}), thời gian theo
+minsup (Mục~\ref{sec:minsup}), ảnh hưởng của độ dài giao dịch (Mục~\ref{sec:width}), khả
+năng mở rộng theo kích thước dữ liệu và số tập phổ biến theo minsup, và hai hướng tối ưu
+tiếp theo (Mục~\ref{sec:future}).
+\item Mục~\ref{sec:applications} áp dụng Eclat vào phân tích giỏ hàng trên Online Retail
+II (Mục~\ref{sec:basket}) và khai thác mẫu hình ảnh trên Semeion
+(Mục~\ref{sec:visual-patterns}).
+\end{itemize}
+
+Hai nguyên tắc chi phối cách trình bày. Thứ nhất, mọi so sánh hiệu năng chỉ dùng các lần
+chạy có đầu ra khớp hoàn toàn, về tập mục và support, với một lần chạy Eclat của SPMF
+độc lập, vì hai chương trình có thể cho cùng số tập mục mà gán support khác nhau. Thứ hai,
+các số đo chính gắn với máy, revision mã nguồn và thư mục kết quả đã tạo ra chúng, và mọi
+bước ngẫu nhiên dùng seed 42, nên người đọc tái lập được kết quả từ repository. Hung phụ trách
+cài đặt, khả năng mở rộng và số lượng tập phổ biến, Thien phụ trách phân tích giỏ hàng,
+thời gian chạy, độ dài giao dịch và hướng tối ưu, còn Phat phụ trách mẫu hình ảnh, độ đúng
+và bộ nhớ.

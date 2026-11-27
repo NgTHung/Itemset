@@ -1,7 +1,7 @@
 const ROOT = dirname(@__DIR__)
 include(joinpath(ROOT, "experiments", "Experiments.jl"))
 using .Experiments: parse_series_spec, curve_points, check_agreement, write_curves, median_ratios,
-                    geometric_mean, csv_field, CurvePoint
+                    geometric_mean, write_rows, CurvePoint
 
 const USAGE = """
 Usage:
@@ -78,12 +78,10 @@ function main(args)
     mkpath(out)
     write_curves(joinpath(out, "curves.csv"), points)
     if !isempty(ratios)
-        open(joinpath(out, "ratios.csv"), "w") do io
-            println(io, "numerator,denominator,dataset,minsup_relative,minsup_count,ratio")
-            for (numerator, denominator, r) in ratio_rows
-                println(io, join(csv_field.((numerator, denominator, r.dataset, r.minsup_relative, r.minsup_count, r.ratio)), ','))
-            end
-        end
+        write_rows(joinpath(out, "ratios.csv"),
+                   ["numerator", "denominator", "dataset", "minsup_relative", "minsup_count", "ratio"],
+                   [(; numerator, denominator, r.dataset, r.minsup_relative, r.minsup_count, r.ratio)
+                    for (numerator, denominator, r) in ratio_rows])
     end
 
     for (numerator, denominator) in ratios

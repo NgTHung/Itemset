@@ -17,9 +17,12 @@ include("subsets.jl")
 include("harness.jl")
 include("references.jl")
 include("summary.jl")
+include("tables.jl")
 include("curves.jl")
 include("output_size.jl")
 include("join_work.jl")
+include("stage_profile.jl")
+include("width.jl")
 include("runner.jl")
 
 end

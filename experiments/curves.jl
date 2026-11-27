@@ -233,14 +233,10 @@ const CURVE_FIELDS = ["dataset", "minsup_relative", "minsup_count", "series", "o
 """Write the tidy table behind a figure: one row per series and threshold, blank where nothing is known."""
 function write_curves(path::AbstractString, points::AbstractVector{CurvePoint})
     number(x) = isnan(x) ? "" : string(x)
-    open(path, "w") do io
-        println(io, join(CURVE_FIELDS, ','))
-        for p in points
-            fields = (p.dataset, p.minsup_relative, p.minsup_count, p.series, something(p.output_count, ""),
-                      p.exact_samples, p.total_samples, p.timeouts, p.correctness_failures, p.unverified,
-                      p.interrupted, p.other_incomplete, number(p.median), number(p.q1), number(p.q3))
-            println(io, join((csv_field(f) for f in fields), ','))
-        end
-    end
-    return nothing
+    rows = [(; dataset=p.dataset, minsup_relative=p.minsup_relative, minsup_count=p.minsup_count, series=p.series,
+             output_count=something(p.output_count, ""), exact_samples=p.exact_samples, total_samples=p.total_samples,
+             timeouts=p.timeouts, correctness_failures=p.correctness_failures, unverified=p.unverified,
+             interrupted=p.interrupted, other_incomplete=p.other_incomplete, median_seconds=number(p.median),
+             q1_seconds=number(p.q1), q3_seconds=number(p.q3)) for p in points]
+    return write_rows(path, CURVE_FIELDS, rows)
 end
