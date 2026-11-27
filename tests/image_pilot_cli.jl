@@ -22,6 +22,9 @@ end
         calls = Ref(0)
         fetch = (url, path) -> (calls[] += 1; write(path, row); path)
         @test ImagePilotCLI.main([input, output]; entry, fetch, vocabulary_size=1) == output
+        for name in ("manifest.toml", "mining_manifest.toml")
+            @test TOML.parsefile(joinpath(output, name))["source_url"] == "test"
+        end
         @test readlines(joinpath(output, "transactions.tsv")) == ["image_id\tlabel\twords", "1\t0\t1"]
         for level in ImagePilotCLI.SUPPORT_LEVELS
             @test read_itemset_records(joinpath(output, "patterns-$level.txt"))[1].support == 1
@@ -29,6 +32,7 @@ end
         @test occursin("0.2\t1\t1\t1\t0", read(joinpath(output, "supporting_images.tsv"), String))
         encoding_dir = joinpath(dir, "encoding")
         @test ImagePilotCLI.encoding_main([input, encoding_dir, "--vocabulary-size", "1"]; entry, fetch) == encoding_dir
+        @test TOML.parsefile(joinpath(encoding_dir, "manifest.toml"))["source_url"] == ""
         @test read(joinpath(encoding_dir, "codebook.tsv")) == read(joinpath(output, "codebook.tsv"))
         sensitivity = joinpath(dir, "sensitivity")
         @test ImagePilotCLI.main([input, sensitivity, "--vocabulary-size", "1", "--minsup", "0.055,0.06"]; entry, fetch) == sensitivity

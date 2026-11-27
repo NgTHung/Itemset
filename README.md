@@ -66,7 +66,7 @@ Three notebooks run on a Python CPU runtime, one purpose each. Select `Run all` 
 
 - [demo_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo_colab.ipynb): the Eclat demo. It also verifies Java 25 and the SPMF JAR, runs the Julia cells of `demo_local.ipynb`, and compares both variants with SPMF on Chess.
 - [market_basket_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/market_basket_colab.ipynb): the market basket application on Online Retail II.
-- [image_patterns_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb): the image pattern application on Semeion.
+- Application 2 mines visual patterns from [Semeion v1 on Kaggle](https://www.kaggle.com/datasets/phattruongpo344/semeion-handwritten-digit-itemset/versions/1). [Run the image pattern notebook on Colab](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb).
 
 The [notebook guide](notebooks/README.md) explains how to pin a revision, inspect the evidence and run the local Julia notebooks.
 

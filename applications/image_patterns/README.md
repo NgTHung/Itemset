@@ -23,7 +23,7 @@ A transaction keeps only which words are present, so it loses each word's locati
 
 Image and plotting packages need team approval before they enter `Project.toml`.
 
-The Semeion runner uses the shared dataset loader and seeded Julia patch encoder. It verifies `semeion.data` against [the raw-data manifest](../../data/raw/manifest.toml), downloads missing data into a staging file, and replaces a corrupt cache only after the replacement verifies. Run from the repository root:
+The Semeion runner uses the shared dataset loader and seeded Julia patch encoder. It checks the cached `semeion.data` against [the raw-data manifest](../../data/raw/manifest.toml). If it needs a download, it tries the public Kaggle mirror, then UCI. It records the URL that supplied verified bytes and leaves the URL empty when it uses the verified cache. Run from the repository root:
 
 ```sh
 julia --startup-file=no --project=. scripts/mine_image_patterns.jl data/raw/semeion/semeion.data results/raw/semeion-patterns

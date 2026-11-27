@@ -4,14 +4,17 @@ The notebook runs on Colab's Python kernel and calls Julia through the shell, so
 order, the pins shared with the market basket notebook, and the repository paths and outputs the cells name.
 """
 
+import hashlib
 import json
+import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOK = ROOT / "notebooks" / "image_patterns_colab.ipynb"
-STEPS = ["itemset-setup", "itemset-ip-instantiate", "itemset-ip-tests", "itemset-ip-mine", "itemset-ip-show",
-         "itemset-ip-evidence"]
+STEPS = ["itemset-setup", "itemset-ip-instantiate", "itemset-ip-tests", "itemset-ip-mine",
+         "itemset-ip-show", "itemset-ip-evidence"]
 
 
 def cells():
@@ -35,6 +38,54 @@ class ImagePatternsNotebookTest(unittest.TestCase):
 
     def test_the_steps_run_in_order(self):
         self.assertEqual(list(code()), STEPS)
+
+    def test_each_completed_run_has_its_own_evidence_after_kernel_restart(self):
+        by_id = code()
+        with tempfile.TemporaryDirectory() as workspace:
+            root = Path(workspace) / "checkout"
+            (root / "results/raw").mkdir(parents=True)
+            outputs = []
+            source_url = "https://example.org/mirror.zip"
+            source_sha = hashlib.sha256(b"fixture input").hexdigest()
+
+            def julia(script, input_path, output_path):
+                self.assertEqual(script, "scripts/image_features.jl")
+                self.assertEqual(input_path, "data/raw/semeion/semeion.data")
+                output = root / output_path
+                self.assertFalse(output.exists())
+                output.mkdir()
+                (output / "manifest.toml").write_text(
+                    f'source_url = "{source_url}"\nsource_sha256 = "{source_sha}"\n'
+                    'git_revision = "fixture"\njulia_version = "1.13.2"\n', encoding="utf-8")
+                outputs.append(output)
+
+            scope = {"root": root, "Path": Path, "julia": julia, "REPOSITORY": "fixture", "JULIA_SHA256": "fixture"}
+            archives = []
+            for _ in range(2):
+                exec(by_id["itemset-ip-mine"], scope)
+                restarted = {"root": root}
+                exec(by_id["itemset-ip-evidence"], restarted)
+                archive_path = restarted["evidence"]
+                self.assertEqual(archive_path.parent, root.parent)
+                with zipfile.ZipFile(archive_path) as archive:
+                    record = json.loads(archive.read("result.json"))
+                    self.assertEqual(record["semeion_download_url"], source_url)
+                    self.assertEqual(record["semeion_sha256"], source_sha)
+                    self.assertIn((outputs[-1] / "manifest.toml").relative_to(root).as_posix(), archive.namelist())
+                archives.append(archive_path)
+            self.assertNotEqual(*archives)
+            self.assertTrue(all(path.is_file() for path in archives))
+
+            def failed_julia(*args):
+                raise RuntimeError("mining failed")
+
+            scope["julia"] = failed_julia
+            with self.assertRaisesRegex(RuntimeError, "mining failed"):
+                exec(by_id["itemset-ip-mine"], scope)
+            self.assertEqual(set((root / "results/raw").glob("semeion-*/")), {path.parent for path in outputs})
+            restarted = {"root": root}
+            exec(by_id["itemset-ip-evidence"], restarted)
+            self.assertEqual(restarted["evidence"], archives[-1])
 
     def test_the_mining_cell_runs_the_script_and_the_tests_run_the_suite(self):
         by_id = code()
@@ -64,12 +115,6 @@ class ImagePatternsNotebookTest(unittest.TestCase):
     def test_the_thresholds_shown_are_among_the_default_mining_levels(self):
         mining = (ROOT / "applications" / "image_patterns" / "mining.jl").read_text(encoding="utf-8")
         self.assertIn("const MINING_LEVELS = (0.2, 0.1, 0.05)", mining)
-
-    def test_the_evidence_archive_records_hashes_the_revision_and_the_data(self):
-        text = code()["itemset-ip-evidence"]
-        for expected in ("sha256", "revision", "results/raw/semeion-patterns", "semeion_sha256", "zipfile"):
-            with self.subTest(expected=expected):
-                self.assertIn(expected, text)
 
     def test_the_output_folder_is_outside_git(self):
         self.assertIn("results/raw/", (ROOT / ".gitignore").read_text(encoding="utf-8"))

@@ -57,4 +57,39 @@ end
             @test readdir(dir) == String[]
         end
     end
+
+    @testset "ZIP mirror and source provenance" begin
+        zip_source = Experiments.DatasetSource(url="https://example.org/toy.zip", format=:zip)
+        entry = toy_entry(baskets; sources=[zip_source, text_source])
+        mktempdir() do fixture
+            mkpath(joinpath(fixture, "nested"))
+            write(joinpath(fixture, "nested", "toy.txt"), baskets)
+            write(joinpath(fixture, "README.txt"), "archive metadata")
+            archive = joinpath(fixture, "toy.zip")
+            run(pipeline(Cmd(`$(Experiments.p7zip()) a -tzip $archive nested README.txt`; dir=fixture);
+                stdout=devnull, stderr=devnull))
+            mktempdir() do dir
+                calls = Ref(0)
+                fetch = fake_fetch(Dict(zip_source.url => read(archive)), calls)
+                downloaded = Experiments.prepare_dataset_with_source(entry, dir; fetch)
+                @test downloaded == (; path=joinpath(dir, "toy.txt"), source_url=zip_source.url)
+                @test read(downloaded.path) == baskets
+                @test Experiments.prepare_dataset_with_source(entry, dir; fetch).source_url == ""
+                @test calls[] == 1
+                @test readdir(dir) == ["toy.txt"]
+            end
+            mktempdir() do dir
+                missing_archive = joinpath(fixture, "missing.zip")
+                run(pipeline(Cmd(`$(Experiments.p7zip()) a -tzip $missing_archive README.txt`; dir=fixture);
+                    stdout=devnull, stderr=devnull))
+                calls = Ref(0)
+                fetch = fake_fetch(Dict(zip_source.url => read(missing_archive), text_source.url => baskets), calls)
+                zip_only = toy_entry(baskets; sources=[zip_source])
+                @test_throws "README.txt" Experiments.prepare_dataset(zip_only, dir; fetch)
+                @test isempty(readdir(dir))
+                @test Experiments.prepare_dataset_with_source(entry, dir; fetch).source_url == text_source.url
+                @test calls[] == 3
+            end
+        end
+    end
 end

@@ -10,6 +10,10 @@ origin = "UCI Machine Learning Repository, https://archive.ics.uci.edu/dataset/1
 terms = "CC BY 4.0; cite the UCI dataset"
 
 [[semeion.sources]]
+url = "https://api.kaggle.com/v1/datasets/download/phattruongpo344/semeion-handwritten-digit-itemset?datasetVersionNumber=1"
+format = "zip"
+
+[[semeion.sources]]
 url = "https://archive.ics.uci.edu/ml/machine-learning-databases/semeion/semeion.data"
 format = "text"
 

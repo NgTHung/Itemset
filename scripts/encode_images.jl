@@ -36,10 +36,11 @@ function prepare_encoding_command(args; entry=semeion_entry(), fetch=Experiments
     ispath(output) && throw(ArgumentError("output path already exists: $output"))
     basename(input) == entry.file || throw(ArgumentError("input must be named $(entry.file): $input"))
     mkpath(dirname(abspath(input)))
-    input = Experiments.prepare_dataset(entry, dirname(abspath(input)); fetch)
+    dataset = Experiments.prepare_dataset_with_source(entry, dirname(abspath(input)); fetch)
+    input = dataset.path
     settings = SemeionPilot.EncodingSettings(; vocabulary_size)
     encoding = SemeionPilot.prepare_encoding(SemeionPilot.read_semeion(input); settings)
-    (; input, output, encoding, entry, levels)
+    (; input, output, encoding, entry, levels, dataset.source_url)
 end
 
 function command_provenance(args; script="scripts/encode_images.jl")
@@ -53,7 +54,7 @@ end
 function write_command_encoding(prepared, args; script="scripts/encode_images.jl")
     metadata = command_provenance(args; script)
     SemeionPilot.write_encoding(prepared.output, prepared.encoding;
-        source_sha=prepared.entry.sha256, source_url=first(prepared.entry.sources).url,
+        source_sha=prepared.entry.sha256, source_url=prepared.source_url,
         metadata...)
     print(read(joinpath(prepared.output, "summary.txt"), String))
     prepared.output

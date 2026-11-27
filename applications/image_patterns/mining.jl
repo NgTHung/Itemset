@@ -159,7 +159,8 @@ function write_mining_run_with_results(dir, encoding::ImageEncoding; levels=MINI
             "pattern_bytes" => filesize(joinpath(bundle, "patterns-$(run.minsup).txt"))) for run in runs]
         hashes = Dict(file => open(io -> bytes2hex(sha256(io)), joinpath(bundle, file)) for file in readdir(bundle))
         manifest = Dict("variant" => "baseline", "git_revision" => revision, "git_dirty" => dirty,
-            "command" => command, "source_sha256" => source_sha, "julia_version" => string(VERSION),
+            "command" => command, "source_sha256" => source_sha, "source_url" => source_url,
+            "julia_version" => string(VERSION),
             "cpu_model" => first(Sys.cpu_info()).model, "threads" => Threads.nthreads(),
             "timing_boundary" => "mine call only, after one untimed warm-up at first threshold",
             "resource_limits" => "no explicit process limit or pattern cap", "source_hashes" => source_hashes,

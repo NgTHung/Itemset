@@ -17,7 +17,7 @@ function run_mining_command(args; kwargs...)
                    Experiments.file_sha256(joinpath(dir, file))
                    for (dir, _, files) in walkdir(joinpath(root, "src")) for file in files if endswith(file, ".jl"))
     runs = SemeionPilot.write_mining_run_with_results(prepared.output, prepared.encoding;
-        source_sha=prepared.entry.sha256, source_url=first(prepared.entry.sources).url,
+        source_sha=prepared.entry.sha256, source_url=prepared.source_url,
         source_hashes=sources, levels=prepared.levels, metadata...)
     print(read(joinpath(prepared.output, "thresholds.tsv"), String))
     (; prepared.output, prepared.encoding, runs)
