@@ -4,14 +4,20 @@ The notebook runs on Colab's Python kernel and calls Julia through the shell, so
 order, the pins shared with the market basket notebook, and the repository paths and outputs the cells name.
 """
 
+import hashlib
+import io
 import json
+import tempfile
 import unittest
+import urllib.request
+import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOK = ROOT / "notebooks" / "image_patterns_colab.ipynb"
-STEPS = ["itemset-setup", "itemset-ip-instantiate", "itemset-ip-tests", "itemset-ip-mine", "itemset-ip-show",
-         "itemset-ip-evidence"]
+STEPS = ["itemset-setup", "itemset-ip-instantiate", "itemset-ip-tests", "itemset-ip-kaggle", "itemset-ip-mine",
+         "itemset-ip-show", "itemset-ip-evidence"]
 
 
 def cells():
@@ -35,6 +41,57 @@ class ImagePatternsNotebookTest(unittest.TestCase):
 
     def test_the_steps_run_in_order(self):
         self.assertEqual(list(code()), STEPS)
+
+    def test_the_kaggle_download_checks_the_manifest_before_writing(self):
+        source = code()["itemset-ip-kaggle"]
+        original = b"original Semeion bytes\n"
+        digest = hashlib.sha256(original).hexdigest()
+        with tempfile.TemporaryDirectory() as workspace:
+            root = Path(workspace)
+            raw = root / "data/raw"
+            raw.mkdir(parents=True)
+            (raw / "manifest.toml").write_text(f'[semeion]\nfile = "semeion.data"\nsha256 = "{digest}"\n',
+                                               encoding="utf-8")
+            target = raw / "semeion/semeion.data"
+            for data in (original, b"corrupt Semeion bytes\n"):
+                archive = io.BytesIO()
+                with zipfile.ZipFile(archive, "w") as package:
+                    package.writestr("semeion.data", data)
+                archive.seek(0)
+                with patch.object(urllib.request, "urlopen", return_value=archive) as fetch:
+                    scope = {"root": root, "hashlib": hashlib, "urllib": urllib}
+                    if data == original:
+                        exec(source, scope)
+                    else:
+                        with self.assertRaisesRegex(ValueError, "Semeion SHA-256"):
+                            exec(source, scope)
+                fetch.assert_called_once_with(
+                    "https://api.kaggle.com/v1/datasets/download/"
+                    "phattruongpo344/semeion-handwritten-digit-itemset?datasetVersionNumber=1", timeout=60)
+                self.assertEqual(target.read_bytes(), original)
+
+    def test_each_mining_run_uses_a_fresh_output_directory(self):
+        source = code()["itemset-ip-mine"]
+        with tempfile.TemporaryDirectory() as workspace:
+            root = Path(workspace)
+            (root / "results/raw").mkdir(parents=True)
+            outputs = []
+
+            def julia(script, input_path, output_path):
+                self.assertEqual(script, "scripts/image_features.jl")
+                self.assertEqual(input_path, "data/raw/semeion/semeion.data")
+                output = root / output_path
+                self.assertFalse(output.exists())
+                output.mkdir()
+                outputs.append(output)
+
+            scope = {"root": root, "Path": Path, "julia": julia}
+            exec(source, scope)
+            exec(source, scope)
+            first, second = outputs
+            self.assertNotEqual(first, second)
+            self.assertTrue(first.is_dir())
+            self.assertEqual(scope["results"], second)
 
     def test_the_mining_cell_runs_the_script_and_the_tests_run_the_suite(self):
         by_id = code()
@@ -67,7 +124,7 @@ class ImagePatternsNotebookTest(unittest.TestCase):
 
     def test_the_evidence_archive_records_hashes_the_revision_and_the_data(self):
         text = code()["itemset-ip-evidence"]
-        for expected in ("sha256", "revision", "results/raw/semeion-patterns", "semeion_sha256", "zipfile"):
+        for expected in ("sha256", "revision", "results", "run_dir.name", "semeion_download_url", "semeion_sha256", "zipfile"):
             with self.subTest(expected=expected):
                 self.assertIn(expected, text)
 
