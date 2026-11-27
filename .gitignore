@@ -9,6 +9,7 @@ __pycache__/
 data/benchmark/*
 !data/benchmark/README.md
 !data/benchmark/manifest.toml
+!data/benchmark/subsets.toml
 data/raw/*
 !data/raw/README.md
 !data/raw/manifest.toml
