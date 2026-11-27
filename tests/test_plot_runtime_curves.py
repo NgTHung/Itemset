@@ -74,6 +74,25 @@ class FigureTest(unittest.TestCase):
         svg = self.run_main([point(0.9, 3, 0.2, 0.19, 0.22), point(0.8, 3, 0.4, 0.38, 0.45)])
         self.assertIn("IQR bars", svg)
 
+    def test_figure_uses_the_report_names_of_datasets_and_programs(self):
+        rows = [point(0.9, 1, 0.2, series=name) for name in ("PrePost", "SPMF", "spmf", "baseline")]
+        svg = self.run_main(rows)
+        for name in ("Chess", "PrePost+", "SPMF Eclat", "Baseline"):
+            self.assertIn(f">{name}<", svg)
+        for name in ("chess", "PrePost", "SPMF", "spmf", "baseline"):
+            self.assertNotIn(f">{name}<", svg)
+
+
+class DisplayNameTest(unittest.TestCase):
+    def test_known_identifiers_take_the_report_name(self):
+        self.assertEqual(plot.display_name("accidents"), "Accidents")
+        self.assertEqual(plot.display_name("optimized"), "Optimized")
+        self.assertEqual(plot.display_name("prepost"), "PrePost+")
+
+    def test_other_names_pass_through(self):
+        self.assertEqual(plot.display_name("T10I4D100K"), "T10I4D100K")
+        self.assertEqual(plot.display_name("SPMF PrePost+"), "SPMF PrePost+")
+
 
 if __name__ == "__main__":
     unittest.main()

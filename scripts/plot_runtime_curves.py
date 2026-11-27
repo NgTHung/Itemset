@@ -19,6 +19,14 @@ from matplotlib.lines import Line2D
 KNOWN = (("baseline", ("#2468a2", "o")), ("optimized", ("#8c4fa1", "D")),
          ("eclat", ("#d97716", "s")), ("prepost", ("#25814a", "^")))
 SPARE = (("#b0384b", "v"), ("#555555", "P"), ("#8a6200", "X"), ("#1a8a8a", "<"))
+# Runs name datasets and programs by identifier, and the report names them as its tables do.
+DISPLAY_NAMES = {"chess": "Chess", "mushroom": "Mushroom", "retail": "Retail", "accidents": "Accidents",
+                 "baseline": "Baseline", "optimized": "Optimized", "spmf": "SPMF Eclat", "SPMF": "SPMF Eclat",
+                 "prepost": "PrePost+", "PrePost": "PrePost+"}
+
+
+def display_name(name):
+    return DISPLAY_NAMES.get(name, name)
 
 
 def assign_styles(series):
@@ -134,7 +142,7 @@ def main():
         ax.set_xticks(minsups, [f"{m:g}\n{compact(counts[m])}" if m in counts else f"{m:g}" for m in minsups],
                       fontsize=6.5)
         ax.minorticks_off()
-        ax.set_title(dataset, fontsize=10)
+        ax.set_title(display_name(dataset), fontsize=10)
         ax.set_xlabel("minsup, with frequent itemsets below", fontsize=7.5)
         ax.grid(axis="y", which="both", alpha=0.18)
         ax.spines[["top", "right"]].set_visible(False)
@@ -145,7 +153,8 @@ def main():
 
     legend_ax = flat[len(datasets)]
     legend_ax.axis("off")
-    handles = [Line2D([], [], color=style[n][0], marker=style[n][1], linewidth=1.3, label=n) for n in series]
+    handles = [Line2D([], [], color=style[n][0], marker=style[n][1], linewidth=1.3, label=display_name(n))
+               for n in series]
     if any_lost:
         handles.append(Line2D([], [], color="#777777", marker="X", markeredgecolor="#a02020", linestyle="none",
                               markersize=9, label="Timeout or lost samples (curves.csv)"))

@@ -16,6 +16,8 @@ matplotlib.use("Agg")
 matplotlib.rcParams["svg.fonttype"] = "none"
 import matplotlib.pyplot as plt
 
+from plot_runtime_curves import display_name
+
 DENSE = {"chess", "mushroom", "accidents"}
 COLORS = {"chess": "#2468a2", "mushroom": "#8c4fa1", "accidents": "#b0384b",
           "retail": "#d97716", "T10I4D100K": "#25814a"}
@@ -61,7 +63,7 @@ def main():
         lengths = [float(r["mean_length"]) for r in points]
         kind = text["dense"] if dataset in DENSE else text["sparse"]
         style = dict(color=COLORS[dataset], marker=MARKERS[dataset], markersize=4.5, linewidth=1.3,
-                     linestyle="-" if dataset in DENSE else "--", label=f"{dataset} ({kind})")
+                     linestyle="-" if dataset in DENSE else "--", label=f"{display_name(dataset)} ({kind})")
         counts_ax.plot(xs, counts, **style)
         length_ax.plot(xs, lengths, **style)
         slopes.append((dataset, kind, xs[0], xs[-1], counts[0], counts[-1], round(log_slope(xs, counts), 2)))
