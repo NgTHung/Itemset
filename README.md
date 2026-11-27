@@ -47,11 +47,12 @@ Applications that start from labels, such as product names, map them to IDs and 
 julia --project=. demo.jl --check-input data/toy/baskets.txt
 julia --project=. demo.jl --minsup 0.5 --output results/patterns.txt data/toy/baskets.txt
 julia --project=. demo.jl --min-count 2 --variant baseline --output results/patterns.txt data/toy/baskets.txt
+julia --project=. demo.jl --min-count 2 data/toy/baskets.txt | head
 ```
 
-`--check-input` prints the transaction and distinct-item counts. `--minsup` and `--min-count` are mutually exclusive. Run `demo.jl --help` for every option.
+`--check-input` prints the transaction and distinct-item counts. `--minsup` and `--min-count` are mutually exclusive. Without `--output`, the itemsets print to stdout in the same format, so they can be piped. Run `demo.jl --help` for every option.
 
-The CLI exits with 0 after it writes the output. On any error it prints `ERROR:` and the cause, such as the input line that failed to parse, to stderr, exits with 1, and leaves an existing output file unchanged, because it mines the whole map before it opens the output. A script can therefore trust the output file whenever the exit code is 0.
+The CLI exits with 0 after it writes the output. On any error it prints `ERROR:` and the cause, such as the input line that failed to parse, to stderr, exits with 1, and leaves an existing output file unchanged, because it mines the whole map before it opens the output. A script can therefore trust the output file whenever the exit code is 0. For the same reason, a failed run without `--output` prints nothing to stdout.
 
 To check the output against the committed SPMF result for the same toy run, use the [comparator](tools/spmf/README.md#compare-outputs):
 

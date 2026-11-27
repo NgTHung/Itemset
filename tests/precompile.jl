@@ -5,16 +5,19 @@
     mktempdir() do dir
         trace = joinpath(dir, "trace.jl")
         output = joinpath(dir, "patterns.txt")
-        @testset "$variant $threshold_args" for variant in ("baseline", "optimized"),
-                threshold_args in (["--minsup", "0.5"], ["--min-count", "2"])
-            args = [threshold_args; "--variant"; variant; "--output"; output; joinpath(TOY_DIR, "baskets.txt")]
+        printed = joinpath(dir, "stdout.txt")
+        @testset "$variant $threshold_args to $destination" for variant in ("baseline", "optimized"),
+                threshold_args in (["--minsup", "0.5"], ["--min-count", "2"]), destination in ("--output", "stdout")
+            output_args = destination == "--output" ? ["--output", output] : String[]
+            args = [threshold_args; "--variant"; variant; output_args; joinpath(TOY_DIR, "baskets.txt")]
             command = `$(Base.julia_cmd()) --startup-file=no --project=$root --trace-compile=$trace
                        $(joinpath(root, "demo.jl")) $args`
             rm(trace; force=true)
-            run(pipeline(command; stdout=devnull))
+            rm(output; force=true)
+            run(pipeline(command; stdout=printed))
             # Julia creates the trace file only when it compiles something.
             @test (isfile(trace) ? readlines(trace) : String[]) == String[]
-            @test read(output, String) == replace(read(joinpath(TOY_DIR, "baskets.expected.txt"), String), "\r\n"=>"\n")
+            @test read(destination == "--output" ? output : printed, String) == replace(read(joinpath(TOY_DIR, "baskets.expected.txt"), String), "\r\n"=>"\n")
         end
     end
 end
