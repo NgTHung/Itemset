@@ -1,20 +1,22 @@
 const CLI_USAGE = """
 Usage:
   julia --project=. demo.jl --check-input PATH
-  julia --project=. demo.jl --minsup FRACTION --output PATH [--variant baseline|optimized] INPUT
-  julia --project=. demo.jl --min-count COUNT --output PATH [--variant baseline|optimized] INPUT
+  julia --project=. demo.jl --minsup FRACTION [--output PATH] [--variant baseline|optimized] INPUT
+  julia --project=. demo.jl --min-count COUNT [--output PATH] [--variant baseline|optimized] INPUT
 
 --check-input prints transaction and distinct-item counts.
 --minsup uses a fraction in (0,1]; --min-count uses an integer >= 1.
+Without --output, the itemsets print to stdout.
 """
 
 """
     cli_main(args::Vector{String}, out::IO=stdout) -> Int
 
-Run the `demo.jl` command line and return 0. The code lives in the package, not
-in the script, so the package image holds its native code and a cold run
-compiles nothing. Throws `ArgumentError` for invalid arguments or input, and
-leaves an existing output file untouched when it throws.
+Run the `demo.jl` command line and return 0. Itemsets go to `--output` when
+given and to `out` otherwise. The code lives in the package, not in the script,
+so the package image holds its native code and a cold run compiles nothing.
+Throws `ArgumentError` for invalid arguments or input, and writes no bytes to
+the output file or `out` when it throws.
 """
 function cli_main(args::Vector{String}, out::IO=stdout)
     if isempty(args) || args == ["--help"]
@@ -59,11 +61,12 @@ function cli_main(args::Vector{String}, out::IO=stdout)
             index += 1
         end
     end
-    input !== nothing && output !== nothing && threshold !== nothing ||
-        throw(ArgumentError("input, --output, and a support threshold are required"))
-    abspath(input) != abspath(output) || throw(ArgumentError("input and output must differ"))
+    input !== nothing && threshold !== nothing ||
+        throw(ArgumentError("input and a support threshold are required"))
+    output === nothing || abspath(input) != abspath(output) ||
+        throw(ArgumentError("input and output must differ"))
     patterns = mine_packed(read_transactions(input); minsup=threshold, variant=variant)
-    write_itemsets(output, patterns)
+    write_itemsets(something(output, out), patterns)
     return 0
 end
 

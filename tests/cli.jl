@@ -17,16 +17,30 @@ threshold_flag(minsup) = minsup isa Integer ? "--min-count" : "--minsup"
                 @test read(output, String) == sprint(write_itemsets, case.expected)
             end
         end
+        @testset "Without --output, itemsets go to stdout with $variant" for variant in MINED_VARIANTS
+            for case in MINING_CASES
+                input = joinpath(TOY_DIR, case.name * ".txt")
+                out = IOBuffer()
+                args = [threshold_flag(case.minsup), string(case.minsup), "--variant", string(variant), input]
+                @test ItemsetMining.cli_main(args, out) == 0
+                @test String(take!(out)) == sprint(write_itemsets, case.expected)
+            end
+        end
         @testset "Argument errors" begin
             @test_throws "exactly one support threshold" main(["--minsup", "0.5", "--min-count", "2", "--output", output, baskets])
-            @test_throws "are required" main(["--minsup", "0.5", baskets])
+            @test_throws "are required" main(["--minsup", "0.5"])
+            @test_throws "are required" main([baskets])
             @test_throws "must differ" main(["--min-count", "2", "--output", baskets, baskets])
             @test_throws "variant must be" main(["--min-count", "2", "--variant", "fast", "--output", output, baskets])
             @test_throws "--minsup needs a value" main(["--minsup", "--output", output, baskets])
         end
+        root = dirname(@__DIR__)
+        demo = `$(Base.julia_cmd()) --startup-file=no --project=$root $(joinpath(root, "demo.jl"))`
+        @testset "A process without --output prints itemsets to stdout" begin
+            expected = sprint(write_itemsets, mine(read_transactions(baskets); minsup=2))
+            @test read(`$demo --min-count 2 $baskets`, String) == expected
+        end
         @testset "A failed process exits 1 and leaves existing output untouched" begin
-            root = dirname(@__DIR__)
-            demo = `$(Base.julia_cmd()) --startup-file=no --project=$root $(joinpath(root, "demo.jl"))`
             write(output, "keep\n")
             err = IOBuffer()
             process = run(pipeline(ignorestatus(`$demo --min-count 2 --output $output $malformed`); stderr=err))

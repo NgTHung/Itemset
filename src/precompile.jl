@@ -18,6 +18,7 @@ if ccall(:jl_generating_output, Cint, ()) == 1
             cli_main(["--check-input", input], out)
             for args in (["--minsup", "0.5"], ["--min-count", "2"]), variant in ("baseline", "optimized")
                 cli_main([args; "--variant"; variant; "--output"; output; input], out)
+                cli_main([args; "--variant"; variant; input], out)
                 cli_exit_code([args; "--variant"; variant; "--output"; output; input])
             end
         end
