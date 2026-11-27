@@ -45,11 +45,6 @@ class ReportValidationTest(TestCase):
             report.require_exact([baseline, result("optimized", comparison_reference_sha256="different")])
         report.require_exact([baseline, result("optimized")])
 
-    def test_names_attempt_when_peak_rss_is_missing(self):
-        row = result(peak_rss_bytes="")
-        with self.assertRaisesRegex(ValueError, "Invalid peak RSS for chess-baseline"):
-            report.plot_memory([row], Path("unused.png"))
-
     def test_does_not_plot_unpaired_coverage(self):
         with self.assertRaisesRegex(ValueError, "both Julia variants"):
             report.plot_coverage([result()], Path("unused.pdf"))
@@ -65,14 +60,10 @@ class ReportValidationTest(TestCase):
             self.assertEqual(ax.get_xlabel(), xlabel)
             self.assertIn(cell, [text.get_text() for text in ax.texts])
 
-    def test_labels_memory_in_the_chosen_language(self):
-        rows = [result(), result("optimized", peak_rss_bytes="500000")]
-        for language, legend, xlabels in (
-            ("en", ["Baseline", "Optimized"], ["Median peak RSS (MiB)", "Median baseline / optimized"]),
-            ("vi", ["Cơ bản", "Tối ưu"], ["Trung vị peak RSS (MiB)", "Trung vị cơ bản / tối ưu"]),
-        ):
-            with patch.object(Figure, "savefig", autospec=True) as save:
-                report.plot_memory(rows, Path("unused.png"), language)
-            left, right = save.call_args.args[0].axes
-            self.assertEqual([text.get_text() for text in left.get_legend().get_texts()], legend)
-            self.assertEqual([left.get_xlabel(), right.get_xlabel()], xlabels)
+    def test_coverage_ignores_the_spmf_programs_of_a_runtime_campaign(self):
+        rows = [result(), result("optimized"), result("spmf"), result("prepost"),
+                result("spmf", minsup_relative="0.5")]
+        with patch.object(Figure, "savefig", autospec=True) as save:
+            report.plot_coverage(rows, Path("unused.pdf"))
+        ax = save.call_args.args[0].axes[0]
+        self.assertEqual([text.get_text() for text in ax.texts], ["80"])

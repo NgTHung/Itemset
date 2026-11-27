@@ -38,29 +38,23 @@ Hung viết cài đặt/scalability/output size; Thien viết basket/runtime/wid
 Phat viết image/correctness/memory. Thien ghép các phần đã có bằng chứng, không viết
 thay toàn bộ nhóm. Phat ghép notebook; Hung kiểm tra repository cuối cùng.
 
-## Tạo lại biểu đồ độ đúng và bộ nhớ
+## Tạo lại biểu đồ độ đúng và bảng bộ nhớ
 
-Chạy từ thư mục gốc trên Julia 1.13.2 với [JAR SPMF đã ghim và Java 25](../../tools/spmf/README.md).
-Hai cấu hình đo cả hai biến thể qua CLI và đối chiếu toàn bộ đầu ra với cùng
-tham chiếu SPMF ở mỗi ngưỡng. Dùng các thư mục kết quả mới.
-Mỗi cấu hình chạy JVM với heap tối đa 3 GiB và bộ thu gom Serial GC.
+Hình lưới độ đúng và bảng peak RSS lấy từ đợt đo thời gian trên máy chấm điểm,
+`bbq-all-variants-cli-5repeat-20261117T041922Z`. [Bản ghi đợt đo](../runtime-curves-2026-11-17.md#reproduce)
+có mã băm của thư mục kết quả và lệnh tái lập. Mọi lần chạy trong đợt này đã được đối
+chiếu toàn bộ đầu ra với SPMF, và kịch bản vẽ từ chối vẽ nếu có lần chạy không khớp.
+Bảng peak RSS là trung vị cột `peak_rss_bytes` của `runs.csv` ở minsup thấp nhất của mỗi
+CSDL.
 
 ```sh
-julia --startup-file=no --project=. experiments/prepare_benchmarks.jl
-julia --startup-file=no --threads=1 --heap-size-hint=512M --project=. experiments/run.jl experiments/configs/report-correctness.toml --out results/raw/report-correctness
-julia --startup-file=no --threads=1 --heap-size-hint=512M --project=. experiments/run.jl experiments/configs/report-peak-memory.toml --out results/raw/report-peak-memory
-uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py results/raw/report-correctness results/raw/report-peak-memory --language vi --out docs/report/figures
-uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py results/raw/report-correctness results/raw/report-peak-memory --out docs/report/figures/en
+RUN=results/raw/bbq-all-variants-cli-5repeat-20261117T041922Z
+uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py $RUN --language vi --out docs/report/figures
+uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py $RUN --out docs/report/figures/en
 ```
 
-Lệnh vẽ thứ nhất tạo hình có nhãn tiếng Việt cho `main.tex`. Lệnh thứ hai tạo bản
-nhãn tiếng Anh cho `main-en.tex`.
-
-Thêm `--project PATH` vào hai lệnh đo để chọn checkout ở revision được
-ghi trong báo cáo. Mỗi thư mục kết quả
-ghi mã băm và phiên bản trong `environment.toml`, `source-checksums.toml` và
-`config.toml`. Tệp `runs.csv` ghi từng phép đo. Các tệp `comparison.toml`
-ghi số tập mục thiếu, thừa, lặp và sai support.
+Lệnh thứ nhất tạo hình có nhãn tiếng Việt cho `main.tex`. Lệnh thứ hai tạo bản nhãn
+tiếng Anh cho `main-en.tex`.
 
 [Hướng dẫn ứng dụng ảnh](../../applications/image_patterns/README.md#reproduce-the-sensitivity-study)
 có lệnh tạo bảng độ nhạy và hình đối chiếu Semeion.
