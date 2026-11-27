@@ -26,17 +26,17 @@
 \maketitle
 \begin{abstract}
 We implement Zaki's Eclat algorithm in Julia using only the standard library, evaluate
-it on five benchmark databases, and apply it to two practical problems. The package has
-a baseline that follows the original paper closely and an optimized variant that adds
-bitset tidsets, a search order by increasing support, perfect-extension pruning, pair
-counting, and tid lists for sparse data. Both variants match SPMF's Eclat exactly at
-every database and threshold we tested. On the grading machine the optimized variant is
+it on five benchmark databases, and apply it to two practical problems. The package
+contains a baseline that stays close to the original paper and an optimized variant that
+adds bitset tidsets, a search order by increasing support, perfect-extension pruning,
+pair counting, and tid lists for sparse data. Both variants match SPMF's Eclat exactly at
+every database and threshold we tested. On the grading machine, the optimized variant is
 the fastest of four programs (our two variants, SPMF Eclat, and SPMF PrePost+) at all 33
 points, and at the lowest minsup of each database it runs 7.9 to 33.3 times faster than
-the baseline. When transaction length grows from 5 to 40 with output size held fixed,
-the baseline's mining time grows 42-fold and the optimized variant's grows 1.8-fold.
-The two applications are market basket analysis on Online Retail II and image-pattern
-mining on Semeion.
+the baseline. When the transaction length grows from 5 to 40 with the output size held
+fixed, the baseline's mining time grows 42-fold, while the optimized variant's grows only
+1.8-fold. We apply the miner to market basket analysis on Online Retail II and to
+image-pattern mining on Semeion.
 \end{abstract}
 \input{sections-en/introduction}
 \input{sections-en/implementation}

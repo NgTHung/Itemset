@@ -1,18 +1,18 @@
 \section{Introduction}
 Frequent itemset mining (FIM) finds the sets of items that occur together in at least
-$\sigma$ transactions of a database, where $\sigma$ is the minimum support threshold
-(minsup when written as a fraction of the database). It is the first step of
-association rule mining and underlies many other pattern-mining tasks. The number of
-frequent itemsets can grow very quickly as the threshold drops, so the data layout and
-the way support is counted decide how low a threshold an algorithm can reach.
+$\sigma_{\min}$ transactions of a database, where $\sigma_{\min}$ is the minimum support
+threshold (called minsup when written as a fraction of the database). It is the first
+step of association rule mining and underlies many other pattern-mining tasks. Because
+the number of frequent itemsets can grow very quickly as the threshold drops, the way an
+algorithm lays out the data and counts support decides how low a threshold it can reach.
 
-Eclat~\cite{zaki2000} stores the database vertically: each item comes with its tidset,
+Eclat~\cite{zaki2000} stores the database vertically, pairing each item with its tidset,
 the set of identifiers of the transactions that contain it. The support of an itemset is
-the size of the intersection of its items' tidsets, and Eclat searches depth-first over
-prefix-based equivalence classes. We reimplemented the algorithm from the original paper
-in Julia using only the standard library, compared it with SPMF's Eclat and
-PrePost+~\cite{spmf2016}, and used it in two applications. The paper has three main
-parts:
+then the size of the intersection of its items' tidsets, and Eclat searches depth-first
+over prefix-based equivalence classes. We reimplemented the algorithm from the original
+paper in Julia using only the standard library, compared it with SPMF's Eclat and
+PrePost+~\cite{spmf2016}, and used it in two applications. The rest of the paper is
+organized in three parts:
 \begin{itemize}
 \item Section~\ref{sec:implementation} presents a baseline that follows the paper and an
 optimized variant (bitsets, a search order by increasing support, perfect-extension
@@ -31,10 +31,9 @@ Retail II (Section~\ref{sec:basket}) and to image-pattern mining on Semeion
 (Section~\ref{sec:visual-patterns}).
 \end{itemize}
 
-Two rules shape how we present results. First, every performance comparison uses only
+We follow two rules when presenting results. First, a performance comparison only uses
 runs whose output, both itemsets and supports, matches an independent run of SPMF's
-Eclat exactly, because two programs can report the same number of itemsets with
-different supports. Second, each headline number is tied to the machine and source
-revision that produced it, and every random step uses seed 42. The project repository
-holds the source code, configurations, data hashes, and reproduction commands for every
-experiment.
+Eclat exactly, since two programs can report the same number of itemsets with different
+supports. Second, every headline number is tied to the machine and the source revision
+that produced it, and every random step uses seed 42. The project repository contains the
+source code, configurations, data hashes, and reproduction commands for every experiment.

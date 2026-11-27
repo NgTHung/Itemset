@@ -3,19 +3,20 @@
 \subsection{Market basket analysis}
 \label{sec:basket}
 Market basket analysis looks for groups of products that customers often buy together, so
-that a retailer can arrange, bundle, or promote them. We use the Online Retail II
-dataset~\cite{chen2012}, licensed CC BY 4.0, which holds every invoice line of a UK online
-gift shop from 2009-12-01 to 2011-12-09. The CSV file comes from two mirrors on Hugging
-Face, pinned by revision. The two copies are byte-identical and have exactly 1\,067\,371
-rows, as UCI states. The file's SHA-256 hash is checked before processing.
+that a retailer can arrange, bundle, or promote them together. We use the Online Retail II
+dataset~\cite{chen2012}, licensed under CC BY 4.0, which contains every invoice line of a
+UK online gift shop from 2009-12-01 to 2011-12-09. We downloaded the CSV file from two
+Hugging Face mirrors, each pinned by revision; the two copies are byte-identical and have
+exactly the 1\,067\,371 rows that UCI reports. The file's SHA-256 hash is checked before
+processing.
 
-Each transaction is an invoice, and each item is an upper-cased stock code, because
-\texttt{85123a} and \texttt{85123A} name the same product. The function
-\texttt{encode\_transactions} assigns integer item codes in stock-code order, so the
-mapping does not depend on row order and can be reversed: the file \texttt{items.tsv}
-stores the integer code, the stock code, the most common description, and the number of
-baskets that contain the product. Table~\ref{tab:basket-cleaning} shows the effect of
-each cleaning step.
+Each invoice becomes a transaction, and each product becomes an item identified by its
+stock code in upper case, because \texttt{85123a} and \texttt{85123A} name the same
+product. The function \texttt{encode\_transactions} assigns integer item codes in
+stock-code order, so the mapping does not depend on the order of the rows and can be
+reversed: the file \texttt{items.tsv} stores, for each product, its integer code, its stock
+code, its most common description, and the number of baskets that contain it.
+Table~\ref{tab:basket-cleaning} shows how each cleaning step changes the data.
 
 \begin{table}[t]
 \centering
@@ -36,61 +37,62 @@ Non-product codes & 4\,555 & 1\,003\,357 & 39\,516 \\
 \end{tabular}
 \end{table}
 
-UCI publishes the data as two sheets, one per year, and both contain 1--9 December 2010,
-which accounts for 22\,844 of the 34\,335 duplicate rows. Duplicate rows do not change the
-baskets, because repeated items in a transaction are merged. A cancelled invoice is a
-separate invoice with a C prefix that reverses an earlier sale, so dropping it keeps the
-basket the customer actually bought. Rows with a non-positive quantity or unit price are
-stock notes such as ``check'' or ``damaged'', not sales. These two steps remove 5\,254
-invoices that hold only notes and 380 codes that were never sold. The last step removes
-service codes such as postage, discounts, bank charges, and gift vouchers. Postage alone
-appears in 8.8\% of invoices, so it would create spurious rules with every popular
-product. Rows without a customer ID are kept, because an invoice is a basket whoever pays
-for it.
+UCI publishes the data as two sheets, one per year, and both include 1 to 9 December
+2010, which accounts for 22\,844 of the 34\,335 duplicate rows. Removing duplicate rows
+does not change any basket, since repeated items in a transaction are merged anyway. A
+cancelled invoice is a separate invoice, marked with a C prefix, that reverses an earlier
+sale, so dropping it leaves the basket the customer actually kept. Rows with a
+non-positive quantity or unit price are stock notes such as ``check'' or ``damaged''
+rather than sales; removing them deletes 5\,254 invoices that hold only notes, along with
+380 codes that were never sold. The last step removes service codes such as postage,
+discounts, bank charges, and gift vouchers. Postage alone appears on 8.8\% of invoices,
+so keeping it would create spurious rules with every popular product. We keep rows
+without a customer ID, because an invoice is a basket no matter who pays for it.
 
-The result is 39\,516 baskets over 4\,725 products. Basket length has a median of 15, a
-90th percentile of 51, a mean of 25.1, and a maximum of 1\,106 for wholesale orders. 92\%
-of baskets come from the UK. With our Eclat, minsup 0.01 (396 invoices) gives 1\,355
-frequent itemsets, 648 of which contain two or more products.
+After cleaning, 39\,516 baskets remain, covering 4\,725 products. Baskets have a median
+length of 15, a 90th percentile of 51, a mean of 25.1, and a maximum of 1\,106 items for
+wholesale orders, and 92\% of them come from the UK. At minsup 0.01 (396 invoices), our
+Eclat finds 1\,355 frequent itemsets, 648 of which contain two or more products.
 
 \subsubsection{Association rules}
 An association rule $X \Rightarrow Y$ has an antecedent $X$ and a consequent $Y$, two
-non-empty, disjoint sets of products. Let $N$ be the number of baskets and $\sigma(Z)$ the
-number of baskets that contain every product of the set $Z$. The three rule measures are
+non-empty, disjoint sets of products. With $N$ the number of baskets and $\sigma(Z)$ the
+number of baskets that contain every product in a set $Z$, the three usual rule measures
+are
 \begin{align}
 \mathrm{supp}(X \Rightarrow Y) &= \frac{\sigma(X \cup Y)}{N}, \label{eq:rule-supp}\\
 \mathrm{conf}(X \Rightarrow Y) &= \frac{\sigma(X \cup Y)}{\sigma(X)}, \label{eq:rule-conf}\\
 \mathrm{lift}(X \Rightarrow Y) &= \frac{\mathrm{conf}(X \Rightarrow Y)}{\sigma(Y)/N}
   = \frac{N\,\sigma(X \cup Y)}{\sigma(X)\,\sigma(Y)}. \label{eq:rule-lift}
 \end{align}
-Support~\eqref{eq:rule-supp} is the share of baskets that contain both sides.
-Confidence~\eqref{eq:rule-conf} is the share of baskets with $X$ that also have $Y$.
-Lift~\eqref{eq:rule-lift} says how many times more often $Y$ occurs with $X$ than it
-would if the two sides were independent, so a lift above 1 means the two sides tend to be
-bought together. Lift is symmetric in $X$ and $Y$, while confidence is not.
+Support~\eqref{eq:rule-supp} is the share of baskets that contain both sides, and
+confidence~\eqref{eq:rule-conf} is the share of baskets with $X$ that also contain $Y$.
+Lift~\eqref{eq:rule-lift} tells how many times more often $Y$ occurs together with $X$
+than it would if the two sides were independent, so a lift above 1 means the two sides
+tend to be bought together. Unlike confidence, lift is symmetric in $X$ and $Y$.
 
-We mined the 39\,516 baskets with our Eclat at minsup 0.01, so each pattern rests on at
-least 396 invoices, and obtained 1\,355 frequent itemsets. Each frequent itemset $Z$ with
-$m \ge 2$ products is split into every pair $X$, $Y = Z \setminus X$, giving $2^m - 2$
-rules. The minsup threshold already applies to $X \cup Y$ from mining, and every subset of
-$Z$ is in the result, so $\sigma(X)$ and $\sigma(Y)$ can always be looked up. The measures
-are computed as exact fractions. The minconf threshold is converted once from its decimal
-form to a fraction $p/q$, and a rule is kept when
-$\sigma(X \cup Y)\, q \ge p\, \sigma(X)$, computed with big integers, so rounding error
-never decides a rule. Comparing against the machine float 0.1, which is slightly larger
-than $1/10$, would wrongly reject a rule whose confidence is exactly $1/10$. At minconf
-0.5, 455 of the 1\,804 rules are kept, and every rule has a lift above 1.4.
+Mining the 39\,516 baskets at minsup 0.01 gives 1\,355 frequent itemsets, each supported
+by at least 396 invoices. Every frequent itemset $Z$ with $m \ge 2$ products is split in
+all possible ways into $X$ and $Y = Z \setminus X$, giving $2^m - 2$ rules. Mining has
+already applied the minsup threshold to $X \cup Y$, and every subset of $Z$ is in the
+result, so $\sigma(X)$ and $\sigma(Y)$ can always be looked up. All measures are computed
+as exact fractions. The minconf threshold is converted once from its decimal form to a
+fraction $p/q$, and a rule is kept when $\sigma(X \cup Y)\, q \ge p\, \sigma(X)$, computed
+with big integers, so rounding error never decides whether a rule is kept. Comparing
+against the machine float 0.1, for example, which is slightly larger than $1/10$, would
+wrongly reject a rule whose confidence is exactly $1/10$. At minconf 0.5, 455 of the
+1\,804 rules survive, and all of them have a lift above 1.4.
 
-As a check, we ran SPMF's Eclat on the same basket file: the two results match 100\% on
+As a check, we ran SPMF's Eclat on the same basket file, and the two results agree on all
 1\,355 frequent itemsets. A separate program that generates rules from SPMF's result also
-gives exactly 455 rules, and the support, confidence, and lift of the top 10 rules match a
-direct count on the baskets.
+finds exactly 455 rules, and the support, confidence, and lift of the top 10 rules agree
+with a direct count on the baskets.
 
-Rules are sorted by decreasing lift, then confidence, then basket count, and finally by
-stock code, so the order is always deterministic. The rules $X \Rightarrow Y$ and
-$Y \Rightarrow X$ always have the same lift, so the direction with higher confidence comes
-first. Table~\ref{tab:top-rules} lists the top 10 rules. No rule outside the table has the
-same lift as the 10th.
+Rules are sorted by decreasing lift, then by confidence and basket count, and finally by
+stock code, so the order is fully deterministic. Since $X \Rightarrow Y$ and
+$Y \Rightarrow X$ always have the same lift, the direction with the higher confidence
+comes first. Table~\ref{tab:top-rules} lists the top 10 rules; no rule outside the table
+ties with the 10th on lift.
 
 \begin{table}[t]
 \centering
@@ -116,10 +118,10 @@ Rank & Rule & $\sigma$ & supp & conf & lift \\
 \end{tabular}
 \end{table}
 
-All 10 rules come from one product line: the six ways of splitting the three-room
-Poppy's Playhouse toy set, plus two symmetric pairs of rules. One frequent itemset yields
-many near-identical rules, so Table~\ref{tab:top-groups} keeps only the best rule of each
-distinct product group $X \cup Y$.
+All 10 rules come from a single product line: they are the six ways of splitting the
+three-room Poppy's Playhouse toy set, plus two symmetric pairs. Because one frequent
+itemset yields many near-identical rules, Table~\ref{tab:top-groups} keeps only the best
+rule for each distinct product group $X \cup Y$.
 
 \begin{table*}[t]
 \centering
@@ -146,96 +148,99 @@ each year and after dropping the largest 1\% of baskets}
 
 \subsubsection{Business interpretation}
 The groups in Table~\ref{tab:top-groups} suggest two hypotheses a retailer could act on.
-First, customers buy whole collections: the three Poppy's Playhouse rooms, two Feltcraft
-doll designs, and two Scandinavian-style Christmas decorations. 82\% of baskets with the
-Livingroom also have the Bedroom, so the shop could sell the rooms as a set, place them
-next to each other on product pages, or suggest the missing room when a basket has only
-one. Second, customers buy several color variants of the same product: blue and pink
-party candles, pink and blue polka-dot cups, and two key-fob designs. The shop could sell
-multi-color packs and restock the variants together. The evidence for both is a lift
-above 35, confidence between 0.62 and 0.84, and more than 400 invoices for each group.
+The first is that customers buy whole collections, such as the three Poppy's Playhouse
+rooms, two Feltcraft doll designs, or two Scandinavian-style Christmas decorations. For
+instance, 82\% of the baskets that contain the Livingroom also contain the Bedroom, so the
+shop could sell the rooms as a set, show them next to each other on product pages, or
+suggest the missing rooms when a basket contains only one. The second is that customers
+buy several color variants of the same product, such as blue and pink party candles, pink
+and blue polka-dot cups, or two key-fob designs, which suggests selling multi-color packs
+and restocking the variants together. Both hypotheses rest on a lift above 35, a
+confidence between 0.62 and 0.84, and more than 400 invoices for each group.
 
-An association rule only says that two products appear on the same invoice. It does not
-say that buying $X$ causes the purchase of $Y$. Many customers are wholesalers, so a
-shared cause, such as stocking a whole product line for their own shop or the Christmas
-season, can produce both sides. The suggestions above are therefore hypotheses to test,
-for example with an A/B test of a product bundle, before changing how the shop sells.
+An association rule only says that two products appear on the same invoice, not that
+buying $X$ causes the purchase of $Y$. Many customers are wholesalers, so a shared cause,
+such as stocking a whole product line for their own shop or preparing for the Christmas
+season, can explain both sides. The suggestions above are therefore hypotheses to test,
+for example with an A/B test of a product bundle, before the shop changes how it sells.
 
 \subsubsection{Robustness of the results}
-Lift and confidence are properties of the data, so changing the thresholds only decides
-which rules are kept and which rules they are ranked against. Raising minconf to 0.6
+Lift and confidence are properties of the data, so the thresholds only decide which rules
+are kept and which other rules they compete with in the ranking. Raising minconf to 0.6
 removes the two rules with confidence 0.58 and 0.55 from Table~\ref{tab:top-rules}, but
-all 10 groups remain. Lowering minsup to 0.0075 keeps every rule, but rarer rules with
-higher lift push the 10 groups down to ranks 32 to 108. Raising minsup to 0.015 (593
-invoices) removes all 10 groups, because they have only 401 to 557 invoices: the
+all 10 groups remain. Lowering minsup to 0.0075 keeps every rule, although rarer rules
+with higher lift push the 10 groups down to ranks 32 to 108. Raising minsup to 0.015 (593
+invoices) removes all 10 groups, because they rest on only 401 to 557 invoices; the
 highest-lift patterns sit just above the support threshold.
 
-To separate stable patterns from chance, we recounted each rule in the first year (before
+To tell stable patterns from chance, we recounted each rule in the first year (before
 2010-12-01, 19\,743 baskets), in the second year (19\,773 baskets), and after dropping the
-393 baskets with more than 197 products, the largest 1\% of baskets. We counted directly
+largest 1\% of baskets, the 393 baskets with more than 197 products. We counted directly
 instead of mining again, because mining half the data at the same relative minsup would
-drop patterns that only fall slightly below the new threshold, and they would look as if
-they had vanished. Table~\ref{tab:top-groups} shows that every group keeps a lift above 27
+drop patterns that fall only slightly below the new threshold and make them look as if
+they had vanished. As Table~\ref{tab:top-groups} shows, every group keeps a lift above 27
 and a confidence between 0.62 and 0.90 in every subset, with at least 108 invoices per
-year, so they are not artifacts of one season or of a few large wholesale orders.
+year, so none of them is an artifact of one season or of a few large wholesale orders.
 
-In contrast, at minsup 0.005 (198 invoices), nine of the top ten groups are sets of Herb
-Marker plant labels with a lift of about 150. The first year has only 7 to 11 invoices for
-each group, which pushes that year's lift to 1\,480--1\,795, a value with no real meaning,
-while the second year has 193 to 221 invoices. These rules rest on about half as many
-invoices as the main groups and mostly on one selling season, so we treat them as a lead
-to watch, not a conclusion.
+At minsup 0.005 (198 invoices), the picture is different: nine of the top ten groups are
+sets of Herb Marker plant labels with a lift of about 150. In the first year, however,
+each of these groups has only 7 to 11 invoices, which pushes that year's lift to between
+1\,480 and 1\,795, a value with no real meaning, while the second year has 193 to 221
+invoices per group. These rules rest on about half as many invoices as the main groups,
+and mostly on one selling season, so we treat them as a lead to watch rather than a
+conclusion.
 
 \subsubsection{Limitations}
-The data comes from one online gift shop over two years, with 92\% of invoices from the UK
+The data covers one online gift shop over two years, with 92\% of invoices from the UK
 and many wholesale customers, so the rules do not represent retail in general. A basket
-records only which products are present and ignores quantity and price, so an invoice for
-one unit and an invoice for a hundred units weigh the same. Lift favors rare products, so a
+records only which products are present, not their quantity or price, so an invoice for
+one unit counts the same as an invoice for a hundred. Lift also favors rare products, so a
 ranking by lift should be read together with the number of supporting invoices. Finally,
-product descriptions are labels typed in by the shop and may differ between nearly
+the product descriptions are labels typed in by the shop and may differ between nearly
 identical codes.
 
 \subsection{Image-pattern mining}
 \label{sec:visual-patterns}
 \subsubsection{From images to transactions}
-The Semeion dataset from UCI holds 1\,593 binary images of handwritten digits,
-$16\times16$ pixels each, labeled 0 to 9~\cite{semeionUCI}. The question we study is which
-local stroke combinations recur across images. A \emph{bag of visual words}
-representation turns each image into an itemset, so Eclat can count how many images
-contain each stroke combination. We split each image into 16 non-overlapping $4\times4$
-patches. Each patch with at least two stroke pixels is flattened row by row into a
-16-dimensional binary vector. We run k-means with seed 42 and at most 25 iterations to
-learn a default codebook of 24 cluster centers. Each center is a visual word. A patch is
-assigned to its nearest center if the squared Euclidean distance is at most 1.0. An image
-transaction stores each assigned word exactly once, so the position and repeat count of a
-patch play no part in support. The $4\times4$ grid keeps local stroke segments while
-limiting each image to 16 patches before filtering. The distance threshold drops patches
-far from every center, so that distinct stroke shapes are less likely to land in the same
-word.
+The Semeion dataset from UCI contains 1\,593 binary images of handwritten digits, each
+$16\times16$ pixels and labeled 0 to 9~\cite{semeionUCI}. We ask which local stroke
+combinations recur across images. A \emph{bag of visual words} representation turns each
+image into an itemset, so that Eclat can count how many images contain each combination of
+strokes. To build it, we split each image into 16 non-overlapping $4\times4$ patches and
+flatten every patch with at least two stroke pixels, row by row, into a 16-dimensional
+binary vector. Running k-means with seed 42 and at most 25 iterations on these vectors
+gives a default codebook of 24 cluster centers, each of which is a visual word. A patch is
+assigned to its nearest center if their squared Euclidean distance is at most 1.0. The
+image's transaction then stores each assigned word once, so neither the position of a
+patch nor how often a word repeats affects support. The $4\times4$ grid keeps local stroke
+segments intact while limiting each image to 16 patches, and the distance threshold drops
+patches that are far from every center, which makes it less likely that clearly different
+stroke shapes end up as the same word.
 
 Of the 18\,386 patches that pass the stroke-pixel filter, those within the distance
-threshold produce 5\,767 word occurrences, an average of 3.62 words per image. Transactions
-hold 0 to 8 words, with a median of 4. We keep the 11 empty transactions in the
-denominator when converting minsup to an integer threshold, as in
-Section~\ref{sec:protocol}. The file \texttt{visual\_words.svg} stores an observed patch
-that represents each center. The file \texttt{manifest.toml} stores the seed, parameters,
-and input hashes needed to reproduce the encoder. We learn the codebook on all of Semeion,
-since the analysis is descriptive.
+threshold produce 5\,767 word occurrences, or 3.62 words per image on average.
+Transactions hold between 0 and 8 words, with a median of 4. As explained in
+Section~\ref{sec:vertical}, the 11 empty transactions still count in the denominator when
+minsup is converted to an integer threshold. The file \texttt{visual\_words.svg} shows an
+observed patch for each center, and \texttt{manifest.toml} stores the seed, the
+parameters, and the input hashes needed to reproduce the encoder. Because the analysis is
+descriptive, we learn the codebook on all of Semeion.
 
 \subsubsection{Frequent patterns and supporting images}
-We mine the transactions with our baseline Eclat. With 24 words and minsup 20\%, 10\%, and
-5\%, all 6, 18, and 46 itemsets match SPMF's supports. The SPMF input has 1\,582
-transactions after dropping 11 empty lines. We adjusted SPMF's relative threshold to keep
-the same minimum image counts of 319, 160, and 80. Empty transactions contribute no support
-to a non-empty itemset.
+We mine the transactions with our baseline Eclat. With 24 words, it finds 6, 18, and 46
+itemsets at minsup 20\%, 10\%, and 5\%, and all of their supports match SPMF. Because the
+SPMF input drops the 11 empty lines and has only 1\,582 transactions, we adjusted SPMF's
+relative threshold so that it uses the same minimum image counts of 319, 160, and 80; the
+empty transactions contribute no support to a non-empty itemset, so the results remain
+comparable.
 
-Table~\ref{tab:image-evidence} shows three patterns at minsup 5\%. The representative patch
-of word 13 is a short horizontal stroke. The pattern $\{8,13\}$ describes images that
-contain patches from both clusters. The file \texttt{supporting\_images.tsv} lists the ID
-and label of every supporting image. We compare images with the same label to interpret
-differences at the patch level. In Fig.~\ref{fig:semeion-contrast}, both images are
-labeled as the digit 2. Image 44 has all three words. Image 41 has words 8 and 13 but lacks
-word 4.
+Table~\ref{tab:image-evidence} shows three patterns at minsup 5\%. The representative
+patch of word 13 is a short horizontal stroke, and the pattern $\{8,13\}$ describes images
+that contain patches from both clusters. The file \texttt{supporting\_images.tsv} lists
+the ID and label of every supporting image. To interpret differences at the patch level,
+we compare images that share a label. In Fig.~\ref{fig:semeion-contrast}, both images
+show the digit 2, but only image 44 has all three words; image 41 has words 8 and 13 but
+not word 4.
 
 \begin{table}[ht]
 \centering
@@ -254,7 +259,7 @@ Word set & Support & Match & No match \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/semeion-source-contrast.png}
+\includegraphics[width=\columnwidth]{figures/en/semeion-source-contrast.png}
 \caption{Two source images, both labeled as the digit 2. The boxes mark patches assigned to
 the corresponding words. Image 44 contains the full triple $\{4,8,13\}$. Image 41 lacks
 word 4.}
@@ -262,11 +267,12 @@ word 4.}
 \end{figure}
 
 \subsubsection{Sensitivity to codebook size and minsup}
-Table~\ref{tab:semeion-sensitivity} compares itemset counts across codebook size $K$ and
-minsup, with the same seed, patch grid, maximum iterations, and distance threshold. Empty
-images are images with no patch assigned to a word. With $K=24$, word 13 and the pair
-$\{8,13\}$ reach all five thresholds. The triple $\{4,8,13\}$ has support 90, which reaches
-the 5.5\% threshold (88 images) and falls below the 6\% threshold (96 images).
+Table~\ref{tab:semeion-sensitivity} compares itemset counts across codebook sizes $K$ and
+minsup values, keeping the seed, patch grid, maximum iterations, and distance threshold
+fixed. An empty image is one in which no patch was assigned to a word. With $K=24$, word
+13 and the pair $\{8,13\}$ are frequent at all five thresholds, while the triple
+$\{4,8,13\}$, with support 90, reaches the 5.5\% threshold (88 images) but not the 6\%
+threshold (96 images).
 
 \begin{table}[t]
 \centering
@@ -283,29 +289,30 @@ $K$ & Empty images & 20\% & 10\% & 6\% & 5.5\% & 5\% \\
 \end{tabular}
 \end{table}
 
-As $K$ grows from 16 to 32, the mean width grows from 2.27 to 4.31 words per image. At the
-20\% threshold, the 24-word codebook gives the most patterns of the three configurations.
-The centers are learned again for each $K$, so the representative patches need comparing
-before a word is interpreted across configurations. How frequent a stroke is also depends
-on where the grid falls and on the resolution of the binary image.
+As $K$ grows from 16 to 32, the mean number of words per image rises from 2.27 to 4.31.
+At the 20\% threshold, the 24-word codebook yields the most patterns of the three. Since
+the centers are learned anew for each $K$, a word's representative patches must be
+compared before the word can be interpreted across configurations. How often a stroke
+appears also depends on where the grid boundaries fall and on the resolution of the
+binary image.
 
 \subsubsection{Uses and limitations}
-Visual patterns can serve as queries by stroke combination. For example, the query
-$\{8,13\}$ returns 330 images. Normalized by the number of images per label, this pattern
-appears in 69 of 159 images of the digit 3 (43.4\%) and 9 of 161 images of the digit 4
-(5.6\%). The gap describes label frequencies in the same dataset used to learn the
-codebook. The two words can appear at any position in the image.
+Visual patterns can be used to search images by stroke combination. The query
+$\{8,13\}$, for example, returns 330 images. Normalized by the number of images per label,
+the pattern appears in 69 of the 159 images of the digit 3 (43.4\%) but in only 9 of the
+161 images of the digit 4 (5.6\%). This gap describes label frequencies in the same dataset
+that the codebook was learned on, and the two words may appear anywhere in the image.
 
-Each itemset can also define a binary feature. With the pattern list
-$(\{13\},\{8,13\},\{4,8,13\})$, an image with transaction $\{8,13\}$ gets the vector
-$(1,1,0)$. The notebook builds a matrix with 1\,593 image rows and 46 itemset columns at
-minsup 5\%. Each column sums to the support of its itemset. To evaluate these features for
-classification, the codebook and the patterns would have to be learned on a training set
-and then held fixed while encoding the test set. The analysis here describes frequencies
-on Semeion.
+Each itemset can also serve as a binary feature. With the pattern list
+$(\{13\},\{8,13\},\{4,8,13\})$, an image whose transaction is $\{8,13\}$ gets the vector
+$(1,1,0)$. At minsup 5\%, the notebook builds a matrix with 1\,593 image rows and 46
+itemset columns, in which each column sums to the support of its itemset. Evaluating these
+features for classification would require learning the codebook and the patterns on a
+training set and keeping them fixed while encoding the test set; the analysis here only
+describes frequencies on Semeion.
 
 The \href{https://github.com/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb}
-{image-pattern notebook} uses Julia 1.13.2 and seed 42 to reproduce the default pipeline.
-The run manifest records the revision, the seed, and the hashes of the codebook and the
+{image-pattern notebook} reproduces the default pipeline with Julia 1.13.2 and seed 42.
+Its run manifest records the revision, the seed, and the hashes of the codebook and of the
 outputs at minsup 20\%, 10\%, and 5\%. The grid in Table~\ref{tab:semeion-sensitivity}
-uses the same encoder in 15 configurations.
+runs the same encoder in 15 configurations.
