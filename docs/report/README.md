@@ -49,8 +49,12 @@ Mỗi cấu hình chạy JVM với heap tối đa 3 GiB và bộ thu gom Serial 
 julia --startup-file=no --project=. experiments/prepare_benchmarks.jl
 julia --startup-file=no --threads=1 --heap-size-hint=512M --project=. experiments/run.jl experiments/configs/report-correctness.toml --out results/raw/report-correctness
 julia --startup-file=no --threads=1 --heap-size-hint=512M --project=. experiments/run.jl experiments/configs/report-peak-memory.toml --out results/raw/report-peak-memory
-uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py results/raw/report-correctness results/raw/report-peak-memory
+uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py results/raw/report-correctness results/raw/report-peak-memory --language vi --out docs/report/figures
+uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py results/raw/report-correctness results/raw/report-peak-memory --out docs/report/figures/en
 ```
+
+Lệnh vẽ thứ nhất tạo hình có nhãn tiếng Việt cho `main.tex`. Lệnh thứ hai tạo bản
+nhãn tiếng Anh cho `main-en.tex`.
 
 Thêm `--project PATH` vào hai lệnh đo để chọn checkout ở revision được
 ghi trong báo cáo. Mỗi thư mục kết quả

@@ -5,6 +5,9 @@ from pathlib import Path
 import sys
 import tempfile
 from unittest import TestCase
+from unittest.mock import patch
+
+from matplotlib.figure import Figure
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
@@ -50,3 +53,26 @@ class ReportValidationTest(TestCase):
     def test_does_not_plot_unpaired_coverage(self):
         with self.assertRaisesRegex(ValueError, "both Julia variants"):
             report.plot_coverage([result()], Path("unused.pdf"))
+
+    def test_labels_coverage_in_the_chosen_language(self):
+        rows = [result(), result("optimized"), result(minsup_relative="0.0025"),
+                result("optimized", minsup_relative="0.0025")]
+        for language, xlabel, cell in (("en", "Threshold position in the grid", "0.25"),
+                                       ("vi", "Thứ tự ngưỡng trong lưới", "0,25")):
+            with patch.object(Figure, "savefig", autospec=True) as save:
+                report.plot_coverage(rows, Path("unused.pdf"), language)
+            ax = save.call_args.args[0].axes[0]
+            self.assertEqual(ax.get_xlabel(), xlabel)
+            self.assertIn(cell, [text.get_text() for text in ax.texts])
+
+    def test_labels_memory_in_the_chosen_language(self):
+        rows = [result(), result("optimized", peak_rss_bytes="500000")]
+        for language, legend, xlabels in (
+            ("en", ["Baseline", "Optimized"], ["Median peak RSS (MiB)", "Median baseline / optimized"]),
+            ("vi", ["Cơ bản", "Tối ưu"], ["Trung vị peak RSS (MiB)", "Trung vị cơ bản / tối ưu"]),
+        ):
+            with patch.object(Figure, "savefig", autospec=True) as save:
+                report.plot_memory(rows, Path("unused.png"), language)
+            left, right = save.call_args.args[0].axes
+            self.assertEqual([text.get_text() for text in left.get_legend().get_texts()], legend)
+            self.assertEqual([left.get_xlabel(), right.get_xlabel()], xlabels)

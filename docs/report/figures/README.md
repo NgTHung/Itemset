@@ -9,4 +9,4 @@ Each figure here is a copy of a plot in `results/figures/`, which Git ignores. T
 | `en/scalability.pdf` | Same run as `scalability.pdf` | The same commands with `--out $OUT` and no `--language vi`, which write `$OUT/scalability.pdf` |
 | `en/output-size.pdf` | Same run as `output-size.pdf` | The same commands with `--out $OUT` and no `--language vi`, which write `$OUT/output-size.pdf` |
 
-The English report, `main-en.tex`, uses the `en/` copies. `correctness-grid.pdf` and `peak-memory.png` have Vietnamese labels hard-coded in `scripts/plot_report_validation.py`, so both reports share them.
+The English report, `main-en.tex`, uses the `en/` copies. `scripts/plot_report_validation.py` writes `correctness-grid.pdf` and `peak-memory.png` with Vietnamese labels under `--language vi` and English labels by default. [The report README](../README.md#tạo-lại-biểu-đồ-độ-đúng-và-bộ-nhớ) gives both commands.
