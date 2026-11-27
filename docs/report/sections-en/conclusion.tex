@@ -2,16 +2,16 @@
 We implemented Eclat from the original paper~\cite{zaki2000} as two variants that return
 the same result. Both match SPMF's Eclat exactly at every database and threshold, with 330
 outputs over 33 pairs and no missing, extra, duplicate, or wrong-support itemset
-(Section~\ref{sec:exact-memory}). In a single timing session on the grading machine, the
+(Section~\ref{sec:exact}). In a single timing session on the grading machine, the
 optimized variant is the fastest at all 33 points. At the lowest minsup of each database
 it is 7.9 times (Accidents) to 33.3 times (Retail) faster than the baseline
 (Section~\ref{sec:minsup}), and Section~\ref{sec:optimized} breaks the gain down by
 optimization step. The baseline's time tracks the total length of the tidsets it merges,
-at 2.0 to 6.9\,ns per element. When transaction length grows from 5 to 40 with output held
+at 2.0 to 6.9\,ns per element. The optimized variant's peak memory is 3.0\% to 34.5\%
+lower than the baseline's at the lowest minsup of each database
+(Section~\ref{sec:memory}). When transaction length grows from 5 to 40 with output held
 fixed, the baseline's mining time grows 42-fold while the optimized variant's grows only
-1.8-fold (Section~\ref{sec:width}). The optimized variant's peak memory is 3.0\% to
-34.5\% lower than the baseline's at the lowest minsup of each database
-(Section~\ref{sec:exact-memory}).
+1.8-fold (Section~\ref{sec:width}).
 
 Both applications use the same miner. On the 39\,516 invoices of Online Retail II, minsup
 0.01 gives 1\,355 frequent itemsets, from which we generate association rules and rank them

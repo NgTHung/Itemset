@@ -65,9 +65,8 @@ trình Julia và Java.
 Mọi phép đo trong bài đều chạy trên máy chấm điểm: Linux, Intel Core i7-11800H với
 xung nhịp cố định 2{,}3\,GHz, 7{,}4\,GiB RAM, Julia 1.13.2 một luồng và bản SPMF đã
 ghim~\cite{spmf2016} trên Java Temurin 25.0.4.1 với heap 4\,GiB.
-\subsection{Độ đúng và bộ nhớ}
-\label{sec:exact-memory}
-\subsubsection{Đối chiếu với SPMF}
+\subsection{Độ đúng so với SPMF}
+\label{sec:exact}
 Hai cài đặt có thể sinh cùng số lượng tập mục nhưng gán support khác nhau.
 Vì vậy, nhóm dùng Eclat của SPMF làm tham chiếu độc lập và đối chiếu toàn bộ
 ánh xạ từ tập mục sang số giao dịch hỗ trợ. Bộ so sánh bỏ dòng siêu dữ liệu và
@@ -141,49 +140,7 @@ Accidents & 7/7 & 7/7 & 15--1\,093 \\
 \end{tabular}
 \end{table}
 
-\subsubsection{Bộ nhớ đỉnh của tiến trình}
-Cùng đợt đo ghi peak RSS của mọi lần chạy. Phép đo bao gồm khởi động, đọc dữ liệu,
-khai thác và ghi toàn bộ đầu ra. Bảng~\ref{tab:peak-rss} ghi trung vị ở minsup thấp nhất
-của mỗi CSDL, nơi đầu ra và phép tìm kiếm lớn nhất. Mọi chương trình đều báo ít nhất
-252\,MiB ở mọi điểm, một mức sàn do chính phép đo đặt ra, nên giá trị ở mức sàn chỉ là
-cận trên.
-
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{3pt}
-\caption{Trung vị peak RSS (MiB) qua năm lần lặp ở minsup thấp nhất của mỗi CSDL. $R$ là
-trung vị của bản cơ bản chia cho trung vị của bản tối ưu.}
-\label{tab:peak-rss}
-\begin{tabular}{lrrrrr}
-\hline
-Dữ liệu / minsup & Cơ bản & Tối ưu & $R$ & SPMF & PrePost+ \\
-\hline
-Chess / 0{,}6 & 285{,}1 & 261{,}5 & 1{,}090 & 526{,}5 & $\le 254$ \\
-Mushroom / 0{,}1 & 366{,}0 & 299{,}2 & 1{,}223 & 514{,}2 & $\le 254$ \\
-Retail / 0{,}001 & 289{,}6 & 280{,}9 & 1{,}031 & 844{,}4 & $\le 254$ \\
-T10I4D100K / 0{,}00025 & 303{,}7 & 278{,}5 & 1{,}090 & 556{,}0 & 297{,}4 \\
-Accidents / 0{,}65 & 608{,}4 & 398{,}3 & 1{,}528 & 4\,248{,}1 & 340{,}9 \\
-\hline
-\end{tabular}
-\end{table}
-
-Từ các trung vị trong bảng, phần trăm giảm là $100(1-M_o/M_b)$, với $M_b$ và $M_o$ lần
-lượt là trung vị peak RSS của bản cơ bản và bản tối ưu. Mức giảm nằm trong khoảng từ
-3{,}0\% ở Retail đến 34{,}5\% ở Accidents. Eclat của SPMF dùng gấp 1{,}7 đến 10{,}7 lần bộ
-nhớ của bản tối ưu. PrePost+ dùng ít hơn ở Accidents (340{,}9 so với 398{,}3\,MiB) và nằm ở
-mức sàn trên Chess, Mushroom và Retail.
-Bản tối ưu dùng \emph{bitset} (mảng bit) và tái sử dụng vùng đệm khi giao
-các tidset trong tìm kiếm theo tiền tố của Eclat~\cite{zaki2000}. Với cơ sở
-dữ liệu có $N$ giao dịch, một tidset có $s$ mã chiếm $8s$ byte dưới dạng
-danh sách số nguyên 64 bit và $8\lceil N/64\rceil$ byte dưới dạng mảng bit,
-tính riêng phần tử. Mảng bit giảm dung lượng cho tidset dài, còn bản tối
-ưu có thể chuyển các lớp có tidset ngắn sang danh sách. Peak RSS gộp dữ liệu,
-cấu trúc tìm kiếm, kết quả và bộ nhớ môi trường chạy. Số đo cho biết chênh
-lệch toàn tiến trình tại các ngưỡng đã chọn.
-
-\subsection{Thời gian, số lượng kết quả và khả năng mở rộng}
-\subsubsection{Thời gian chạy theo ngưỡng hỗ trợ}
+\subsection{Thời gian chạy theo ngưỡng hỗ trợ}
 \label{sec:minsup}
 Nhóm đo bốn chương trình trong một phiên duy nhất trên máy chấm điểm
 (mục~\ref{sec:protocol}): bản cơ bản, bản tối ưu, Eclat của SPMF 2.66
@@ -327,13 +284,10 @@ và bản cơ bản là bản hiện có ở revision \texttt{ca60f43}, đã hư
 nhanh hơn của các giai đoạn sau, nên không phải bản cơ bản của lần đo ngày 31/10.
 Số đếm phép giao chạy riêng, không nằm trong lần đo thời gian.
 
-\subsubsection{Số lượng tập phổ biến theo minsup}
+\subsection{Số lượng tập phổ biến theo minsup}
 \label{sec:output-size}
-Số tập phổ biến (output size) được lấy lại từ lần chạy đo thời gian ngày 17/11/2026 trên
-33 ngưỡng của năm CSDL, ghi trong chú thích Hình~\ref{fig:output-size}, nên không cần khai
-thác thêm lần nào. Lần chạy này gồm bản cơ bản, biến thể tối ưu, Eclat và PrePost+ của
-SPMF, mỗi chương trình năm lần ở mỗi ngưỡng, và cả 660 đầu ra đều khớp hoàn toàn với
-Eclat của SPMF. Kịch bản \texttt{scripts/output\_size.jl} kiểm tra thêm ba tính chất trên
+Số tập phổ biến (output size) trong Hình~\ref{fig:output-size} được lấy lại từ đợt đo
+thời gian ở Mục~\ref{sec:minsup}, nên không cần khai thác thêm lần nào. Kịch bản \texttt{scripts/output\_size.jl} kiểm tra thêm ba tính chất trên
 các đầu ra được giữ lại. Thứ nhất, bốn chương trình báo cùng một số tập ở mỗi ngưỡng. Thứ
 hai, số tập không giảm khi minsup giảm, vì theo tính chất phản đơn điệu (anti-monotone),
 mọi tập con của một tập phổ biến đều phổ biến, nên hạ ngưỡng không làm mất tập nào. Thứ
@@ -407,92 +361,49 @@ khi nó rất lớn: ở Mushroom 0{,}05, trước khi có radix sort, phép s�
 3\,755\,511 itemset chiếm 89\% thời gian, còn khai thác chỉ 11\% (Mục~\ref{sec:optimized}). Ngược lại, khi minsup tương đối cố định thì số tập gần
 như không đổi, và thời gian tăng theo $N$ như Mục~\ref{sec:scalability} cho thấy.
 
-\subsubsection{Ảnh hưởng của độ dài giao dịch}
-\label{sec:width}
-Để tách độ dài giao dịch khỏi mật độ và khối lượng đầu ra vốn lẫn trong các
-benchmark thật, nhóm sinh tám cơ sở dữ liệu tổng hợp với cùng $N = 10\,000$ giao
-dịch và $|I| = 100$ item, chỉ khác độ dài giao dịch $w \in \{5, 10, \dots, 40\}$.
-Mô hình lấy mẫu: mỗi giao dịch là một tập con ngẫu nhiên đồng đều đúng $w$ item,
-độc lập với các giao dịch khác, nên các item hoán đổi được cho nhau và không cặp
-item nào đi cùng nhau nhiều hơn mức ngẫu nhiên. Do đó một $k$-itemset bất kỳ có
-support kỳ vọng $N \prod_{j=0}^{k-1} (w - j)/(|I| - j)$, ví dụ một cặp có
-$N\,w(w-1)/(|I|(|I|-1))$ giao dịch. Bộ sinh dùng SplitMix64 với seed
-$(42 \ll 32) \,|\, w$ thay cho \texttt{Xoshiro} của Julia, vì Julia không đảm bảo
-một dòng số ngẫu nhiên qua các phiên bản; nhờ vậy mã SHA-256 trong manifest đúng
-trên mọi nền tảng.
-
-Hai yếu tố gây nhiễu cần tách. Thứ nhất là khối lượng đầu ra: giao dịch dài hơn
-làm nhiều cặp và bộ ba đạt ngưỡng hơn nên số tập phổ biến tăng theo bậc thang,
-và thời gian tăng theo số tập phổ biến chứ chưa chắc theo $w$. Thứ hai là sự đồng
-xuất hiện (co-occurrence): mô hình đã loại nó bằng cách giữ các item độc lập,
-nên kết quả không thay thế được hành vi của Chess hay Mushroom. Vì vậy nhóm đo
-theo hai giao thức. Giao thức cố định dùng $\mathrm{minsup} = 0{,}05$ ở mọi $w$.
-Giao thức khớp đầu ra dùng, với mỗi $w$, ngưỡng $\sigma$ lớn nhất còn cho ít nhất
-5\,000 tập phổ biến, nên đầu ra gần như không đổi và $w$ là thay đổi duy nhất.
-
-Ở giao thức cố định, số tập phổ biến là 53, 100, 100, 100, 5\,050, 5\,050,
-5\,050 và 166\,749 khi $w$ tăng từ 5 đến 40. Các cặp bắt đầu đạt $\sigma = 500$
-từ $w = 25$ (support kỳ vọng 606, trong khi ở $w = 20$ chỉ là 384), và các bộ ba
-từ $w = 40$ (kỳ vọng 611). Thời gian của Eclat cơ bản đi theo các bậc này
-(1{,}0\,s ở $w = 20$, 2{,}9\,s ở $w = 25$, 49{,}4\,s ở $w = 40$ theo phạm vi
-\emph{process}, Hình~\ref{fig:width}), nên đồ thị theo $w$ ở một minsup chủ yếu
-phản ánh đầu ra chứ không phải độ dài giao dịch.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/width-curves.png}
-\caption{Thời gian chạy và khối lượng đầu ra theo độ dài giao dịch $w$ trên các
-cơ sở dữ liệu tổng hợp ($N = 10\,000$, $|I| = 100$). Từ trái sang phải: thời gian
-\emph{process} ở minsup cố định 0,05; thời gian \emph{process} khi khớp đầu ra
-khoảng 5\,000 tập; số tập phổ biến của hai giao thức; thời gian \emph{mine} (sau
-khởi động) khi khớp đầu ra. Trung vị của ba lần lặp, thanh là khoảng tứ phân vị;
-dưới mỗi nhãn trục là số tập phổ biến.}
-\label{fig:width}
-\end{figure*}
-
-Ở giao thức khớp đầu ra, số tập phổ biến giữ quanh 5\,000 và số phép giao tidset
-(join) gần như không đổi (khoảng 164\,000, trong đó khoảng 4\,900 phép thành
-công), nhưng thời gian khai thác của Eclat cơ bản tăng 42 lần khi $w$ đi từ 5 đến
-40 (Bảng~\ref{tab:width}). Lý do là Eclat cơ bản giao hai tidset đã sắp xếp bằng
-phép trộn, nên mỗi phép giao tốn công tỉ lệ với tổng độ dài hai tidset. Mỗi item
-có mặt trong $w/|I|$ số giao dịch, nên tidset của nó dài tỉ lệ với $w$, còn tidset
-của một cặp dài tỉ lệ với $w(w-1)$. Tổng số phần tử được trộn tăng 47 lần dù $w$
-chỉ tăng 8 lần, và thời gian của Eclat cơ bản bám theo với 9{,}0 đến 10{,}0\,ns mỗi
-phần tử. Bản tối ưu giao bitset có $\lceil N/64 \rceil = 157$ từ máy bất kể tidset
-dài bao nhiêu, nên thời gian khai thác của nó chỉ tăng 1{,}8 lần, từ 10{,}2 lên
-18{,}3\,ms. Theo phạm vi \emph{process}, bản tối ưu gần như phẳng ở 0{,}79 đến 0{,}80\,s
-vì chi phí khởi động và biên dịch của Julia lấn át. Nguồn gốc phần tăng 1{,}8 lần
-đó chưa được xác định. Ở cả hai giao thức, mọi đầu ra đều khớp hoàn toàn với SPMF.
+\subsection{Bộ nhớ đỉnh của tiến trình}
+\label{sec:memory}
+Đợt đo thời gian ở Mục~\ref{sec:minsup} cũng ghi peak RSS của mọi lần chạy. Phép đo bao gồm khởi động, đọc dữ liệu,
+khai thác và ghi toàn bộ đầu ra. Bảng~\ref{tab:peak-rss} ghi trung vị ở minsup thấp nhất
+của mỗi CSDL, nơi đầu ra và phép tìm kiếm lớn nhất. Mọi chương trình đều báo ít nhất
+252\,MiB ở mọi điểm, một mức sàn do chính phép đo đặt ra, nên giá trị ở mức sàn chỉ là
+cận trên.
 
 \begin{table}[t]
 \centering
-\caption{Eclat ở giao thức khớp đầu ra. $\sigma$ là ngưỡng theo số giao dịch,
-``Phần tử'' là tổng độ dài hai tidset trên mọi phép giao của bản cơ bản, thời
-gian là trung vị \emph{mine} của ba lần lặp.}
-\label{tab:width}
-\begin{tabular}{rrrrrr}
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{Trung vị peak RSS (MiB) qua năm lần lặp ở minsup thấp nhất của mỗi CSDL. $R$ là
+trung vị của bản cơ bản chia cho trung vị của bản tối ưu.}
+\label{tab:peak-rss}
+\begin{tabular}{lrrrrr}
 \hline
-$w$ & $\sigma$ & Tập & Phần tử (triệu) & Cơ bản (s) & Tối ưu (ms) \\
+Dữ liệu / minsup & Cơ bản & Tối ưu & $R$ & SPMF & PrePost+ \\
 \hline
-5 & 10 & 5\,028 & 11{,}4 & 0{,}114 & 10{,}2 \\
-10 & 69 & 5\,016 & 38{,}9 & 0{,}361 & 11{,}3 \\
-15 & 179 & 5\,007 & 82{,}4 & 0{,}747 & 12{,}5 \\
-20 & 340 & 5\,007 & 142{,}0 & 1{,}366 & 13{,}9 \\
-25 & 550 & 5\,007 & 217{,}2 & 2{,}046 & 15{,}1 \\
-30 & 815 & 5\,002 & 308{,}8 & 2{,}833 & 16{,}2 \\
-35 & 1\,127 & 5\,002 & 416{,}4 & 3{,}765 & 17{,}2 \\
-40 & 1\,488 & 5\,001 & 538{,}8 & 4{,}841 & 18{,}3 \\
+Chess / 0{,}6 & 285{,}1 & 261{,}5 & 1{,}090 & 526{,}5 & $\le 254$ \\
+Mushroom / 0{,}1 & 366{,}0 & 299{,}2 & 1{,}223 & 514{,}2 & $\le 254$ \\
+Retail / 0{,}001 & 289{,}6 & 280{,}9 & 1{,}031 & 844{,}4 & $\le 254$ \\
+T10I4D100K / 0{,}00025 & 303{,}7 & 278{,}5 & 1{,}090 & 556{,}0 & 297{,}4 \\
+Accidents / 0{,}65 & 608{,}4 & 398{,}3 & 1{,}528 & 4\,248{,}1 & 340{,}9 \\
 \hline
 \end{tabular}
 \end{table}
 
-Về cây tìm kiếm, khi cố định minsup, cây vừa sâu thêm một mức ở $w = 25$ (cặp) và
-$w = 40$ (bộ ba), vừa rộng ra: số phép giao tăng từ 4\,950 lên 166\,650 rồi
-4\,087\,798. Khi khớp đầu ra, cây có cùng kích thước ở mọi $w$ nên chỉ chi phí trên
-mỗi phép giao thay đổi. Phạm vi kết luận có giới hạn: một $N$ và một số item, tám
-giá trị $w$, item độc lập, ba lần lặp trên một máy, và mục tiêu 5\,000 tập
-là một lựa chọn.
-\subsubsection{Khả năng mở rộng}
+Từ các trung vị trong bảng, phần trăm giảm là $100(1-M_o/M_b)$, với $M_b$ và $M_o$ lần
+lượt là trung vị peak RSS của bản cơ bản và bản tối ưu. Mức giảm nằm trong khoảng từ
+3{,}0\% ở Retail đến 34{,}5\% ở Accidents. Eclat của SPMF dùng gấp 1{,}7 đến 10{,}7 lần bộ
+nhớ của bản tối ưu. PrePost+ dùng ít hơn ở Accidents (340{,}9 so với 398{,}3\,MiB) và nằm ở
+mức sàn trên Chess, Mushroom và Retail.
+Bản tối ưu dùng \emph{bitset} (mảng bit) và tái sử dụng vùng đệm khi giao
+các tidset trong tìm kiếm theo tiền tố của Eclat~\cite{zaki2000}. Với cơ sở
+dữ liệu có $N$ giao dịch, một tidset có $s$ mã chiếm $8s$ byte dưới dạng
+danh sách số nguyên 64 bit và $8\lceil N/64\rceil$ byte dưới dạng mảng bit,
+tính riêng phần tử. Mảng bit giảm dung lượng cho tidset dài, còn bản tối
+ưu có thể chuyển các lớp có tidset ngắn sang danh sách. Peak RSS gộp dữ liệu,
+cấu trúc tìm kiếm, kết quả và bộ nhớ môi trường chạy. Số đo cho biết chênh
+lệch toàn tiến trình tại các ngưỡng đã chọn.
+
+\subsection{Khả năng mở rộng}
 \label{sec:scalability}
 Thực nghiệm này trả lời câu hỏi: khi CSDL lớn lên mà ngưỡng tương đối giữ nguyên, thời
 gian chạy tăng tuyến tính (linear) hay phi tuyến (nonlinear) theo số giao dịch $N$.
@@ -597,6 +508,91 @@ Eclat của SPMF là chương trình duy nhất có dấu hiệu phi tuyến: �
 trong bốn dòng của Accidents. Vì đường cong cong lên, đường thẳng khớp cắt trục tung ở giá
 trị âm, nên $a$ ở dòng này không phải chi phí cố định. Nhóm không đo cấu trúc bên trong của SPMF, nên chỉ ghi nhận xu hướng này mà không
 quy cho một nguyên nhân cụ thể.
+\subsection{Ảnh hưởng của độ dài giao dịch}
+\label{sec:width}
+Để tách độ dài giao dịch khỏi mật độ và khối lượng đầu ra vốn lẫn trong các
+benchmark thật, nhóm sinh tám cơ sở dữ liệu tổng hợp với cùng $N = 10\,000$ giao
+dịch và $|I| = 100$ item, chỉ khác độ dài giao dịch $w \in \{5, 10, \dots, 40\}$.
+Mô hình lấy mẫu: mỗi giao dịch là một tập con ngẫu nhiên đồng đều đúng $w$ item,
+độc lập với các giao dịch khác, nên các item hoán đổi được cho nhau và không cặp
+item nào đi cùng nhau nhiều hơn mức ngẫu nhiên. Do đó một $k$-itemset bất kỳ có
+support kỳ vọng $N \prod_{j=0}^{k-1} (w - j)/(|I| - j)$, ví dụ một cặp có
+$N\,w(w-1)/(|I|(|I|-1))$ giao dịch. Bộ sinh dùng SplitMix64 với seed
+$(42 \ll 32) \,|\, w$ thay cho \texttt{Xoshiro} của Julia, vì Julia không đảm bảo
+một dòng số ngẫu nhiên qua các phiên bản; nhờ vậy mã SHA-256 trong manifest đúng
+trên mọi nền tảng.
+
+Hai yếu tố gây nhiễu cần tách. Thứ nhất là khối lượng đầu ra: giao dịch dài hơn
+làm nhiều cặp và bộ ba đạt ngưỡng hơn nên số tập phổ biến tăng theo bậc thang,
+và thời gian tăng theo số tập phổ biến chứ chưa chắc theo $w$. Thứ hai là sự đồng
+xuất hiện (co-occurrence): mô hình đã loại nó bằng cách giữ các item độc lập,
+nên kết quả không thay thế được hành vi của Chess hay Mushroom. Vì vậy nhóm đo
+theo hai giao thức. Giao thức cố định dùng $\mathrm{minsup} = 0{,}05$ ở mọi $w$.
+Giao thức khớp đầu ra dùng, với mỗi $w$, ngưỡng $\sigma$ lớn nhất còn cho ít nhất
+5\,000 tập phổ biến, nên đầu ra gần như không đổi và $w$ là thay đổi duy nhất.
+
+Ở giao thức cố định, số tập phổ biến là 53, 100, 100, 100, 5\,050, 5\,050,
+5\,050 và 166\,749 khi $w$ tăng từ 5 đến 40. Các cặp bắt đầu đạt $\sigma = 500$
+từ $w = 25$ (support kỳ vọng 606, trong khi ở $w = 20$ chỉ là 384), và các bộ ba
+từ $w = 40$ (kỳ vọng 611). Thời gian của Eclat cơ bản đi theo các bậc này
+(1{,}0\,s ở $w = 20$, 2{,}9\,s ở $w = 25$, 49{,}4\,s ở $w = 40$ theo phạm vi
+\emph{process}, Hình~\ref{fig:width}), nên đồ thị theo $w$ ở một minsup chủ yếu
+phản ánh đầu ra chứ không phải độ dài giao dịch.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/width-curves.png}
+\caption{Thời gian chạy và khối lượng đầu ra theo độ dài giao dịch $w$ trên các
+cơ sở dữ liệu tổng hợp ($N = 10\,000$, $|I| = 100$). Từ trái sang phải: thời gian
+\emph{process} ở minsup cố định 0,05; thời gian \emph{process} khi khớp đầu ra
+khoảng 5\,000 tập; số tập phổ biến của hai giao thức; thời gian \emph{mine} (sau
+khởi động) khi khớp đầu ra. Trung vị của ba lần lặp, thanh là khoảng tứ phân vị;
+dưới mỗi nhãn trục là số tập phổ biến.}
+\label{fig:width}
+\end{figure*}
+
+Ở giao thức khớp đầu ra, số tập phổ biến giữ quanh 5\,000 và số phép giao tidset
+(join) gần như không đổi (khoảng 164\,000, trong đó khoảng 4\,900 phép thành
+công), nhưng thời gian khai thác của Eclat cơ bản tăng 42 lần khi $w$ đi từ 5 đến
+40 (Bảng~\ref{tab:width}). Lý do là Eclat cơ bản giao hai tidset đã sắp xếp bằng
+phép trộn, nên mỗi phép giao tốn công tỉ lệ với tổng độ dài hai tidset. Mỗi item
+có mặt trong $w/|I|$ số giao dịch, nên tidset của nó dài tỉ lệ với $w$, còn tidset
+của một cặp dài tỉ lệ với $w(w-1)$. Tổng số phần tử được trộn tăng 47 lần dù $w$
+chỉ tăng 8 lần, và thời gian của Eclat cơ bản bám theo với 9{,}0 đến 10{,}0\,ns mỗi
+phần tử. Bản tối ưu giao bitset có $\lceil N/64 \rceil = 157$ từ máy bất kể tidset
+dài bao nhiêu, nên thời gian khai thác của nó chỉ tăng 1{,}8 lần, từ 10{,}2 lên
+18{,}3\,ms. Theo phạm vi \emph{process}, bản tối ưu gần như phẳng ở 0{,}79 đến 0{,}80\,s
+vì chi phí khởi động và biên dịch của Julia lấn át. Nguồn gốc phần tăng 1{,}8 lần
+đó chưa được xác định. Ở cả hai giao thức, mọi đầu ra đều khớp hoàn toàn với SPMF.
+
+\begin{table}[t]
+\centering
+\caption{Eclat ở giao thức khớp đầu ra. $\sigma$ là ngưỡng theo số giao dịch,
+``Phần tử'' là tổng độ dài hai tidset trên mọi phép giao của bản cơ bản, thời
+gian là trung vị \emph{mine} của ba lần lặp.}
+\label{tab:width}
+\begin{tabular}{rrrrrr}
+\hline
+$w$ & $\sigma$ & Tập & Phần tử (triệu) & Cơ bản (s) & Tối ưu (ms) \\
+\hline
+5 & 10 & 5\,028 & 11{,}4 & 0{,}114 & 10{,}2 \\
+10 & 69 & 5\,016 & 38{,}9 & 0{,}361 & 11{,}3 \\
+15 & 179 & 5\,007 & 82{,}4 & 0{,}747 & 12{,}5 \\
+20 & 340 & 5\,007 & 142{,}0 & 1{,}366 & 13{,}9 \\
+25 & 550 & 5\,007 & 217{,}2 & 2{,}046 & 15{,}1 \\
+30 & 815 & 5\,002 & 308{,}8 & 2{,}833 & 16{,}2 \\
+35 & 1\,127 & 5\,002 & 416{,}4 & 3{,}765 & 17{,}2 \\
+40 & 1\,488 & 5\,001 & 538{,}8 & 4{,}841 & 18{,}3 \\
+\hline
+\end{tabular}
+\end{table}
+
+Về cây tìm kiếm, khi cố định minsup, cây vừa sâu thêm một mức ở $w = 25$ (cặp) và
+$w = 40$ (bộ ba), vừa rộng ra: số phép giao tăng từ 4\,950 lên 166\,650 rồi
+4\,087\,798. Khi khớp đầu ra, cây có cùng kích thước ở mọi $w$ nên chỉ chi phí trên
+mỗi phép giao thay đổi. Phạm vi kết luận có giới hạn: một $N$ và một số item, tám
+giá trị $w$, item độc lập, ba lần lặp trên một máy, và mục tiêu 5\,000 tập
+là một lựa chọn.
 \subsection{Phân tích và hướng phát triển}
 \label{sec:future}
 Đề bài gợi ý hai hướng tối ưu: biểu diễn tidset thích nghi giữa danh sách và

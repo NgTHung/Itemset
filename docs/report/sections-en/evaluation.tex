@@ -66,9 +66,8 @@ Every measurement in this paper ran on the grading machine: Linux, an Intel Core
 i7-11800H with its clock fixed at 2.3\,GHz, 7.4\,GiB RAM, single-threaded Julia 1.13.2,
 and the pinned SPMF release~\cite{spmf2016} on Java Temurin 25.0.4.1 with a 4\,GiB heap.
 
-\subsection{Correctness and memory}
-\label{sec:exact-memory}
-\subsubsection{Comparison with SPMF}
+\subsection{Correctness against SPMF}
+\label{sec:exact}
 Two implementations can produce the same number of itemsets but assign different
 supports. We therefore use SPMF's Eclat as an independent reference and compare the full
 map from itemset to support count. The comparator skips metadata lines and sorts the
@@ -142,48 +141,7 @@ Accidents & 7/7 & 7/7 & 15--1\,093 \\
 \end{tabular}
 \end{table}
 
-\subsubsection{Process peak memory}
-The same campaign records the peak RSS of every run. The measurement covers start-up,
-reading the data, mining, and writing the whole output. Table~\ref{tab:peak-rss} gives
-the medians at the lowest minsup of each database, where the output and the search are
-largest. Every program reports at least 252\,MiB at every point, a floor set by the
-measurement itself, so a value at that floor is only an upper bound.
-
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{3pt}
-\caption{Median peak RSS (MiB) over five repeats at the lowest minsup of each database.
-$R$ is the baseline's median divided by the optimized variant's.}
-\label{tab:peak-rss}
-\begin{tabular}{lrrrrr}
-\hline
-Data / minsup & Baseline & Optimized & $R$ & SPMF & PrePost+ \\
-\hline
-Chess / 0.6 & 285.1 & 261.5 & 1.090 & 526.5 & $\le 254$ \\
-Mushroom / 0.1 & 366.0 & 299.2 & 1.223 & 514.2 & $\le 254$ \\
-Retail / 0.001 & 289.6 & 280.9 & 1.031 & 844.4 & $\le 254$ \\
-T10I4D100K / 0.00025 & 303.7 & 278.5 & 1.090 & 556.0 & 297.4 \\
-Accidents / 0.65 & 608.4 & 398.3 & 1.528 & 4\,248.1 & 340.9 \\
-\hline
-\end{tabular}
-\end{table}
-
-From the medians in the table, the percentage reduction is $100(1-M_o/M_b)$, where $M_b$
-and $M_o$ are the median peak RSS of the baseline and the optimized variant. The reduction
-ranges from 3.0\% on Retail to 34.5\% on Accidents. SPMF Eclat uses 1.7 to 10.7 times as
-much as the optimized variant. PrePost+ uses less on Accidents (340.9 against
-398.3\,MiB) and stays at the floor on Chess, Mushroom, and Retail. The optimized variant uses \emph{bitsets} (bit
-arrays) and reuses buffers when it intersects tidsets in Eclat's prefix
-search~\cite{zaki2000}. For a database of $N$ transactions, a tidset with $s$ tids takes
-$8s$ bytes as a list of 64-bit integers and $8\lceil N/64\rceil$ bytes as a bit array,
-counting elements only. The bit array saves space for long tidsets, and the optimized
-variant can switch classes with short tidsets to lists. Peak RSS combines the data, the
-search structures, the result, and the runtime's own memory. The numbers show the
-whole-process difference at the chosen thresholds.
-
-\subsection{Runtime, output size, and scalability}
-\subsubsection{Runtime against minimum support}
+\subsection{Runtime against minimum support}
 \label{sec:minsup}
 We timed four programs in a single session on the grading machine
 (Section~\ref{sec:protocol}): the baseline, the optimized variant, SPMF 2.66 Eclat, and
@@ -333,12 +291,10 @@ benefits from the faster reading and writing of later stages, so it is not the b
 measured on 2026-10-31. The intersection counts come from a separate run, outside the
 timed runs.
 
-\subsubsection{Number of frequent itemsets against minsup}
+\subsection{Number of frequent itemsets against minsup}
 \label{sec:output-size}
-The output sizes come from the timing campaign of 2026-11-17 on 33 thresholds of the
-five databases, shown in Fig.~\ref{fig:output-size}, so no extra mining was needed. That
-campaign ran the baseline, the optimized variant, SPMF's Eclat, and PrePost+ five times
-each at every threshold, and all 660 outputs match SPMF's Eclat exactly. The script
+The output sizes in Fig.~\ref{fig:output-size} come from the runtime campaign of
+Section~\ref{sec:minsup}, so no extra mining was needed. The script
 \texttt{scripts/output\_size.jl} checks three more properties on the kept outputs. First,
 the four programs report the same number of itemsets at every threshold. Second, the
 count never falls as minsup falls: by the anti-monotone property, every subset of a
@@ -420,96 +376,48 @@ sort, sorting and writing 3\,755\,511 itemsets took 89\% of the time and mining 
 (Section~\ref{sec:optimized}). Conversely, when relative minsup is fixed, the count barely
 changes, and runtime grows with $N$, as Section~\ref{sec:scalability} shows.
 
-\subsubsection{Effect of transaction length}
-\label{sec:width}
-To separate transaction length from the density and output volume that are mixed together
-in real benchmarks, we generated eight synthetic databases with the same $N = 10\,000$
-transactions and $|I| = 100$ items, differing only in transaction length
-$w \in \{5, 10, \dots, 40\}$. In the sampling model, each transaction is a uniformly random
-subset of exactly $w$ items, independent of the other transactions, so the items are
-interchangeable and no pair occurs together more often than chance. A $k$-itemset
-therefore has expected support $N \prod_{j=0}^{k-1} (w - j)/(|I| - j)$; for example, a
-pair appears in $N\,w(w-1)/(|I|(|I|-1))$ transactions. The generator uses SplitMix64 with
-seed $(42 \ll 32) \,|\, w$ instead of Julia's \texttt{Xoshiro}, because Julia does not
-guarantee the same random stream across versions. This keeps the SHA-256 hashes in the
-manifest valid on every platform.
-
-Two confounding factors need separating. The first is output volume: longer transactions
-push more pairs and triples over the threshold, so the number of frequent itemsets grows
-in steps, and runtime follows that count rather than necessarily following $w$. The second
-is co-occurrence. The model removes it by keeping items independent, so the results
-cannot stand in for the behavior of Chess or Mushroom. We therefore measure under two
-protocols. The fixed protocol uses $\mathrm{minsup} = 0.05$ at every $w$. The
-matched-output protocol uses, for each $w$, the largest threshold $\sigma$ that still
-gives at least 5\,000 frequent itemsets, so output stays nearly constant and $w$ is the
-only thing that changes.
-
-Under the fixed protocol, the number of frequent itemsets is 53, 100, 100, 100, 5\,050,
-5\,050, 5\,050, and 166\,749 as $w$ grows from 5 to 40. Pairs start to reach
-$\sigma = 500$ at $w = 25$ (expected support 606, against 384 at $w = 20$), and triples at
-$w = 40$ (expected 611). The baseline Eclat's runtime follows these steps (1.0\,s at
-$w = 20$, 2.9\,s at $w = 25$, 49.4\,s at $w = 40$ in the \emph{process} scope,
-Fig.~\ref{fig:width}), so a plot against $w$ at one minsup mostly reflects output, not
-transaction length.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/width-curves.png}
-\caption{Runtime and output volume against transaction length $w$ on the synthetic
-databases ($N = 10\,000$, $|I| = 100$). From left to right: \emph{process} time at fixed
-minsup 0.05; \emph{process} time with output matched to about 5\,000 itemsets; number of
-frequent itemsets under both protocols; \emph{mine} time (after warm-up) with matched
-output. Medians of three repeats with interquartile-range bars; below each axis label is
-the number of frequent itemsets.}
-\label{fig:width}
-\end{figure*}
-
-Under the matched-output protocol, the number of frequent itemsets stays around 5\,000 and
-the number of tidset intersections (joins) is nearly constant (about 164\,000, of which
-about 4\,900 succeed), but the baseline Eclat's mining time grows 42-fold as $w$ goes from
-5 to 40 (Table~\ref{tab:width}). The reason is that the baseline intersects two sorted
-tidsets by merging them, so each intersection costs work proportional to their combined
-length. Each item appears in a fraction $w/|I|$ of the transactions, so its tidset length
-is proportional to $w$, and the tidset of a pair is proportional to $w(w-1)$. The total
-number of merged elements grows 47-fold while $w$ grows only 8-fold, and the baseline's
-time tracks it at 9.0 to 10.0\,ns per element. The optimized variant intersects bitsets of
-$\lceil N/64 \rceil = 157$ machine words regardless of tidset length, so its mining time
-grows only 1.8-fold, from 10.2 to 18.3\,ms. In the \emph{process} scope, the optimized
-variant is nearly flat at 0.79 to 0.80\,s because Julia start-up and compilation dominate.
-We have not identified the source of that 1.8-fold growth. Under both protocols every
-output matches SPMF exactly.
+\subsection{Process peak memory}
+\label{sec:memory}
+The runtime campaign of Section~\ref{sec:minsup} also records the peak RSS of every run. The measurement covers start-up,
+reading the data, mining, and writing the whole output. Table~\ref{tab:peak-rss} gives
+the medians at the lowest minsup of each database, where the output and the search are
+largest. Every program reports at least 252\,MiB at every point, a floor set by the
+measurement itself, so a value at that floor is only an upper bound.
 
 \begin{table}[t]
 \centering
-\caption{Eclat under the matched-output protocol. $\sigma$ is the threshold in
-transactions, ``Elements'' is the combined length of the two tidsets over all of the
-baseline's intersections, and times are \emph{mine} medians of three repeats.}
-\label{tab:width}
-\begin{tabular}{rrrrrr}
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{Median peak RSS (MiB) over five repeats at the lowest minsup of each database.
+$R$ is the baseline's median divided by the optimized variant's.}
+\label{tab:peak-rss}
+\begin{tabular}{lrrrrr}
 \hline
-$w$ & $\sigma$ & Sets & Elements (M) & Baseline (s) & Optimized (ms) \\
+Data / minsup & Baseline & Optimized & $R$ & SPMF & PrePost+ \\
 \hline
-5 & 10 & 5\,028 & 11.4 & 0.114 & 10.2 \\
-10 & 69 & 5\,016 & 38.9 & 0.361 & 11.3 \\
-15 & 179 & 5\,007 & 82.4 & 0.747 & 12.5 \\
-20 & 340 & 5\,007 & 142.0 & 1.366 & 13.9 \\
-25 & 550 & 5\,007 & 217.2 & 2.046 & 15.1 \\
-30 & 815 & 5\,002 & 308.8 & 2.833 & 16.2 \\
-35 & 1\,127 & 5\,002 & 416.4 & 3.765 & 17.2 \\
-40 & 1\,488 & 5\,001 & 538.8 & 4.841 & 18.3 \\
+Chess / 0.6 & 285.1 & 261.5 & 1.090 & 526.5 & $\le 254$ \\
+Mushroom / 0.1 & 366.0 & 299.2 & 1.223 & 514.2 & $\le 254$ \\
+Retail / 0.001 & 289.6 & 280.9 & 1.031 & 844.4 & $\le 254$ \\
+T10I4D100K / 0.00025 & 303.7 & 278.5 & 1.090 & 556.0 & 297.4 \\
+Accidents / 0.65 & 608.4 & 398.3 & 1.528 & 4\,248.1 & 340.9 \\
 \hline
 \end{tabular}
 \end{table}
 
-As for the search tree, with minsup fixed the tree both deepens by one level at $w = 25$
-(pairs) and $w = 40$ (triples) and widens: the number of intersections grows from 4\,950
-to 166\,650 and then 4\,087\,798. With output matched, the tree has the same size at every
-$w$, so only the cost per intersection changes. The scope of these conclusions is
-limited: one $N$ and one item count, eight values of $w$, independent items, three
-repeats on one machine, and a target of 5\,000 itemsets that is a choice, not a
-derived value.
+From the medians in the table, the percentage reduction is $100(1-M_o/M_b)$, where $M_b$
+and $M_o$ are the median peak RSS of the baseline and the optimized variant. The reduction
+ranges from 3.0\% on Retail to 34.5\% on Accidents. SPMF Eclat uses 1.7 to 10.7 times as
+much as the optimized variant. PrePost+ uses less on Accidents (340.9 against
+398.3\,MiB) and stays at the floor on Chess, Mushroom, and Retail. The optimized variant uses \emph{bitsets} (bit
+arrays) and reuses buffers when it intersects tidsets in Eclat's prefix
+search~\cite{zaki2000}. For a database of $N$ transactions, a tidset with $s$ tids takes
+$8s$ bytes as a list of 64-bit integers and $8\lceil N/64\rceil$ bytes as a bit array,
+counting elements only. The bit array saves space for long tidsets, and the optimized
+variant can switch classes with short tidsets to lists. Peak RSS combines the data, the
+search structures, the result, and the runtime's own memory. The numbers show the
+whole-process difference at the chosen thresholds.
 
-\subsubsection{Scalability}
+\subsection{Scalability}
 \label{sec:scalability}
 This experiment asks whether runtime grows linearly or nonlinearly with the number of
 transactions $N$ when the database grows and the relative threshold stays fixed. We chose
@@ -623,6 +531,95 @@ of 0.9951 is the lowest of the four Accidents rows. Because the curve bends upwa
 fitted line crosses the vertical axis at a negative value, so $a$ in that row is not a
 fixed cost. We did not measure SPMF's internal structure, so we
 only record this trend and do not attribute it to a specific cause.
+
+\subsection{Effect of transaction length}
+\label{sec:width}
+To separate transaction length from the density and output volume that are mixed together
+in real benchmarks, we generated eight synthetic databases with the same $N = 10\,000$
+transactions and $|I| = 100$ items, differing only in transaction length
+$w \in \{5, 10, \dots, 40\}$. In the sampling model, each transaction is a uniformly random
+subset of exactly $w$ items, independent of the other transactions, so the items are
+interchangeable and no pair occurs together more often than chance. A $k$-itemset
+therefore has expected support $N \prod_{j=0}^{k-1} (w - j)/(|I| - j)$; for example, a
+pair appears in $N\,w(w-1)/(|I|(|I|-1))$ transactions. The generator uses SplitMix64 with
+seed $(42 \ll 32) \,|\, w$ instead of Julia's \texttt{Xoshiro}, because Julia does not
+guarantee the same random stream across versions. This keeps the SHA-256 hashes in the
+manifest valid on every platform.
+
+Two confounding factors need separating. The first is output volume: longer transactions
+push more pairs and triples over the threshold, so the number of frequent itemsets grows
+in steps, and runtime follows that count rather than necessarily following $w$. The second
+is co-occurrence. The model removes it by keeping items independent, so the results
+cannot stand in for the behavior of Chess or Mushroom. We therefore measure under two
+protocols. The fixed protocol uses $\mathrm{minsup} = 0.05$ at every $w$. The
+matched-output protocol uses, for each $w$, the largest threshold $\sigma$ that still
+gives at least 5\,000 frequent itemsets, so output stays nearly constant and $w$ is the
+only thing that changes.
+
+Under the fixed protocol, the number of frequent itemsets is 53, 100, 100, 100, 5\,050,
+5\,050, 5\,050, and 166\,749 as $w$ grows from 5 to 40. Pairs start to reach
+$\sigma = 500$ at $w = 25$ (expected support 606, against 384 at $w = 20$), and triples at
+$w = 40$ (expected 611). The baseline Eclat's runtime follows these steps (1.0\,s at
+$w = 20$, 2.9\,s at $w = 25$, 49.4\,s at $w = 40$ in the \emph{process} scope,
+Fig.~\ref{fig:width}), so a plot against $w$ at one minsup mostly reflects output, not
+transaction length.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/width-curves.png}
+\caption{Runtime and output volume against transaction length $w$ on the synthetic
+databases ($N = 10\,000$, $|I| = 100$). From left to right: \emph{process} time at fixed
+minsup 0.05; \emph{process} time with output matched to about 5\,000 itemsets; number of
+frequent itemsets under both protocols; \emph{mine} time (after warm-up) with matched
+output. Medians of three repeats with interquartile-range bars; below each axis label is
+the number of frequent itemsets.}
+\label{fig:width}
+\end{figure*}
+
+Under the matched-output protocol, the number of frequent itemsets stays around 5\,000 and
+the number of tidset intersections (joins) is nearly constant (about 164\,000, of which
+about 4\,900 succeed), but the baseline Eclat's mining time grows 42-fold as $w$ goes from
+5 to 40 (Table~\ref{tab:width}). The reason is that the baseline intersects two sorted
+tidsets by merging them, so each intersection costs work proportional to their combined
+length. Each item appears in a fraction $w/|I|$ of the transactions, so its tidset length
+is proportional to $w$, and the tidset of a pair is proportional to $w(w-1)$. The total
+number of merged elements grows 47-fold while $w$ grows only 8-fold, and the baseline's
+time tracks it at 9.0 to 10.0\,ns per element. The optimized variant intersects bitsets of
+$\lceil N/64 \rceil = 157$ machine words regardless of tidset length, so its mining time
+grows only 1.8-fold, from 10.2 to 18.3\,ms. In the \emph{process} scope, the optimized
+variant is nearly flat at 0.79 to 0.80\,s because Julia start-up and compilation dominate.
+We have not identified the source of that 1.8-fold growth. Under both protocols every
+output matches SPMF exactly.
+
+\begin{table}[t]
+\centering
+\caption{Eclat under the matched-output protocol. $\sigma$ is the threshold in
+transactions, ``Elements'' is the combined length of the two tidsets over all of the
+baseline's intersections, and times are \emph{mine} medians of three repeats.}
+\label{tab:width}
+\begin{tabular}{rrrrrr}
+\hline
+$w$ & $\sigma$ & Sets & Elements (M) & Baseline (s) & Optimized (ms) \\
+\hline
+5 & 10 & 5\,028 & 11.4 & 0.114 & 10.2 \\
+10 & 69 & 5\,016 & 38.9 & 0.361 & 11.3 \\
+15 & 179 & 5\,007 & 82.4 & 0.747 & 12.5 \\
+20 & 340 & 5\,007 & 142.0 & 1.366 & 13.9 \\
+25 & 550 & 5\,007 & 217.2 & 2.046 & 15.1 \\
+30 & 815 & 5\,002 & 308.8 & 2.833 & 16.2 \\
+35 & 1\,127 & 5\,002 & 416.4 & 3.765 & 17.2 \\
+40 & 1\,488 & 5\,001 & 538.8 & 4.841 & 18.3 \\
+\hline
+\end{tabular}
+\end{table}
+
+As for the search tree, with minsup fixed the tree both deepens by one level at $w = 25$
+(pairs) and $w = 40$ (triples) and widens: the number of intersections grows from 4\,950
+to 166\,650 and then 4\,087\,798. With output matched, the tree has the same size at every
+$w$, so only the cost per intersection changes. The scope of these conclusions is
+limited: one $N$ and one item count, eight values of $w$, independent items, three
+repeats on one machine, and a target of 5\,000 itemsets that is a choice, not a
+derived value.
 
 \subsection{Analysis and future directions}
 \label{sec:future}

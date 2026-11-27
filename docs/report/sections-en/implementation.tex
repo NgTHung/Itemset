@@ -3,8 +3,9 @@
 We reimplemented Eclat from Zaki's original paper~\cite{zaki2000} in Julia, using only
 the standard library and no frequent itemset mining (FIM) library. The package has two
 variants that return the same result: a baseline that follows the paper closely, and an
-optimized variant. This section explains the algorithm and why it is correct, how we test
-it, which optimizations we added, and how much each one improved on the baseline.
+optimized variant. This section explains the algorithm and why it is correct, its
+interface, which optimizations we added, how we test both variants, and how much each
+optimization improved on the baseline.
 
 \subsection{Vertical layout and tidsets}
 A database holds $N$ transactions. Each transaction gets a transaction identifier (tid),
@@ -164,41 +165,6 @@ line. The writer validates the whole result before it opens the file, so a faile
 leaves an existing output file untouched. Itemsets are written in lexicographic order of
 their item codes, so the output files of the two variants are identical byte for byte.
 
-\subsection{Automated tests}
-\label{sec:tests}
-The command \texttt{julia --project=. test/runtests.jl} runs 1\,458 checks, and all of
-them pass on Julia 1.13.2. Each mining test compares the whole \texttt{SupportMap} and
-also the number of itemsets recorded, because the dictionary would hide an itemset
-recorded twice. Both variants run the following groups of tests.
-
-\begin{itemize}
-\item Hand-derived results: eight small databases, including an empty database, a
-database with no frequent itemset, duplicate transactions, thresholds just above and
-just below an itemset's support, and an image database with empty transactions.
-\item Comparison with SPMF's Eclat~\cite{spmf2016}: eight runs on seven small databases
-and one run on T25I10D10K (9\,976 transactions, 929 items), where SPMF reports 14\,782
-itemsets of 1 to 13 items at $\mathit{minsup} = 0.008$. Both variants match 100\% on all
-nine runs, with no missing, extra, or wrong-support itemset.
-\item Comparison with a brute-force counter that enumerates every subset: 10 random
-databases generated with seed 42 for each variant. The optimized variant also runs eight
-databases with 0, 1, 63, 64, 65, 127, 128, and 129 transactions, which sit around the
-boundary of one 64-bit bitset word. Half of them contain groups of items that always
-occur together, to produce perfect extensions. Each database runs under 18
-configurations that switch each technique of Section~\ref{sec:optimized} on and off.
-\item Type stability: \texttt{Test.@inferred} on \texttt{mine}, \texttt{mine\_packed},
-and the search functions of both variants.
-\item Reading, writing, and the command line: the byte-level reader is checked against a
-line-based parser on edge-case inputs (\texttt{Int} overflow, unexpected characters,
-blank lines, Windows line endings) and on every small database. The writer is compared
-byte for byte with a reference formatter, and argument errors and process exit codes are
-checked.
-\end{itemize}
-
-The brute-force counter is only a test tool. Outside the test suite, every measurement
-campaign compares each output file with an independent run of SPMF's Eclat after timing
-ends. In the runtime campaign of Section~\ref{sec:minsup}, all 660 output files on the
-five benchmark databases, 165 from each of the four programs, match 100\%.
-
 \subsection{Optimized variant}
 \label{sec:optimized}
 The optimized variant keeps the Bottom-Up procedure and changes three things: how
@@ -338,6 +304,41 @@ constant is \texttt{const}, and every container on a hot path has a concrete ele
 comment that proves the indices valid. On the bitset intersection loop,
 \texttt{@inbounds @simd} changed mining time by $-8\%$ to $+11\%$ over five measurement
 points, which is within noise, so we do not use it.
+
+\subsection{Automated tests}
+\label{sec:tests}
+The command \texttt{julia --project=. test/runtests.jl} runs 1\,458 checks, and all of
+them pass on Julia 1.13.2. Each mining test compares the whole \texttt{SupportMap} and
+also the number of itemsets recorded, because the dictionary would hide an itemset
+recorded twice. Both variants run the following groups of tests.
+
+\begin{itemize}
+\item Hand-derived results: eight small databases, including an empty database, a
+database with no frequent itemset, duplicate transactions, thresholds just above and
+just below an itemset's support, and an image database with empty transactions.
+\item Comparison with SPMF's Eclat~\cite{spmf2016}: eight runs on seven small databases
+and one run on T25I10D10K (9\,976 transactions, 929 items), where SPMF reports 14\,782
+itemsets of 1 to 13 items at $\mathit{minsup} = 0.008$. Both variants match 100\% on all
+nine runs, with no missing, extra, or wrong-support itemset.
+\item Comparison with a brute-force counter that enumerates every subset: 10 random
+databases generated with seed 42 for each variant. The optimized variant also runs eight
+databases with 0, 1, 63, 64, 65, 127, 128, and 129 transactions, which sit around the
+boundary of one 64-bit bitset word. Half of them contain groups of items that always
+occur together, to produce perfect extensions. Each database runs under 18
+configurations that switch each technique of Section~\ref{sec:optimized} on and off.
+\item Type stability: \texttt{Test.@inferred} on \texttt{mine}, \texttt{mine\_packed},
+and the search functions of both variants.
+\item Reading, writing, and the command line: the byte-level reader is checked against a
+line-based parser on edge-case inputs (\texttt{Int} overflow, unexpected characters,
+blank lines, Windows line endings) and on every small database. The writer is compared
+byte for byte with a reference formatter, and argument errors and process exit codes are
+checked.
+\end{itemize}
+
+The brute-force counter is only a test tool. Outside the test suite, every measurement
+campaign compares each output file with an independent run of SPMF's Eclat after timing
+ends. In the runtime campaign of Section~\ref{sec:minsup}, all 660 output files on the
+five benchmark databases, 165 from each of the four programs, match 100\%.
 
 \subsection{Measuring the improvement}
 \label{sec:measure}

@@ -17,14 +17,15 @@ parts:
 \item Section~\ref{sec:implementation} presents a baseline that follows the paper and an
 optimized variant (bitsets, a search order by increasing support, perfect-extension
 pruning, pair counting, and tid lists for sparse data), together with a correctness
-argument and the test suite.
+argument, the test suite, and the measured gain of each optimization.
 \item Section~\ref{sec:evaluation} describes the shared measurement protocol
-(Section~\ref{sec:protocol}), checks every itemset against SPMF and measures peak memory
-(Section~\ref{sec:exact-memory}), and reports runtime against minsup
-(Section~\ref{sec:minsup}), the effect of transaction length (Section~\ref{sec:width}),
-scalability with database size (Section~\ref{sec:scalability}), the number of frequent
-itemsets against minsup (Section~\ref{sec:output-size}), and two directions for further
-optimization (Section~\ref{sec:future}).
+(Section~\ref{sec:protocol}), checks every itemset against SPMF
+(Section~\ref{sec:exact}), and reports runtime against minsup
+(Section~\ref{sec:minsup}), the number of frequent itemsets against minsup
+(Section~\ref{sec:output-size}), peak memory (Section~\ref{sec:memory}), scalability
+with database size (Section~\ref{sec:scalability}), the effect of transaction length
+(Section~\ref{sec:width}), and two directions for further optimization
+(Section~\ref{sec:future}).
 \item Section~\ref{sec:applications} applies Eclat to market basket analysis on Online
 Retail II (Section~\ref{sec:basket}) and to image-pattern mining on Semeion
 (Section~\ref{sec:visual-patterns}).

@@ -4,7 +4,8 @@ Nhóm cài đặt lại Eclat từ bài báo gốc của Zaki~\cite{zaki2000} b�
 viện chuẩn và không dùng thư viện khai thác tập phổ biến (frequent itemset mining, FIM)
 nào. Gói có hai biến thể cho cùng một kết quả: bản cơ bản (baseline) bám sát bài báo, và
 biến thể tối ưu (optimized). Chương này trình bày thuật toán và lý do nó cho kết quả đúng,
-cách kiểm thử, các kỹ thuật tối ưu và mức cải thiện đo được so với bản cơ bản.
+giao diện của gói, các kỹ thuật tối ưu, cách kiểm thử cả hai biến thể và mức cải thiện
+đo được so với bản cơ bản.
 
 \subsection{Biểu diễn dọc và tidset}
 Cơ sở dữ liệu (CSDL) gồm $N$ giao dịch (transaction). Mỗi giao dịch được gán một mã
@@ -157,39 +158,6 @@ kiểm tra toàn bộ kết quả trước khi mở tệp, nên một lần ch�
 đầu ra đã có. Các itemset được ghi theo thứ tự từ điển (lexicographic order) của mã item,
 nên tệp đầu ra của hai biến thể giống nhau từng byte.
 
-\subsection{Kiểm thử tự động}
-\label{sec:tests}
-Lệnh \texttt{julia --project=. test/runtests.jl} chạy 1\,458 phép kiểm tra, và tất cả
-đều đạt trên Julia 1.13.2. Mỗi kiểm thử khai thác so sánh toàn bộ \texttt{SupportMap} lẫn
-số itemset được ghi, vì một itemset bị ghi hai lần sẽ bị từ điển che mất. Cả hai biến thể
-chạy cùng các nhóm kiểm thử sau.
-
-\begin{itemize}
-\item Kết quả tính tay: tám CSDL nhỏ, gồm CSDL rỗng, CSDL không có tập phổ biến, giao
-dịch lặp và ngưỡng nằm ngay trên và dưới độ hỗ trợ của một itemset, và một CSDL ảnh có
-giao dịch rỗng.
-\item Đối chiếu với Eclat của SPMF~\cite{spmf2016}: tám lần chạy trên bảy CSDL nhỏ và
-một lần chạy trên T25I10D10K (9\,976 giao dịch, 929 item), nơi SPMF cho 14\,782 itemset
-dài từ 1 đến 13 item ở $\mathit{minsup} = 0{,}008$. Cả hai biến thể khớp 100\% trên cả
-chín lần chạy, không có itemset thiếu, thừa hoặc sai độ hỗ trợ.
-\item Đối chiếu với bộ đếm vét cạn (brute force) liệt kê mọi tập con: 10 CSDL ngẫu
-nhiên sinh với hạt giống 42 cho mỗi biến thể. Biến thể tối ưu chạy thêm tám CSDL có 0, 1,
-63, 64, 65, 127, 128 và 129 giao dịch, tức quanh biên của một từ 64 bit trong bitset; một
-nửa trong số đó chứa các nhóm item luôn đi cùng nhau để sinh phần mở rộng hoàn hảo. Mỗi
-CSDL chạy với 18 tổ hợp cấu hình bật và tắt từng kỹ thuật ở Mục~\ref{sec:optimized}.
-\item Tính ổn định kiểu (type stability): \texttt{Test.@inferred} trên \texttt{mine},
-\texttt{mine\_packed} và các hàm tìm kiếm của hai biến thể.
-\item Đọc, ghi và dòng lệnh: hàm đọc theo byte được đối chiếu với bộ phân tích theo dòng
-trên các đầu vào biên (số tràn \texttt{Int}, ký tự lạ, dòng trống, xuống dòng kiểu Windows)
-và mọi CSDL nhỏ, hàm ghi được so từng byte với một bộ định dạng tham chiếu, và các lỗi tham
-số cùng mã thoát của tiến trình được kiểm tra.
-\end{itemize}
-
-Bộ đếm vét cạn chỉ là công cụ kiểm thử. Ngoài bộ kiểm thử, mỗi đợt đo so sánh mọi tệp
-đầu ra với một lần chạy Eclat của SPMF độc lập sau khi đo xong. Trong đợt đo thời gian ở
-mục~\ref{sec:minsup}, cả 660 tệp đầu ra trên năm CSDL chuẩn, 165 tệp của mỗi chương trình
-trong bốn chương trình, đều khớp 100\%.
-
 \subsection{Biến thể tối ưu}
 \label{sec:optimized}
 Biến thể tối ưu giữ nguyên thủ tục Bottom-Up và thay đổi ba thứ: cách lưu tidset, những
@@ -318,6 +286,39 @@ biên giao diện cho ứng dụng. Mọi hằng số điều chỉnh là \textt
 tid và hàm ghi số, kèm chú thích chứng minh chỉ số hợp lệ. Trên vòng lặp giao bitset,
 \texttt{@inbounds @simd} làm thời gian khai thác thay đổi từ $-8\%$ đến $+11\%$ trên năm
 điểm đo, nằm trong nhiễu, nên nhóm không dùng.
+
+\subsection{Kiểm thử tự động}
+\label{sec:tests}
+Lệnh \texttt{julia --project=. test/runtests.jl} chạy 1\,458 phép kiểm tra, và tất cả
+đều đạt trên Julia 1.13.2. Mỗi kiểm thử khai thác so sánh toàn bộ \texttt{SupportMap} lẫn
+số itemset được ghi, vì một itemset bị ghi hai lần sẽ bị từ điển che mất. Cả hai biến thể
+chạy cùng các nhóm kiểm thử sau.
+
+\begin{itemize}
+\item Kết quả tính tay: tám CSDL nhỏ, gồm CSDL rỗng, CSDL không có tập phổ biến, giao
+dịch lặp và ngưỡng nằm ngay trên và dưới độ hỗ trợ của một itemset, và một CSDL ảnh có
+giao dịch rỗng.
+\item Đối chiếu với Eclat của SPMF~\cite{spmf2016}: tám lần chạy trên bảy CSDL nhỏ và
+một lần chạy trên T25I10D10K (9\,976 giao dịch, 929 item), nơi SPMF cho 14\,782 itemset
+dài từ 1 đến 13 item ở $\mathit{minsup} = 0{,}008$. Cả hai biến thể khớp 100\% trên cả
+chín lần chạy, không có itemset thiếu, thừa hoặc sai độ hỗ trợ.
+\item Đối chiếu với bộ đếm vét cạn (brute force) liệt kê mọi tập con: 10 CSDL ngẫu
+nhiên sinh với hạt giống 42 cho mỗi biến thể. Biến thể tối ưu chạy thêm tám CSDL có 0, 1,
+63, 64, 65, 127, 128 và 129 giao dịch, tức quanh biên của một từ 64 bit trong bitset; một
+nửa trong số đó chứa các nhóm item luôn đi cùng nhau để sinh phần mở rộng hoàn hảo. Mỗi
+CSDL chạy với 18 tổ hợp cấu hình bật và tắt từng kỹ thuật ở Mục~\ref{sec:optimized}.
+\item Tính ổn định kiểu (type stability): \texttt{Test.@inferred} trên \texttt{mine},
+\texttt{mine\_packed} và các hàm tìm kiếm của hai biến thể.
+\item Đọc, ghi và dòng lệnh: hàm đọc theo byte được đối chiếu với bộ phân tích theo dòng
+trên các đầu vào biên (số tràn \texttt{Int}, ký tự lạ, dòng trống, xuống dòng kiểu Windows)
+và mọi CSDL nhỏ, hàm ghi được so từng byte với một bộ định dạng tham chiếu, và các lỗi tham
+số cùng mã thoát của tiến trình được kiểm tra.
+\end{itemize}
+
+Bộ đếm vét cạn chỉ là công cụ kiểm thử. Ngoài bộ kiểm thử, mỗi đợt đo so sánh mọi tệp
+đầu ra với một lần chạy Eclat của SPMF độc lập sau khi đo xong. Trong đợt đo thời gian ở
+mục~\ref{sec:minsup}, cả 660 tệp đầu ra trên năm CSDL chuẩn, 165 tệp của mỗi chương trình
+trong bốn chương trình, đều khớp 100\%.
 
 \subsection{Đo lường mức cải thiện}
 \label{sec:measure}
