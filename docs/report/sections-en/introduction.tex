@@ -11,8 +11,8 @@ the set of identifiers of the transactions that contain it. The support of an it
 the size of the intersection of its items' tidsets, and Eclat searches depth-first over
 prefix-based equivalence classes. We reimplemented the algorithm from the original paper
 in Julia using only the standard library, compared it with SPMF's Eclat and
-PrePost+~\cite{spmf2016}, and used it in two applications. Following the assignment, the
-paper has three main parts:
+PrePost+~\cite{spmf2016}, and used it in two applications. The paper has three main
+parts:
 \begin{itemize}
 \item Section~\ref{sec:implementation} presents a baseline that follows the paper and an
 optimized variant (bitsets, a search order by increasing support, perfect-extension
@@ -32,9 +32,7 @@ Retail II (Section~\ref{sec:basket}) and to image-pattern mining on Semeion
 Two rules shape how we present results. First, every performance comparison uses only
 runs whose output, both itemsets and supports, matches an independent run of SPMF's
 Eclat exactly, because two programs can report the same number of itemsets with
-different supports. Second, each headline number is tied to the machine, source revision,
-and result directory that produced it, and every random step uses seed 42, so a reader
-can regenerate the results from the repository. Hung is responsible for the
-implementation, scalability, and output size. Thien is responsible for the market basket
-analysis, runtime, transaction length, and optimization proposals. Phat is responsible
-for the image patterns, correctness, and memory.
+different supports. Second, each headline number is tied to the machine and source
+revision that produced it, and every random step uses seed 42. The project repository
+holds the source code, configurations, data hashes, and reproduction commands for every
+experiment.

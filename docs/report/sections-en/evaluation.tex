@@ -86,10 +86,7 @@ baseline reaches 100\%, with no missing, extra, duplicate, or wrong-support item
 \texttt{disjoint}, both programs return an empty map. The \texttt{boundary} database runs
 at two thresholds to check itemsets just above and just below the threshold. Each
 threshold is chosen so that SPMF and exact decimal arithmetic give the same $\sigma$. The
-raw SPMF outputs and the run list are in \texttt{data/toy/spmf/}, together with the
-script \texttt{tools/spmf/toy\_reference.jl} that regenerates them. The test suite checks
-these outputs against every Eclat variant on every run. The protocol is in
-\texttt{tools/spmf/README.md}.
+test suite checks the stored SPMF outputs against every Eclat variant on every run.
 
 \begin{table}[t]
 \centering
@@ -118,10 +115,8 @@ missing, extra, duplicate, or wrong-support itemsets. Table~\ref{tab:bench-exact
 the number of matching thresholds for each variant and the range of SPMF output sizes.
 Fig.~\ref{fig:exact-grid} shows the minsup values that were checked.
 
-Both report configurations cap the Java heap at 3 GiB and use the Serial garbage
-collector. This keeps the memory footprint of the reference process stable across
-thresholds. The out-of-memory attempts under the default JVM configuration are kept
-separately in the investigation log.
+The SPMF reference runs cap the Java heap at 3 GiB and use the Serial garbage collector,
+which keeps the memory footprint of the reference process stable across thresholds.
 
 \begin{figure}[t]
 \centering
@@ -196,14 +191,10 @@ variant can switch classes with short tidsets to lists. Peak RSS combines the da
 search structures, the result, and the runtime's own memory. The numbers show the
 whole-process difference at the chosen thresholds.
 
-The file \texttt{docs/report/README.md} records the configuration and the commands that
-reproduce these results. The measurement tools store the data hashes, the SPMF version,
-the source revision, and the status of each comparison alongside the raw numbers.
-
 \subsection{Runtime, output size, and scalability}
 \subsubsection{Runtime against minimum support}
 \label{sec:minsup}
-We timed four programs in a single session on the grading machine BBQ (Linux, Intel
+We timed four programs in a single session on the grading machine (Linux, Intel
 i7-11800H fixed at 2.3\,GHz, 7.4\,GiB RAM, single-threaded Julia 1.13.2, Temurin
 25.0.4.1 for the Java programs): the baseline, the optimized variant, SPMF 2.66 Eclat, and
 SPMF PrePost+. Both Julia variants ran through the \texttt{demo.jl} command-line
@@ -342,20 +333,15 @@ algorithms are equally fast. At the lowest minsup, SPMF Eclat is faster than the
 baseline on Retail (8.0 times) and T10I4D100K (1.3 times) but slower on Chess (5.2 times)
 and Accidents (4.0 times). On Mushroom, SPMF Eclat takes 6.93\,s and the baseline
 6.15\,s. The 13\% gap is within the noise of a Java program (about 16\%), so the two
-programs cannot be told apart. We have not read the SPMF source code, so we do not
-explain the reversal at the other points.
+programs cannot be told apart. We treat SPMF as a black box, so we do not explain the
+reversal at the other points.
 
 These conclusions have limits: one machine, five repeats per point, and a
 \emph{process} scope that includes Julia or JVM start-up (the Java programs also pay for
 JVM start-up). The baseline is the version at revision \texttt{ca60f43}, which already
 benefits from the faster reading and writing of later stages, so it is not the baseline
 measured on 2026-10-31. The intersection counts come from a separate run, outside the
-timed runs. The raw data of the campaign (directory
-\texttt{bbq-all-variants-cli-5repeat-20261117T041922Z}) is not in Git. The tables and
-figure are rebuilt with \texttt{scripts/runtime\_curves.jl},
-\texttt{scripts/plot\_runtime\_curves.py}, and \texttt{scripts/join\_work.jl}. The hash of
-that directory, the reproduction commands, and the checks are in
-\texttt{docs/runtime-curves-2026-11-17.md}.
+timed runs.
 
 \subsubsection{Number of frequent itemsets against minsup}
 \label{sec:output-size}
@@ -378,8 +364,7 @@ satisfy all three properties.
 \includegraphics[width=\textwidth]{figures/en/output-size.pdf}
 \caption{Number of frequent itemsets (left, log scale) and mean frequent-itemset length
 (right) as minsup decreases on the five databases. Solid lines are dense data and dashed
-lines are sparse data. Numbers from run
-\texttt{bbq-all-variants-cli-5repeat-20261117T041922Z}}
+lines are sparse data.}
 \label{fig:output-size}
 \end{figure*}
 
@@ -533,8 +518,7 @@ to 166\,650 and then 4\,087\,798. With output matched, the tree has the same siz
 $w$, so only the cost per intersection changes. The scope of these conclusions is
 limited: one $N$ and one item count, eight values of $w$, independent items, three
 repeats on one Windows machine, and a target of 5\,000 itemsets that is a choice, not a
-derived value. The raw data, configurations, and reproduction commands are in
-\texttt{docs/width-runtime-2026-11-11.md}.
+derived value.
 
 \subsubsection{Scalability}
 \label{sec:scalability}
@@ -565,8 +549,7 @@ within 1.9\% of the median for our two variants and 7.6\% for the two SPMF progr
 \caption{Median process time against number of transactions on five nested subsets of
 Accidents (minsup 0.65) and Retail (minsup 0.001); error bars are the interquartile range
 of five runs. The second row of numbers under the horizontal axis is the number of
-frequent itemsets in each subset. Measured on 2026-11-19, run
-\texttt{bbq-scalability-cli-20261119T140526Z}}
+frequent itemsets in each subset.}
 \label{fig:scalability}
 \end{figure*}
 
@@ -655,7 +638,7 @@ only record this trend and do not attribute it to a specific cause.
 \label{sec:future}
 The assignment suggests two optimization directions: an adaptive tidset representation
 that switches between lists and \emph{bitsets}, and early termination of tidset
-intersections. Hung's optimized variant already has both: \texttt{prefer\_lists}
+intersections. The optimized variant already has both: \texttt{prefer\_lists}
 switches an equivalence class to lists when that is cheaper, \texttt{intersect\_lists!}
 stops when the tids found so far plus the rest of the shorter list cannot reach minsup,
 and \texttt{BlockCounts} rejects an intersection without merging. Diffsets were tried and
@@ -700,22 +683,21 @@ Accidents 0.65 & 1\,093 & 0.393 & 99 & 0 & 0 & 0 \\
 Tidset intersection, the core operation of Eclat, takes most of the time at only one
 point, T10I4D100K 0.00025. At the three dense points (Chess 0.6, Mushroom 0.1 and 0.05),
 output takes 82\% to 98\%. At the other five points, building the vertical layout and
-counting pairs dominate, and on Accidents the search takes under 1\% of the run. Our
-teammates' results agree with this. Hung measured on BBQ that the optimized variant's CLI
-time is linear in the number of transactions, with a slope of 0.195\,s per 100\,000
-transactions on Accidents even though the output barely changes (about 1\,100 itemsets),
-against 0.544 for PrePost+ and 8.015 for SPMF Eclat. Phat measured the optimized variant's
-peak RSS (Table~\ref{tab:peak-rss}) at 149.0 to 181.7\,MiB on the four smaller databases
-and 313.4\,MiB on Accidents, a difference of the same order as the input database
-(105\,MiB by \texttt{Base.summarysize}). Hung also recorded a mean itemset length at the
-lowest minsup of 8.02 on Mushroom, 7.37 on Chess, and 4.00 on Accidents, against 2.07 on
-Retail and 3.10 on T10I4D100K. The itemset count on the dense databases grows 3 to 9 times
-faster on a log-log scale (ratio of slopes, from $5.23/1.68$ to $14.33/1.55$). That record
-uses the same campaign as the runtime subsection and gives the same times. Every run behind
-these numbers matches SPMF Eclat exactly.
+counting pairs dominate, and on Accidents the search takes under 1\% of the run. The
+earlier subsections agree with this. The optimized variant's CLI time is linear in the
+number of transactions, with a slope of 0.195\,s per 100\,000 transactions on Accidents
+even though the output barely changes (about 1\,100 itemsets), against 0.544 for PrePost+
+and 8.015 for SPMF Eclat (Section~\ref{sec:scalability}). Its peak RSS
+(Table~\ref{tab:peak-rss}) is 149.0 to 181.7\,MiB on the four smaller databases and
+313.4\,MiB on Accidents, a difference of the same order as the input database (105\,MiB by
+\texttt{Base.summarysize}). At the lowest minsup, the mean itemset length is 8.02 on
+Mushroom, 7.37 on Chess, and 4.00 on Accidents, against 2.07 on Retail and 3.10 on
+T10I4D100K, and the itemset count on the dense databases grows 3 to 9 times faster on a
+log-log scale (ratio of slopes, from $5.23/1.68$ to $14.33/1.55$,
+Section~\ref{sec:output-size}). Every run behind these numbers matches SPMF Eclat exactly.
 
 The strengths and weaknesses relative to SPMF below are based on measured behavior. We
-have not read the SPMF source code, so we do not attribute causes inside SPMF. On the
+treat SPMF as a black box, so we do not attribute causes inside SPMF. On the
 strong side, the optimized variant's per-transaction cost on Accidents is 41 times lower
 than SPMF Eclat's and 2.8 times lower than PrePost+'s. Its start-up constant of 0.19 to
 0.22\,s is below PrePost+'s 0.48 to 0.52\,s. Its mining time grows only 1.8-fold as
@@ -729,7 +711,7 @@ Section~\ref{sec:exact-memory}). We have no memory measurements against SPMF.
 
 \paragraph{Proposal 1: a flat integer store and an array-built vertical layout.}
 \emph{Bottleneck.} Layout takes 99\% to 100\% of the run on Accidents and Retail 0.01, and
-it is what Hung's slope and Phat's peak RSS measure. \texttt{count\_items} hashes every
+it drives both the per-transaction slope and the peak RSS above. \texttt{count\_items} hashes every
 item occurrence into a \texttt{Dict}, \texttt{bitset\_tidsets} looks up every occurrence
 in a second \texttt{Dict}, and the reader allocates an 8-byte-per-item \texttt{Vector} for
 each transaction. \emph{Change.} The CLI path reads the database into one flat
@@ -740,25 +722,23 @@ prototype replaced the two \texttt{Dict} passes with array lookups on the same d
 On Accidents 0.65 the two steps dropped from 0.177 to 0.062\,s (2.9 times faster),
 saving 29\% of the run (22\% in another profile run, because the seconds vary by up to
 25\% between runs), 10\% on Retail 0.001, and 2\% on T10I4D100K 0.00025. The testable
-prediction is that Hung's slope on Accidents drops by about a quarter, and points
+prediction is that the per-transaction slope on Accidents drops by about a quarter, and points
 dominated by intersection do not change. The Accidents database takes 105\,MiB as
 \texttt{Vector\{Vector\{Int\}\}}, 46\,MiB as flat \texttt{Int32}, and 23\,MiB as
 \texttt{UInt16} (the largest code is 468), a saving of 59 to 82\,MiB out of 313.4\,MiB peak
 RSS. \emph{Tradeoff.} The CLI gains a second reader and a second layout builder next to the
 general ones, the two must always stay equivalent, and the item-code cutoff needs a
-fallback path because SPMF files allow large, sparse codes. Hung confirmed that
-\texttt{count\_items} and \texttt{bitset\_tidsets} use \texttt{Dict}, and that the item
-codes of the benchmarks in use are small enough for an array. \emph{Tests.} The new layout
+fallback path because SPMF files allow large, sparse codes. The item codes of all five
+benchmarks are small enough for an array. \emph{Tests.} The new layout
 must equal \texttt{bitset\_class} on seeded random databases (including $N = 63, 64, 65$,
 code 0, and codes above the cutoff). The CLI output must be byte-identical to the
 present output at all 33 points and match SPMF's full map. The layout share, slope, and
-peak RSS are then measured again, and the change is kept only if it meets the
-keep-or-drop rule in Hung's plan (at least a 10\% gain at the targeted points and no
-regression above 10\% elsewhere).
+peak RSS are then measured again, and the change is kept only if it gains at least 10\%
+at the targeted points and slows no other point by more than 10\%.
 
 \paragraph{Proposal 2: output in search order.}
 \emph{Bottleneck.} On Chess 0.6, Mushroom 0.1, and Mushroom 0.05, output takes 82\% to
-98\% of the samples and the lexicographic sort takes 28\% to 37\%. On BBQ, the sort on
+98\% of the samples and the lexicographic sort takes 28\% to 37\%. On the grading machine, the sort on
 Mushroom 0.05 costs 0.30\,s of 1.445\,s, and printing in storage order is 0.18\,s cheaper
 than printing in sorted order. \emph{Change.} Add an \texttt{order=:search} option to
 \texttt{write\_itemsets} and \texttt{--order search} to \texttt{demo.jl}, which write
@@ -769,14 +749,11 @@ removing the cost of non-sequential reads), so the ratio $R$ against PrePost+ dr
 1.05 to between 0.83 and 0.70. On Chess 0.6 and Mushroom 0.1 the prediction is a 28\% to
 37\% shorter run, and the sparse points do not change. \emph{Tradeoff.} Files in search
 order can no longer be compared byte for byte across variants and across runs of
-different code, which the \texttt{docs/interface.md} contract guarantees through a fixed
-order. The comparator reads both files into maps, so it is not affected. The grading
-campaign would have to record which order it used, because CLI time would then exclude
-the sort, as it does for the SPMF programs, and the team would need to decide which order
-the graded CLI uses. Hung considered dropping the sort and decided against it, to avoid
-changing the contract while the applications were still being written, and because the
-extra code to maintain was not worth a small gain. The measured gain is
-concentrated at the dense points, most of all at Mushroom 0.05. \emph{Tests.} A
+different code, which the package interface guarantees through a fixed order. The
+comparator reads both files into maps, so it is not affected. A benchmark would have to
+record which order it used, because CLI time would then exclude the sort, as it does for
+the SPMF programs. The measured gain is concentrated at the dense points, most of all at
+Mushroom 0.05, so the submitted version keeps the fixed order. \emph{Tests.} A
 search-order file, once sorted externally, is byte-identical to the default output. The
 full map matches SPMF at every required point and every stress point. Two runs of the same
 code give the same bytes. A five-repeat campaign of both orders on Chess 0.5, Mushroom 0.1,
@@ -790,6 +767,4 @@ two kinds of intersection. Diffsets lost or tied at every point tested. Parallel
 over equivalence classes has no measurements yet of how work is spread across the root
 classes, so the evidence here neither supports nor rules it out. The profile has limits:
 it ran on one Windows machine, in a warm state, only for the optimized variant's CLI path,
-and the expected benefits are predictions that have not been implemented. The
-reproduction commands, the hashes of the result files, and the prototype code are in
-\texttt{docs/future-optimizations-2026-11-22.md}.
+and the expected benefits are predictions that have not been implemented.
