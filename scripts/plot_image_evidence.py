@@ -13,6 +13,20 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 
+# The Vietnamese report needs its own copy of the figure text.
+LABELS = {
+    "en": dict(image="Image", digit="digit", complete="All target words present", missing="Missing"),
+    "vi": dict(image="Ảnh", digit="chữ số", complete="Có đủ các từ đích", missing="Thiếu từ"),
+}
+
+
+def panel_title(image_id, label, missing_words, language="en"):
+    """Title of one panel: the image and its digit, then which target words it lacks."""
+    text = LABELS[language]
+    status = f"{text['missing']} {missing_words}" if missing_words else text["complete"]
+    return f"{text['image']} {image_id} · {text['digit']} {label}\n{status}"
+
+
 def read_evidence(path, ids, minsup, words):
     with path.open(newline="", encoding="utf-8") as stream:
         return [r for r in csv.DictReader(stream, delimiter="\t")
@@ -27,6 +41,7 @@ def main():
     parser.add_argument("--minsup", type=float, default=0.05)
     parser.add_argument("--words", default="4,8,13")
     parser.add_argument("--ids", nargs=2, type=int, default=[44, 41])
+    parser.add_argument("--language", choices=sorted(LABELS), default="en")
     args = parser.parse_args()
     data = args.source.read_bytes()
     manifest = tomllib.loads((args.run / "mining_manifest.toml").read_text(encoding="utf-8"))
@@ -60,8 +75,7 @@ def main():
             ax.add_patch(Rectangle((c - 0.5, r - 0.5), 4, 4, fill=False, edgecolor=color, linewidth=2))
             ax.text(c, r, patch["word"], color="white", fontsize=10, ha="left", va="top",
                     bbox={"facecolor": color, "edgecolor": "none", "pad": 1})
-        status = f"Missing {row['missing_words']}" if row["missing_words"] else "All target words present"
-        ax.set_title(f"Image {image_id} · digit {row['label']}\n{status}", fontsize=11)
+        ax.set_title(panel_title(image_id, row["label"], row["missing_words"], args.language), fontsize=11)
         ax.set_axis_off()
     fig.savefig(args.output, dpi=220)
     plt.close(fig)

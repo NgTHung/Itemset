@@ -12,7 +12,22 @@ matplotlib.rcParams["svg.fonttype"] = "none"
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-from plot_runtime_curves import assign_styles, compact, display_name, lost, read_points
+from plot_runtime_curves import LABELS as RUNTIME_LABELS
+from plot_runtime_curves import assign_styles, compact, display_name, lost, number, read_points
+
+# Text for each language of the report. Numbers take the decimal mark of plot_runtime_curves.LABELS.
+LABELS = {
+    "en": dict(width_counts="transaction width, with frequent itemsets below", width="transaction width",
+               itemsets="Frequent itemsets (log)", output="Output volume", mine="Median mine seconds (log)",
+               mine_title="Matched output, warm mine scope", fixed_title="Fixed minsup 0.05",
+               matched_title="Matched output, about 5,000 itemsets", fixed="fixed minsup 0.05",
+               matched="matched output"),
+    "vi": dict(width_counts="độ dài giao dịch, số tập phổ biến ở dưới", width="độ dài giao dịch",
+               itemsets="Số tập phổ biến (log)", output="Khối lượng đầu ra", mine="Trung vị giây mine (log)",
+               mine_title="Khớp đầu ra, phạm vi mine sau khởi động", fixed_title="minsup cố định 0,05",
+               matched_title="Khớp đầu ra, khoảng 5 000 tập", fixed="minsup cố định 0,05",
+               matched="khớp đầu ra"),
+}
 
 WIDTH = re.compile(r"width-w(\d+)$")
 
@@ -24,7 +39,7 @@ def width_of(row):
     return int(match.group(1))
 
 
-def plot_runtime(ax, rows, series, style, title):
+def plot_runtime(ax, rows, series, style, title, language="en"):
     widths = sorted({width_of(r) for r in rows})
     ax.set_yscale("log")
     for name in series:
@@ -41,15 +56,16 @@ def plot_runtime(ax, rows, series, style, title):
                 ax.plot([width_of(r)], [1], marker="X", color=color, markersize=9, markeredgecolor="#a02020",
                         markeredgewidth=1.2, linestyle="none", clip_on=False, transform=ax.get_xaxis_transform())
     counts = {width_of(r): r["output_count"] for r in rows if r["output_count"]}
-    ax.set_xticks(widths, [f"{w}\n{compact(counts[w])}" if w in counts else str(w) for w in widths], fontsize=7)
-    ax.set_xlabel("transaction width, with frequent itemsets below", fontsize=8)
+    ax.set_xticks(widths, [number(f"{w}\n{compact(counts[w])}", language) if w in counts else str(w)
+                           for w in widths], fontsize=7)
+    ax.set_xlabel(LABELS[language]["width_counts"], fontsize=8)
     ax.set_title(title, fontsize=10)
     ax.minorticks_off()
     ax.grid(axis="y", which="both", alpha=0.18)
     ax.spines[["top", "right"]].set_visible(False)
 
 
-def plot_output(ax, protocols):
+def plot_output(ax, protocols, language="en"):
     for (label, rows), (color, marker) in zip(protocols, (("#2468a2", "o"), ("#d97716", "s"))):
         seen = {}
         for r in rows:
@@ -59,9 +75,9 @@ def plot_output(ax, protocols):
         ax.plot(widths, [seen[w] for w in widths], f"-{marker}", color=color, markersize=4.5, linewidth=1.3,
                 label=label)
     ax.set_yscale("log")
-    ax.set_xlabel("transaction width", fontsize=8)
-    ax.set_ylabel("Frequent itemsets (log)", fontsize=8)
-    ax.set_title("Output volume", fontsize=10)
+    ax.set_xlabel(LABELS[language]["width"], fontsize=8)
+    ax.set_ylabel(LABELS[language]["itemsets"], fontsize=8)
+    ax.set_title(LABELS[language]["output"], fontsize=10)
     ax.legend(frameon=False, fontsize=8)
     ax.grid(axis="y", which="both", alpha=0.18)
     ax.spines[["top", "right"]].set_visible(False)
@@ -96,17 +112,17 @@ def read_mine_summary(path):
     return {name: sorted(points) for name, points in series.items()}
 
 
-def plot_mine(ax, summary, style):
+def plot_mine(ax, summary, style, language="en"):
     for name, points in summary.items():
         color, marker = style.get(name, ("#555555", "P"))
         xs, ys, lower, upper = zip(*points)
         ax.errorbar(xs, ys, yerr=[lower, upper], fmt=f"-{marker}", color=color,
-                    markersize=4.5, capsize=2.5, linewidth=1.3, elinewidth=1.0, label=display_name(name))
+                    markersize=4.5, capsize=2.5, linewidth=1.3, elinewidth=1.0, label=display_name(name, language))
     ax.set_yscale("log")
     ax.set_xticks(sorted({p[0] for pts in summary.values() for p in pts}))
-    ax.set_xlabel("transaction width", fontsize=8)
-    ax.set_ylabel("Median mine seconds (log)", fontsize=8)
-    ax.set_title("Matched output, warm mine scope", fontsize=10)
+    ax.set_xlabel(LABELS[language]["width"], fontsize=8)
+    ax.set_ylabel(LABELS[language]["mine"], fontsize=8)
+    ax.set_title(LABELS[language]["mine_title"], fontsize=10)
     ax.legend(frameon=False, fontsize=8)
     ax.grid(axis="y", which="both", alpha=0.18)
     ax.spines[["top", "right"]].set_visible(False)
@@ -119,7 +135,9 @@ def main():
     parser.add_argument("--warm-summary", type=Path,
                         help="summary.csv of a warm matched run, for a fourth panel of mine-scope time")
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--language", choices=sorted(LABELS), default="en")
     args = parser.parse_args()
+    language, text = args.language, LABELS[args.language]
     fixed, matched = read_points(args.fixed), read_points(args.matched)
     series = list(dict.fromkeys(r["series"] for r in fixed + matched))
     style = assign_styles(series)
@@ -128,20 +146,21 @@ def main():
 
     summary = read_mine_summary(args.warm_summary) if args.warm_summary else None
     fig, axes = plt.subplots(1, 4 if summary else 3, figsize=(16.5 if summary else 12.5, 3.8))
-    plot_runtime(axes[0], fixed, series, style, "Fixed minsup 0.05")
-    plot_runtime(axes[1], matched, series, style, "Matched output, about 5,000 itemsets")
+    plot_runtime(axes[0], fixed, series, style, text["fixed_title"], language)
+    plot_runtime(axes[1], matched, series, style, text["matched_title"], language)
     for ax in axes[:2]:
         ax.set_ylim(floor, ceiling)
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
-    axes[0].set_ylabel("Median seconds (log), IQR bars", fontsize=8)
-    plot_output(axes[2], [("fixed minsup 0.05", fixed), ("matched output", matched)])
-    handles = [Line2D([], [], color=style[n][0], marker=style[n][1], linewidth=1.3, label=display_name(n))
-               for n in series]
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: number(f"{v:g}", language)))
+    runtime_text = RUNTIME_LABELS[language]
+    axes[0].set_ylabel(f"{runtime_text['seconds']}, {runtime_text['iqr']}", fontsize=8)
+    plot_output(axes[2], [(text["fixed"], fixed), (text["matched"], matched)], language)
+    handles = [Line2D([], [], color=style[n][0], marker=style[n][1], linewidth=1.3,
+                      label=display_name(n, language)) for n in series]
     if any(lost(r) for r in fixed + matched):
         handles.append(Line2D([], [], color="#777777", marker="X", markeredgecolor="#a02020", linestyle="none",
-                              markersize=9, label="Timeout or lost samples (curves.csv)"))
+                              markersize=9, label=runtime_text["lost"]))
     if summary:
-        plot_mine(axes[3], summary, style)
+        plot_mine(axes[3], summary, style, language)
     axes[1].legend(handles=handles, loc="upper left", frameon=False, fontsize=8)
     fig.tight_layout()
     args.out.mkdir(parents=True, exist_ok=True)

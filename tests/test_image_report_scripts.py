@@ -65,3 +65,9 @@ class ImagePlotTest(TestCase):
                 path.write_text(header + "1" * 16 + "\n", encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, "source patch differs for image 1"):
                     plot.main()
+
+    def test_titles_follow_the_report_language(self):
+        self.assertEqual(plot.panel_title(44, "2", "", "en"), "Image 44 · digit 2\nAll target words present")
+        self.assertEqual(plot.panel_title(41, "2", "4", "en"), "Image 41 · digit 2\nMissing 4")
+        self.assertEqual(plot.panel_title(44, "2", "", "vi"), "Ảnh 44 · chữ số 2\nCó đủ các từ đích")
+        self.assertEqual(plot.panel_title(41, "2", "4", "vi"), "Ảnh 41 · chữ số 2\nThiếu từ 4")

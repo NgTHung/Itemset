@@ -48,7 +48,7 @@ class YLabelTest(unittest.TestCase):
 
 
 class FigureTest(unittest.TestCase):
-    def run_main(self, rows):
+    def run_main(self, rows, *options):
         with tempfile.TemporaryDirectory() as tmp:
             curves = Path(tmp) / "curves.csv"
             with curves.open("w", newline="", encoding="utf-8") as stream:
@@ -57,7 +57,7 @@ class FigureTest(unittest.TestCase):
                 writer.writerows(rows)
             out = Path(tmp) / "figure"
             argv = sys.argv
-            sys.argv = ["plot_runtime_curves.py", str(curves), "--out", str(out)]
+            sys.argv = ["plot_runtime_curves.py", str(curves), "--out", str(out), *options]
             try:
                 plot.main()
             finally:
@@ -83,11 +83,26 @@ class FigureTest(unittest.TestCase):
             self.assertNotIn(f">{name}<", svg)
 
 
+    def test_vietnamese_figure_uses_decimal_commas_and_vietnamese_names(self):
+        rows = [point(0.9, 3, 0.2, 0.19, 0.22, series="baseline"),
+                point(0.75, 3, 0.4, 0.38, 0.45, series="optimized")]
+        svg = self.run_main(rows, "--language", "vi")
+        for text in (">0,9<", ">0,75<", ">Cơ bản<", ">Tối ưu<", "thanh IQR"):
+            self.assertIn(text, svg)
+        for text in (">0.9<", ">0.75<", ">Baseline<", ">Optimized<", "IQR bars"):
+            self.assertNotIn(text, svg)
+
+
 class DisplayNameTest(unittest.TestCase):
     def test_known_identifiers_take_the_report_name(self):
         self.assertEqual(plot.display_name("accidents"), "Accidents")
         self.assertEqual(plot.display_name("optimized"), "Optimized")
         self.assertEqual(plot.display_name("prepost"), "PrePost+")
+
+    def test_vietnamese_names_only_the_julia_variants(self):
+        self.assertEqual(plot.display_name("baseline", "vi"), "Cơ bản")
+        self.assertEqual(plot.display_name("optimized", "vi"), "Tối ưu")
+        self.assertEqual(plot.display_name("spmf", "vi"), "SPMF Eclat")
 
     def test_other_names_pass_through(self):
         self.assertEqual(plot.display_name("T10I4D100K"), "T10I4D100K")
