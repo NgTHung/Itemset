@@ -8,6 +8,7 @@ giao diện của gói, các kỹ thuật tối ưu, cách kiểm thử cả hai
 đo được so với bản cơ bản.
 
 \subsection{Biểu diễn dọc và tidset}
+\label{sec:vertical}
 Cơ sở dữ liệu (CSDL) gồm $N$ giao dịch (transaction). Mỗi giao dịch được gán một mã
 giao dịch (transaction identifier, tid) là chỉ số $1, 2, \dots, N$ theo thứ tự đọc.
 Apriori lưu CSDL theo chiều ngang (horizontal layout): mỗi giao dịch kèm danh sách item.
@@ -20,8 +21,9 @@ các giao dịch chứa $x$. Với itemset $X$, ta có
 \end{equation}
 trong đó $T_i$ là giao dịch thứ $i$ và $\sigma(X)$ là độ hỗ trợ (support) của $X$, tức
 số giao dịch chứa $X$. Itemset $X$ là phổ biến (frequent) khi
-$\sigma(X) \ge \mathit{minsup}$, với $\mathit{minsup}$ là ngưỡng hỗ trợ tối thiểu tính
-bằng số giao dịch. Giao dịch rỗng vẫn có tid và vẫn được tính vào $N$, nhưng không xuất
+$\sigma(X) \ge \sigma_{\min}$, với $\sigma_{\min}$ là ngưỡng hỗ trợ tối thiểu tính
+bằng số giao dịch. Ngưỡng tương đối $\mathit{minsup}$ là cùng ngưỡng đó viết dưới dạng tỉ
+lệ của $N$. Giao dịch rỗng vẫn có tid và vẫn được tính vào $N$, nhưng không xuất
 hiện trong tidset nào.
 
 Bản cơ bản lưu mỗi tidset dưới dạng \texttt{Vector\{Int\}} tăng dần, gọi là tid-list.
@@ -40,7 +42,8 @@ mới vì vậy được tính từ hai tidset sẵn có, không cần quét l�
 \subsection{Lớp tương đương theo tiền tố và tìm kiếm Bottom-Up}
 Zaki chia không gian tìm kiếm thành các lớp tương đương theo tiền tố (prefix-based
 equivalence class)~\cite{zaki2000}. Lớp có tiền tố (prefix) $P$ gồm các phần tử
-$(b, t(P \cup \{b\}))$, với mỗi $b$ lớn hơn mọi item của $P$. Hai itemset trong cùng
+$(b, t(P \cup \{b\}))$, với mỗi $b$ lớn hơn mọi item của $P$ sao cho $P \cup \{b\}$
+phổ biến. Hai itemset trong cùng
 một lớp chỉ khác nhau ở item cuối, nên phép giao~\eqref{eq:intersect} chỉ hợp lệ giữa
 các phần tử cùng lớp.
 
@@ -78,13 +81,13 @@ Giao hai tid-list & \texttt{intersect\_tidlists}; \texttt{intersect\_bitsets!} v
 
 Bảng~\ref{tab:trace} truy vết thuật toán trên CSDL \texttt{baskets.txt} gồm bốn giao
 dịch $T_1 = \{1,2,3\}$, $T_2 = \{1,2\}$, $T_3 = \{1,3\}$, $T_4 = \{2,3\}$ với
-$\mathit{minsup} = 2$. Các tidset ban đầu là $t(1) = \{1,2,3\}$, $t(2) = \{1,2,4\}$ và
+$\sigma_{\min} = 2$. Các tidset ban đầu là $t(1) = \{1,2,3\}$, $t(2) = \{1,2,4\}$ và
 $t(3) = \{1,3,4\}$. Thuật toán ghi đúng sáu itemset phổ biến, và tập $\{1,2,3\}$ bị tỉa
 vì chỉ xuất hiện trong $T_1$.
 
 \begin{table}[t]
 \centering
-\caption{Truy vết Bottom-Up trên \texttt{baskets.txt} với $\mathit{minsup} = 2$}
+\caption{Truy vết Bottom-Up trên \texttt{baskets.txt} với $\sigma_{\min} = 2$}
 \label{tab:trace}
 \begin{tabular}{llll}
 \hline
@@ -141,11 +144,12 @@ $2^k - 1$ tập con khác rỗng, và mọi tập con đó đều phổ biến.
 \subsection{Giao diện, định dạng SPMF và dòng lệnh}
 Hai ứng dụng và phần thực nghiệm chỉ gọi bốn hàm công khai: \texttt{read\_transactions}
 đọc file SPMF (mỗi dòng một giao dịch, các item cách nhau bởi dấu cách),
-\texttt{support\_threshold} đổi $\mathit{minsup}$ thành số giao dịch, \texttt{mine} trả
+\texttt{support\_threshold} đổi một ngưỡng thành số giao dịch, \texttt{mine} trả
 về từ điển \texttt{SupportMap} từ itemset sang độ hỗ trợ, và \texttt{write\_itemsets}
-ghi mỗi itemset một dòng theo dạng \texttt{1 2 \#SUP: 2}. Một $\mathit{minsup}$ thực
-trong $(0, 1]$ là tỉ lệ và được làm tròn lên thành $\lceil \mathit{minsup} \cdot N \rceil$
-giao dịch; một $\mathit{minsup}$ nguyên là số giao dịch tuyệt đối. Tham số
+ghi mỗi itemset một dòng theo dạng \texttt{1 2 \#SUP: 2}. Một ngưỡng thực
+trong $(0, 1]$ là tỉ lệ $\mathit{minsup}$ và được làm tròn lên thành
+$\sigma_{\min} = \lceil \mathit{minsup} \cdot N \rceil$ giao dịch; một ngưỡng nguyên chính
+là $\sigma_{\min}$. Tham số
 \texttt{variant} chọn \texttt{:baseline} hoặc \texttt{:optimized}, nên hai biến thể được
 chọn riêng và so sánh trên cùng đầu vào.
 
@@ -213,8 +217,10 @@ biến bằng một mảng tam giác gồm $m_f(m_f-1)/2$ ô qua một lượt d
 đạt ngưỡng. Tại gốc tiền tố rỗng, nên số đếm của cặp $(a, b)$ đúng bằng $|t(\{a, b\})|$
 và không phép giao phổ biến nào bị bỏ. Việc đếm chỉ chạy khi chi phí ước lượng của nó nhỏ
 hơn một phần mười chi phí các phép giao ở gốc, tức khi
-$10 \sum_i |T_i|(|T_i| - 1)/2 < W m_f(m_f-1)/2$. Retail và T10I4D100K thỏa điều kiện này;
-Chess, Mushroom và Accidents, với giao dịch dài và ít item phổ biến, vẫn giao như trước.
+$10 \sum_i |T_i|(|T_i| - 1)/2 < W m_f(m_f-1)/2$. Retail và T10I4D100K thỏa điều kiện này
+khi có nhiều item phổ biến. Ở Retail 0{,}01 chỉ có ít item phổ biến, nên điều kiện không
+thỏa và lớp gốc vẫn giao như trước (Bảng~\ref{tab:stage-profile}). Chess, Mushroom và
+Accidents, với giao dịch dài và ít item phổ biến, không bao giờ thỏa điều kiện này.
 
 \emph{Danh sách tid theo lớp.} Một lớp con gồm $k$ phần tử chuyển từ bitset sang danh
 sách tid tăng dần khi
@@ -224,10 +230,11 @@ sách tid tăng dần khi
 \end{equation}
 trong đó vế phải là số từ mà các phép giao bitset của lớp phải đọc, $kW$ là chi phí
 chuyển đổi, $\sigma_i$ là độ hỗ trợ của phần tử thứ $i$, và $c = 8$ là chi phí một bước
-trộn tính theo số từ, chọn từ phép quét $c$ từ 2 đến 16 trên máy đo.
-Quy tắc~\eqref{eq:lists} dựa trên độ dài tidset và $N$, không dựa trên tên CSDL. Phép trộn hai danh sách không có nhánh rẽ phụ
-thuộc dữ liệu và dừng sớm khi số tid chung đã tìm cộng phần còn lại của danh sách ngắn hơn
-không thể đạt $\mathit{minsup}$.
+trộn tính theo số từ, chọn từ phép quét $c$ từ 2 đến 16 trên máy chấm điểm.
+Quy tắc~\eqref{eq:lists} dựa trên độ dài tidset và $N$, không dựa trên tên CSDL. Mỗi bước
+trộn tiến trên hai danh sách mà không rẽ nhánh theo giá trị tid được so sánh, và một phép
+kiểm tra cận trước mỗi bước dừng phép trộn khi số tid chung đã tìm cộng phần còn lại của
+danh sách ngắn hơn không thể đạt $\sigma_{\min}$.
 
 \emph{Cận theo khối.} Ở T10I4D100K 0{,}00025, 98{,}7\% trong 2\,076\,972 phép trộn vẫn
 thất bại, trên hai danh sách có tổng cộng trung bình 126 tid. Trước khi duyệt một lớp danh
@@ -240,7 +247,7 @@ tid của mỗi phần tử trong từng khối. Với hai phần tử $X$ và $
 \end{equation}
 trong đó $c_{X,j}$ và $c_{Y,j}$ là số tid của $X$ và $Y$ trong khối $j$, vì một tid chung
 nằm trong đúng một khối và được đếm một lần cho mỗi phần tử. Phép trộn nào có cận nhỏ hơn
-$\mathit{minsup}$ bị bỏ qua mà không đọc tid nào. Cận~\eqref{eq:bound} không bao giờ loại
+$\sigma_{\min}$ bị bỏ qua mà không đọc tid nào. Cận~\eqref{eq:bound} không bao giờ loại
 một phép giao phổ biến, nên đầu ra không đổi. Giá trị $K = 256$ được chọn từ phép quét 64
 đến 512 khối.
 
@@ -289,7 +296,7 @@ tid và hàm ghi số, kèm chú thích chứng minh chỉ số hợp lệ. Trê
 
 \subsection{Kiểm thử tự động}
 \label{sec:tests}
-Lệnh \texttt{julia --project=. test/runtests.jl} chạy 1\,458 phép kiểm tra, và tất cả
+Lệnh \texttt{julia --project=. test/runtests.jl} chạy 1\,500 phép kiểm tra, và tất cả
 đều đạt trên Julia 1.13.2. Mỗi kiểm thử khai thác so sánh toàn bộ \texttt{SupportMap} lẫn
 số itemset được ghi, vì một itemset bị ghi hai lần sẽ bị từ điển che mất. Cả hai biến thể
 chạy cùng các nhóm kiểm thử sau.
@@ -333,8 +340,8 @@ của SPMF trên dữ liệu dày. Tỉ số $R = T_\text{tối ưu} / T_\text{P
 thời gian của biến thể tối ưu cho trung vị của PrePost+ ở cùng ngưỡng.
 
 Mỗi kỹ thuật được đo trong một phiên riêng, trong đó phiên bản trước và sau thay đổi chạy
-xen kẽ ở mỗi lần lặp, nên độ trôi của máy chia đều cho cả hai. Riêng bước tiền biên dịch
-được đo bằng hai đợt liên tiếp. Bảng~\ref{tab:steps} cho tỉ số thời gian sau trên trước
+xen kẽ ở mỗi lần lặp, nên độ trôi của máy chia đều cho cả hai. Riêng
+bước~\ref{step:precompile-package}, tiền biên dịch gói, được đo bằng hai đợt liên tiếp. Bảng~\ref{tab:steps} cho tỉ số thời gian sau trên trước
 của từng bước trên 33 ngưỡng, và tỉ số bộ nhớ đỉnh tương ứng. Bộ nhớ đỉnh là peak RSS
 (resident set size, lượng bộ nhớ vật lý lớn nhất mà tiến trình chiếm) do hệ điều hành đo.
 

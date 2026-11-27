@@ -200,7 +200,7 @@ giữa các mã gần giống nhau.
 \subsection{Khai thác mẫu hình ảnh}
 \label{sec:visual-patterns}
 \subsubsection{Từ ảnh đến giao dịch}
-Bộ dữ liệu Semeion từ UCI gồm 1.593 ảnh chữ số viết tay nhị phân kích thước
+Bộ dữ liệu Semeion từ UCI gồm 1\,593 ảnh chữ số viết tay nhị phân kích thước
 $16\times16$ pixel, có nhãn từ 0 đến 9~\cite{semeionUCI}. Câu hỏi khảo sát là
 những tổ hợp nét cục bộ nào lặp lại giữa các ảnh. Biểu diễn \emph{bag of
 visual words} (túi từ thị giác) đưa mỗi ảnh về một tập mục để Eclat đếm số ảnh
@@ -215,10 +215,10 @@ Lưới $4\times4$ giữ được các đoạn nét cục bộ trong khi giới 
 16 patch trước lọc. Ngưỡng khoảng cách loại các patch ở xa mọi tâm cụm để
 hạn chế gán các hình nét khác biệt vào cùng một từ.
 
-Trong số 18.386 patch qua bước lọc pixel nét, các patch đạt ngưỡng khoảng cách
-tạo 5.767 lượt hiện diện từ, trung bình 3,62 từ mỗi ảnh. Giao dịch chứa từ 0
+Trong số 18\,386 patch qua bước lọc pixel nét, các patch đạt ngưỡng khoảng cách
+tạo 5\,767 lượt hiện diện từ, trung bình 3,62 từ mỗi ảnh. Giao dịch chứa từ 0
 đến 8 từ, trung vị là 4. Nhóm giữ 11 giao dịch rỗng trong mẫu số khi đổi minsup
-sang ngưỡng nguyên theo Mục~\ref{sec:protocol}. Tệp \texttt{visual\_words.svg}
+sang ngưỡng nguyên theo Mục~\ref{sec:vertical}. Tệp \texttt{visual\_words.svg}
 lưu patch quan sát đại diện cho từng tâm. Tệp \texttt{manifest.toml} lưu seed,
 tham số và mã băm đầu vào để tái lập bộ mã hóa. Nhóm học từ điển trên toàn bộ
 Semeion để phân tích mô tả.
@@ -226,7 +226,7 @@ Semeion để phân tích mô tả.
 \subsubsection{Mẫu phổ biến và ảnh hỗ trợ}
 Nhóm khai thác các giao dịch bằng Eclat cơ bản của nhóm. Với 24 từ và minsup
 20\%, 10\% và 5\%, toàn bộ 6, 18 và 46 tập mục tương ứng khớp support với
-SPMF. Đầu vào SPMF có 1.582 giao dịch sau khi bỏ 11 dòng rỗng. Nhóm điều chỉnh
+SPMF. Đầu vào SPMF có 1\,582 giao dịch sau khi bỏ 11 dòng rỗng. Nhóm điều chỉnh
 ngưỡng tương đối của SPMF để giữ nguyên số ảnh tối thiểu lần lượt là 319, 160
 và 80. Giao dịch rỗng không đóng góp support cho tập mục khác rỗng.
 
@@ -297,7 +297,7 @@ có thể hiện diện ở các vị trí bất kỳ trong ảnh.
 
 Mỗi tập mục cũng có thể tạo một đặc trưng nhị phân. Với danh sách mẫu
 $(\{13\},\{8,13\},\{4,8,13\})$, ảnh có giao dịch $\{8,13\}$ nhận vector
-$(1,1,0)$. Notebook tạo ma trận gồm 1.593 hàng ảnh và 46 cột tập mục ở minsup
+$(1,1,0)$. Notebook tạo ma trận gồm 1\,593 hàng ảnh và 46 cột tập mục ở minsup
 5\%. Tổng mỗi cột bằng support của tập mục tương ứng. Để đánh giá hiệu quả
 phân loại của đặc trưng này, cần học từ điển và khai thác mẫu trên tập huấn
 luyện, rồi giữ cố định cả hai khi mã hóa tập kiểm tra. Phân tích ở đây mô tả
