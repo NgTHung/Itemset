@@ -12,7 +12,7 @@ matplotlib.rcParams["svg.fonttype"] = "none"
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-from plot_runtime_curves import assign_styles, compact, lost, read_points
+from plot_runtime_curves import assign_styles, compact, display_name, lost, read_points
 
 WIDTH = re.compile(r"width-w(\d+)$")
 
@@ -101,7 +101,7 @@ def plot_mine(ax, summary, style):
         color, marker = style.get(name, ("#555555", "P"))
         xs, ys, lower, upper = zip(*points)
         ax.errorbar(xs, ys, yerr=[lower, upper], fmt=f"-{marker}", color=color,
-                    markersize=4.5, capsize=2.5, linewidth=1.3, elinewidth=1.0, label=name)
+                    markersize=4.5, capsize=2.5, linewidth=1.3, elinewidth=1.0, label=display_name(name))
     ax.set_yscale("log")
     ax.set_xticks(sorted({p[0] for pts in summary.values() for p in pts}))
     ax.set_xlabel("transaction width", fontsize=8)
@@ -135,7 +135,8 @@ def main():
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
     axes[0].set_ylabel("Median seconds (log), IQR bars", fontsize=8)
     plot_output(axes[2], [("fixed minsup 0.05", fixed), ("matched output", matched)])
-    handles = [Line2D([], [], color=style[n][0], marker=style[n][1], linewidth=1.3, label=n) for n in series]
+    handles = [Line2D([], [], color=style[n][0], marker=style[n][1], linewidth=1.3, label=display_name(n))
+               for n in series]
     if any(lost(r) for r in fixed + matched):
         handles.append(Line2D([], [], color="#777777", marker="X", markeredgecolor="#a02020", linestyle="none",
                               markersize=9, label="Timeout or lost samples (curves.csv)"))

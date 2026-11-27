@@ -15,12 +15,14 @@ thực tế. Bài báo gồm ba phần chính theo đề:
 \begin{itemize}
 \item Mục~\ref{sec:implementation} trình bày bản cơ bản bám sát bài báo gốc và bản tối ưu
 (bitset, thứ tự duyệt theo support tăng dần, tỉa phần mở rộng hoàn hảo, đếm cặp và danh
-sách tid cho dữ liệu thưa), cùng chứng minh tính đúng và cách kiểm thử.
+sách tid cho dữ liệu thưa), cùng chứng minh tính đúng, cách kiểm thử và mức cải thiện đo
+được của từng kỹ thuật tối ưu.
 \item Mục~\ref{sec:evaluation} nêu giao thức đo chung (Mục~\ref{sec:protocol}), đối chiếu
-toàn bộ tập mục với SPMF và bộ nhớ đỉnh (Mục~\ref{sec:exact-memory}), thời gian theo
-minsup (Mục~\ref{sec:minsup}), ảnh hưởng của độ dài giao dịch (Mục~\ref{sec:width}), khả
-năng mở rộng theo kích thước dữ liệu và số tập phổ biến theo minsup, và hai hướng tối ưu
-tiếp theo (Mục~\ref{sec:future}).
+toàn bộ tập mục với SPMF (Mục~\ref{sec:exact}), thời gian theo minsup
+(Mục~\ref{sec:minsup}), số tập phổ biến theo minsup (Mục~\ref{sec:output-size}), bộ nhớ
+đỉnh (Mục~\ref{sec:memory}), khả năng mở rộng theo kích thước dữ liệu
+(Mục~\ref{sec:scalability}), ảnh hưởng của độ dài giao dịch (Mục~\ref{sec:width}), và
+hai hướng tối ưu tiếp theo (Mục~\ref{sec:future}).
 \item Mục~\ref{sec:applications} áp dụng Eclat vào phân tích giỏ hàng trên Online Retail
 II (Mục~\ref{sec:basket}) và khai thác mẫu hình ảnh trên Semeion
 (Mục~\ref{sec:visual-patterns}).
@@ -29,8 +31,6 @@ II (Mục~\ref{sec:basket}) và khai thác mẫu hình ảnh trên Semeion
 Hai nguyên tắc chi phối cách trình bày. Thứ nhất, mọi so sánh hiệu năng chỉ dùng các lần
 chạy có đầu ra khớp hoàn toàn, về tập mục và support, với một lần chạy Eclat của SPMF
 độc lập, vì hai chương trình có thể cho cùng số tập mục mà gán support khác nhau. Thứ hai,
-các số đo chính gắn với máy, revision mã nguồn và thư mục kết quả đã tạo ra chúng, và mọi
-bước ngẫu nhiên dùng seed 42, nên người đọc tái lập được kết quả từ repository. Hung phụ trách
-cài đặt, khả năng mở rộng và số lượng tập phổ biến, Thien phụ trách phân tích giỏ hàng,
-thời gian chạy, độ dài giao dịch và hướng tối ưu, còn Phat phụ trách mẫu hình ảnh, độ đúng
-và bộ nhớ.
+các số đo chính gắn với máy và revision mã nguồn đã tạo ra chúng, và mọi bước ngẫu nhiên
+dùng seed 42. Repository của dự án chứa mã nguồn, cấu hình, mã băm dữ liệu và lệnh tái lập
+của mọi thực nghiệm.

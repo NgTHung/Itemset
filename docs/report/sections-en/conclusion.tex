@@ -1,0 +1,34 @@
+\section{Conclusion}
+We implemented Eclat from the original paper~\cite{zaki2000} as two variants that return
+the same result. Both match SPMF's Eclat exactly at every database and threshold, with 330
+outputs over 33 pairs and no missing, extra, duplicate, or wrong-support itemset
+(Section~\ref{sec:exact}). In a single timing session on the grading machine, the
+optimized variant is the fastest at all 33 points. At the lowest minsup of each database
+it is 7.9 times (Accidents) to 33.3 times (Retail) faster than the baseline
+(Section~\ref{sec:minsup}), and Section~\ref{sec:optimized} breaks the gain down by
+optimization step. The baseline's time tracks the total length of the tidsets it merges,
+at 2.0 to 6.9\,ns per element. The optimized variant's peak memory is 3.0\% to 34.5\%
+lower than the baseline's at the lowest minsup of each database
+(Section~\ref{sec:memory}). When transaction length grows from 5 to 40 with output held
+fixed, the baseline's mining time grows 42-fold while the optimized variant's grows only
+1.8-fold (Section~\ref{sec:width}).
+
+Both applications use the same miner. On the 39\,516 invoices of Online Retail II, minsup
+0.01 gives 1\,355 frequent itemsets, from which we generate association rules and rank them
+by lift (Section~\ref{sec:basket}). On the 1\,593 Semeion images, a 24-word visual
+codebook turns each image into a transaction, and the frequent itemsets describe stroke
+combinations that recur across images (Section~\ref{sec:visual-patterns}).
+
+The conclusions have limits. Every measurement ran on one machine, the grading machine,
+and programs are compared only within the same session. The \emph{process} scope includes Julia
+or JVM start-up, so at high thresholds, where the two Julia variants are close, start-up
+is most of the time. We treat SPMF as a black box, so we do not explain the differences
+we measured in terms of SPMF's internals. The basket data comes from a single
+shop over two years, and the image patterns describe frequencies within the same set used
+to learn the codebook, so they say nothing yet about classification accuracy.
+
+Two next steps follow from the optimized variant's time profile (Section~\ref{sec:future}):
+a flat integer store with an array-built vertical layout, to cut the reading and layout
+time that takes almost the whole run on Accidents, and output in search order, to drop the
+sort that takes 35\% to 43\% of the profiler samples at the dense points. Both are predictions with a
+plan for testing them, and neither has been implemented.

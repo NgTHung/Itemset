@@ -1,11 +1,14 @@
-"""Plot the exact-map coverage and paired peak RSS for the IEEE report."""
+"""Plot which thresholds of a verified runtime campaign match SPMF exactly, for the IEEE report.
+
+The input is one run directory that times both Julia variants, and possibly the SPMF programs, at every
+threshold. Every attempt must match its SPMF reference, and only the two Julia variants are plotted.
+"""
 
 import argparse
 import csv
 from collections import Counter, defaultdict
 from decimal import Decimal
 from pathlib import Path
-from statistics import median
 import tomllib
 
 import matplotlib
@@ -21,6 +24,11 @@ DATASETS = {
     "retail": "Retail",
     "T10I4D100K": "T10I4D100K",
     "accidents": "Accidents",
+}
+# The Vietnamese report writes decimals with a comma, so its copy of each figure needs its own text.
+LABELS = {
+    "en": dict(decimal=".", grid="Threshold position in the grid"),
+    "vi": dict(decimal=",", grid="Thứ tự ngưỡng trong lưới"),
 }
 
 
@@ -60,10 +68,11 @@ def require_exact(rows):
         raise ValueError("Expected one SPMF reference per dataset and count threshold")
 
 
-def plot_coverage(rows, destination):
+def plot_coverage(rows, destination, language="en"):
+    text = LABELS[language]
     thresholds = defaultdict(set)
     variants = defaultdict(set)
-    for row in rows:
+    for row in (row for row in rows if row["variant"] in VARIANTS):
         minsup = Decimal(row["minsup_relative"])
         thresholds[row["dataset"]].add(minsup)
         variants[row["dataset"], minsup].add(row["variant"])
@@ -74,14 +83,14 @@ def plot_coverage(rows, destination):
     fig, ax = plt.subplots(figsize=(4.4, 1.95), layout="constrained")
     ax.set_yticks(range(len(dataset_order)), [DATASETS[name] for name in dataset_order])
     ax.set_xticks(range(columns), range(1, columns + 1))
-    ax.set_xlabel("Thứ tự ngưỡng trong lưới")
+    ax.set_xlabel(text["grid"])
     ax.set_ylim(len(dataset_order) - 0.5, -0.5)
     ax.set_xlim(-0.5, columns - 0.5)
     for index, name in enumerate(dataset_order):
         values = sorted(thresholds[name], reverse=True)
         ax.barh(index, len(values) - 0.12, left=-0.44, height=0.76, color="#176681")
         for column, value in enumerate(values):
-            percent = format((value * 100).normalize(), "f").replace(".", ",")
+            percent = format((value * 100).normalize(), "f").replace(".", text["decimal"])
             ax.text(column, index, percent, color="white", ha="center", va="center", fontsize=9)
         for column in range(len(values) - 1):
             ax.vlines(column + 0.5, index - 0.38, index + 0.38, color="white", linewidth=0.8)
@@ -92,62 +101,16 @@ def plot_coverage(rows, destination):
     plt.close(fig)
 
 
-def plot_memory(rows, destination):
-    samples = defaultdict(list)
-    points = defaultdict(set)
-    for row in rows:
-        value = row["peak_rss_bytes"]
-        if not value.isdecimal() or int(value) <= 0:
-            raise ValueError(f"Invalid peak RSS for {row['attempt_id']}")
-        samples[row["dataset"], row["variant"]].append(int(value) / 2**20)
-        points[row["dataset"]].add((row["minsup_count"], row["memory_tool"]))
-    if any(len(values) != 1 for values in points.values()):
-        raise ValueError("Expected one consistent peak RSS measurement point per dataset")
-    if any(not samples.get((name, variant)) for name in points for variant in VARIANTS):
-        raise ValueError("Peak RSS comparison requires both Julia variants per dataset")
-    names = [name for name in DATASETS if (name, "baseline") in samples]
-    fig, (left, right) = plt.subplots(1, 2, figsize=(8.0, 2.5), layout="constrained")
-    medians = {}
-    for variant, label, color, offset in (
-        ("baseline", "Cơ bản", "#176681", -0.19),
-        ("optimized", "Tối ưu", "#ad552e", 0.19),
-    ):
-        data = [samples[name, variant] for name in names]
-        values = [median(peaks) for peaks in data]
-        medians[variant] = values
-        ranges = [
-            [mid - min(peaks) for mid, peaks in zip(values, data)],
-            [max(peaks) - mid for mid, peaks in zip(values, data)],
-        ]
-        left.barh([i + offset for i in range(len(names))], values, xerr=ranges,
-                  height=0.31, color=color, label=label, error_kw={"capsize": 2, "elinewidth": 0.8})
-    left.legend(loc="upper right", frameon=False, fontsize=9)
-    left.set_xlabel("Trung vị peak RSS (MiB)")
-    ratios = [a / b for a, b in zip(medians["baseline"], medians["optimized"])]
-    right.barh(range(len(names)), ratios, color="#426779", height=0.57)
-    right.axvline(1, color="#313131", linestyle=":", linewidth=1)
-    right.set_xlabel("Trung vị cơ bản / tối ưu")
-    for ax in (left, right):
-        ax.set_yticks(range(len(names)), [DATASETS[name] for name in names])
-        ax.invert_yaxis()
-        ax.spines[["top", "right"]].set_visible(False)
-    fig.savefig(destination, dpi=200)
-    plt.close(fig)
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("correctness", type=Path, help="report-correctness run directory")
-    parser.add_argument("memory", type=Path, help="report-peak-memory run directory")
-    parser.add_argument("--out", type=Path, default=Path("docs/report/figures"))
+    parser.add_argument("run", type=Path, help="run directory of the runtime campaign")
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--language", choices=sorted(LABELS), default="en")
     args = parser.parse_args()
-    exact_rows = read_process_rows(args.correctness)
-    memory_rows = read_process_rows(args.memory)
-    require_exact(exact_rows)
-    require_exact(memory_rows)
+    rows = read_process_rows(args.run)
+    require_exact(rows)
     args.out.mkdir(parents=True, exist_ok=True)
-    plot_coverage(exact_rows, args.out / "correctness-grid.pdf")
-    plot_memory(memory_rows, args.out / "peak-memory.png")
+    plot_coverage(rows, args.out / "correctness-grid.pdf", args.language)
 
 
 if __name__ == "__main__":

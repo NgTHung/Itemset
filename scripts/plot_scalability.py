@@ -17,7 +17,7 @@ matplotlib.use("Agg")
 matplotlib.rcParams["svg.fonttype"] = "none"
 import matplotlib.pyplot as plt
 
-from plot_runtime_curves import assign_styles, compact, lost, read_points
+from plot_runtime_curves import assign_styles, compact, display_name, lost, read_points
 
 SUBSET = re.compile(r"^(?P<base>.+)-p(?P<percent>[0-9.]+)$")
 # The report is in Vietnamese, so its copy of the figure needs its own axis text.
@@ -72,7 +72,7 @@ def main():
         ax.set_xticks(sizes, [f"{n / 1000:.0f}k\n{compact(counts[n])}" if n in counts else f"{n / 1000:.0f}k"
                               for n in sizes], fontsize=6.5)
         minsup = next(iter(by_series.values()))[0]["minsup_relative"]
-        ax.set_title(f"{base}, minsup {minsup}", fontsize=10)
+        ax.set_title(f"{display_name(base)}, minsup {minsup}", fontsize=10)
         ax.set_xlabel(LABELS[args.language]["x"], fontsize=7.5)
         ax.set_ylabel(LABELS[args.language]["y"], fontsize=8)
         ax.grid(axis="y", alpha=0.18)
