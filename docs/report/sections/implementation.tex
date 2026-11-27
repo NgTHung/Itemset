@@ -148,8 +148,8 @@ giao dịch; một $\mathit{minsup}$ nguyên là số giao dịch tuyệt đối
 \texttt{variant} chọn \texttt{:baseline} hoặc \texttt{:optimized}, nên hai biến thể được
 chọn riêng và so sánh trên cùng đầu vào.
 
-Chương trình dòng lệnh \texttt{demo.jl} nhận đường dẫn đầu vào, \texttt{--output},
-đúng một trong hai ngưỡng \texttt{--minsup} (tỉ lệ) hoặc \texttt{--min-count} (số giao
+Chương trình dòng lệnh \texttt{demo.jl} nhận đường dẫn đầu vào, \texttt{--output}
+tùy chọn (in ra stdout khi bỏ qua), đúng một trong hai ngưỡng \texttt{--minsup} (tỉ lệ) hoặc \texttt{--min-count} (số giao
 dịch) và \texttt{--variant}, ví dụ
 \texttt{julia --project=. demo.jl --minsup 0.5 --output out.txt data/toy/baskets.txt}.
 Đầu vào sai làm chương trình dừng với mã thoát 1 và thông báo nêu số dòng lỗi. Hàm ghi
