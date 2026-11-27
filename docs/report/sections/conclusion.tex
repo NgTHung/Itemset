@@ -1,15 +1,15 @@
 \section{Kết luận}
 Nhóm cài đặt Eclat từ bài báo gốc~\cite{zaki2000} thành hai biến thể cho cùng một kết
-quả. Cả hai khớp hoàn toàn với Eclat của SPMF ở mọi cặp cơ sở dữ liệu và ngưỡng, với 66
-phép đối chiếu trên 33 cặp và không có tập mục thiếu, thừa, lặp hay sai support
+quả. Cả hai khớp hoàn toàn với Eclat của SPMF ở mọi cặp cơ sở dữ liệu và ngưỡng, với 330
+đầu ra trên 33 cặp và không có tập mục thiếu, thừa, lặp hay sai support
 (Mục~\ref{sec:exact-memory}). Trong đợt đo thời gian cùng một phiên trên máy chấm điểm,
 bản tối ưu nhanh nhất ở cả 33 điểm. Ở minsup thấp nhất của mỗi cơ sở dữ liệu nó nhanh hơn
 bản cơ bản từ 7{,}9 lần (Accidents) đến 33{,}3 lần (Retail) (Mục~\ref{sec:minsup}), và
 Mục~\ref{sec:optimized} tách mức tăng theo từng bước tối ưu. Thời gian của
 bản cơ bản bám theo tổng độ dài các tidset được trộn, từ 2{,}0 đến 6{,}9\,ns mỗi phần tử.
 Khi độ dài giao dịch tăng từ 5 lên 40 ở đầu ra không đổi, thời gian khai thác của bản cơ
-bản tăng 53 lần còn bản tối ưu chỉ tăng 1{,}8 lần (Mục~\ref{sec:width}). Bộ nhớ đỉnh của
-bản tối ưu thấp hơn bản cơ bản từ 11{,}0\% đến 34{,}4\% ở ngưỡng giữa dải của mỗi cơ sở dữ
+bản tăng 42 lần còn bản tối ưu chỉ tăng 1{,}8 lần (Mục~\ref{sec:width}). Bộ nhớ đỉnh của
+bản tối ưu thấp hơn bản cơ bản từ 3{,}0\% đến 34{,}5\% ở minsup thấp nhất của mỗi cơ sở dữ
 liệu (Mục~\ref{sec:exact-memory}).
 
 Hai ứng dụng dùng cùng bộ khai thác. Trên 39\,516 hóa đơn của Online Retail II, minsup
@@ -18,9 +18,8 @@ Hai ứng dụng dùng cùng bộ khai thác. Trên 39\,516 hóa đơn của Onl
 thành một giao dịch, và các tập phổ biến mô tả tổ hợp nét lặp lại giữa các ảnh
 (Mục~\ref{sec:visual-patterns}).
 
-Các kết luận có giới hạn. Thời gian được đo trên một máy chấm điểm, còn độ dài giao dịch
-và bộ nhớ đo trên hai máy Windows khác nhau, nên chỉ so sánh giữa các chương trình trong
-cùng một phiên. Phạm vi \emph{process} gồm cả khởi động Julia hoặc JVM, nên ở ngưỡng cao,
+Các kết luận có giới hạn. Mọi phép đo chạy trên một máy, máy chấm điểm, và các chương
+trình chỉ được so sánh trong cùng một phiên. Phạm vi \emph{process} gồm cả khởi động Julia hoặc JVM, nên ở ngưỡng cao,
 nơi hai bản Julia gần bằng nhau, phần lớn thời gian là khởi động. Nhóm xem SPMF như hộp
 đen nên không giải thích nguyên nhân bên trong SPMF của các khác biệt đo được. Dữ liệu giỏ
 hàng đến từ một cửa hàng trong hai năm, và các mẫu hình ảnh mô tả tần suất trong chính tập
@@ -29,5 +28,5 @@ dùng để học từ điển, nên chưa cho biết hiệu quả phân loại.
 Hai hướng tiếp theo xuất phát từ hồ sơ thời gian của bản tối ưu (Mục~\ref{sec:future}):
 một kho số nguyên phẳng với bố cục dọc dựng bằng mảng, nhằm giảm thời gian đọc và dựng bố
 cục chiếm gần hết lượt chạy ở Accidents, và một thứ tự đầu ra theo thứ tự tìm kiếm, nhằm
-bỏ bước sắp xếp chiếm từ 28\% đến 37\% lượt chạy ở các điểm dày. Cả hai chỉ là dự đoán kèm
+bỏ bước sắp xếp chiếm từ 35\% đến 43\% số mẫu \emph{profiler} ở các điểm dày. Cả hai chỉ là dự đoán kèm
 cách kiểm chứng, chưa được cài đặt.

@@ -159,7 +159,7 @@ nên tệp đầu ra của hai biến thể giống nhau từng byte.
 
 \subsection{Kiểm thử tự động}
 \label{sec:tests}
-Lệnh \texttt{julia --project=. test/runtests.jl} chạy 1\,091 phép kiểm tra, và tất cả
+Lệnh \texttt{julia --project=. test/runtests.jl} chạy 1\,458 phép kiểm tra, và tất cả
 đều đạt trên Julia 1.13.2. Mỗi kiểm thử khai thác so sánh toàn bộ \texttt{SupportMap} lẫn
 số itemset được ghi, vì một itemset bị ghi hai lần sẽ bị từ điển che mất. Cả hai biến thể
 chạy cùng các nhóm kiểm thử sau.
@@ -185,10 +185,10 @@ và mọi CSDL nhỏ, hàm ghi được so từng byte với một bộ định 
 số cùng mã thoát của tiến trình được kiểm tra.
 \end{itemize}
 
-Bộ đếm vét cạn chỉ là công cụ kiểm thử. Ngoài bộ kiểm thử, mỗi đợt đo ở
-Mục~\ref{sec:measure} so sánh mọi tệp đầu ra với một lần chạy Eclat của SPMF độc lập sau
-khi đo xong. Đợt đo cuối gồm 820 tệp đầu ra trên năm CSDL chuẩn (615 của biến thể tối ưu
-và 205 của PrePost+), và cả 820 tệp khớp 100\%.
+Bộ đếm vét cạn chỉ là công cụ kiểm thử. Ngoài bộ kiểm thử, mỗi đợt đo so sánh mọi tệp
+đầu ra với một lần chạy Eclat của SPMF độc lập sau khi đo xong. Trong đợt đo thời gian ở
+mục~\ref{sec:minsup}, cả 660 tệp đầu ra trên năm CSDL chuẩn, 165 tệp của mỗi chương trình
+trong bốn chương trình, đều khớp 100\%.
 
 \subsection{Biến thể tối ưu}
 \label{sec:optimized}
@@ -323,12 +323,11 @@ tid và hàm ghi số, kèm chú thích chứng minh chỉ số hợp lệ. Trê
 \label{sec:measure}
 Mọi số đo trong mục này là trung vị thời gian của năm tiến trình \texttt{demo.jl} nguội
 (cold), tức mỗi lần chạy là một tiến trình mới gồm khởi động Julia, đọc, khai thác và ghi
-tệp. Các đợt đo chạy trên một máy Linux (Intel Core i7-11800H, 7{,}4 GiB RAM, xung nhịp
-cố định 2{,}3 GHz) với Julia 1.13.2 một luồng. Lưới đo gồm 33 ngưỡng trên năm CSDL Chess,
+tệp. Các đợt đo chạy trên máy chấm điểm mô tả ở mục~\ref{sec:protocol}. Lưới đo gồm 33 ngưỡng trên năm CSDL Chess,
 Mushroom, Retail, T10I4D100K và Accidents, cùng một số ngưỡng stress thấp hơn lưới, chỉ
 dùng để kiểm tra giới hạn. Ngoài Eclat của SPMF, nhóm so sánh với PrePost+~\cite{deng2015}
-của \href{https://github.com/NgTHung/Itemset/blob/main/tools/spmf/release.toml}{bản SPMF đã ghim}
-(Java Temurin 25.0.4.1, heap 4 GiB), vì đây là thuật toán nhanh hơn Eclat
+của \href{https://github.com/NgTHung/Itemset/blob/main/tools/spmf/release.toml}{bản SPMF đã ghim},
+vì đây là thuật toán nhanh hơn Eclat
 của SPMF trên dữ liệu dày. Tỉ số $R = T_\text{tối ưu} / T_\text{PrePost+}$ chia trung vị
 thời gian của biến thể tối ưu cho trung vị của PrePost+ ở cùng ngưỡng.
 
@@ -368,60 +367,11 @@ tiến trình, vì ở ngưỡng đó việc sắp xếp và ghi hàng trăm ngh
 gian; nhóm vẫn giữ bước này vì nó không làm tăng bộ nhớ và là nền của bước~\ref{step:single-allocation}. Không bước
 nào làm một ngưỡng chậm đi quá 4{,}4\%.
 
-Bảng~\ref{tab:final} cho tác động cộng dồn của các bước~\ref{step:bitset}
-đến~\ref{step:single-allocation} ở ngưỡng cao nhất và thấp nhất của mỗi CSDL: nó so sánh bản
-cơ bản sau bước~\ref{step:precompile-package} với biến thể tối ưu sau
-bước~\ref{step:single-allocation}. Các bước~\ref{step:precompile-cli} và~\ref{step:byte-io}
-nằm trong mã dùng chung, nên bản cơ bản của phiên bản nộp cũng hưởng hai bước này; phép so
-sánh hai biến thể trên cùng một phiên bản mã là bước~\ref{step:bitset} của
-Bảng~\ref{tab:steps}. Hai cột được đo ở hai phiên cách nhau ba ngày trên cùng máy và cùng
-cấu hình. PrePost+ chạy trong cả hai phiên, và trung vị của nó giữa hai phiên lệch nhau từ
-$-3{,}8\%$ đến $+5{,}8\%$ (trung vị $+0{,}3\%$), nên hai phiên so sánh được với nhau trong
-sai số này.
-
-\begin{table*}[t]
-\centering
-\small
-\caption{Trung vị thời gian tiến trình nguội (s) và bộ nhớ đỉnh lớn nhất (MiB) trong năm
-lần chạy. Bản cơ bản (sau bước~\ref{step:precompile-package}) đo ngày 06/11/2026, biến thể
-tối ưu (sau bước~\ref{step:single-allocation}) và
-PrePost+ ngày 09/11/2026, Eclat của SPMF ngày 31/10/2026, cùng một máy}
-\label{tab:final}
-\begin{tabular}{lrrrrrrrr}
-\hline
- & & \multicolumn{5}{c}{Thời gian (s)} & \multicolumn{2}{c}{Bộ nhớ đỉnh (MiB)} \\
-Dữ liệu / minsup & Itemset & Cơ bản & Tối ưu & Tăng tốc & Eclat SPMF & PrePost+ & Cơ bản & Tối ưu \\
-\hline
-Chess / 0{,}9 & 622 & 0{,}33 & 0{,}21 & 1{,}6 & 0{,}51 & 0{,}42 & 268 & $\le 254$ \\
-Chess / 0{,}6 & 254\,944 & 3{,}24 & 0{,}30 & 10{,}8 & 15{,}98 & 0{,}59 & 308 & 262 \\
-Mushroom / 0{,}5 & 153 & 0{,}33 & 0{,}22 & 1{,}5 & 0{,}51 & 0{,}44 & 256 & $\le 254$ \\
-Mushroom / 0{,}1 & 574\,431 & 6{,}28 & 0{,}40 & 15{,}7 & 7{,}44 & 0{,}68 & 414 & 302 \\
-Retail / 0{,}01 & 159 & 0{,}55 & 0{,}29 & 1{,}9 & 1{,}19 & 0{,}80 & 304 & $\le 254$ \\
-Retail / 0{,}001 & 7\,589 & 12{,}80 & 0{,}38 & 33{,}5 & 1{,}53 & 3{,}52 & 331 & 281 \\
-T10I4D100K / 0{,}01 & 385 & 2{,}93 & 0{,}32 & 9{,}1 & 0{,}78 & 1{,}42 & 304 & $\le 254$ \\
-T10I4D100K / 0{,}00025 & 96\,959 & 10{,}92 & 0{,}97 & 11{,}3 & 8{,}02 & 4{,}34 & 363 & 279 \\
-Accidents / 0{,}95 & 15 & 1{,}31 & 0{,}78 & 1{,}7 & 4{,}59 & 1{,}71 & 650 & 397 \\
-Accidents / 0{,}65 & 1\,093 & 7{,}13 & 0{,}86 & 8{,}3 & 26{,}87 & 2{,}34 & 804 & 397 \\
-\hline
-\end{tabular}
-\end{table*}
-
-Trên cả 33 ngưỡng, các bước~\ref{step:bitset} đến~\ref{step:single-allocation} rút ngắn thời gian tiến trình từ 1{,}5 đến 33{,}5 lần
-(trung vị 4{,}0 lần). Trung bình nhân của mức tăng tốc theo CSDL là 3{,}1 lần ở Accidents,
-3{,}3 ở Mushroom, 3{,}4 ở Chess, 6{,}5 ở Retail và 13{,}5 ở T10I4D100K. Mức tăng nhỏ nhất
-nằm ở các ngưỡng cao của Chess và Mushroom, nơi một lần chạy chỉ còn khoảng 0{,}22 s, trong
-đó 0{,}19 s là khởi động Julia và nạp gói; ở đó phần lớn mức tăng đến từ bước~\ref{step:precompile-cli}. So với
-SPMF, biến thể tối ưu nhanh hơn Eclat từ 2{,}3 đến 53 lần, theo số đo Eclat của phiên
-31/10/2026, và nhanh hơn PrePost+ ở cả 33 ngưỡng, với $R$ từ 0{,}11 đến 0{,}59. Trung bình
-nhân của $R$ theo CSDL là 0{,}20 ở Retail, 0{,}21 ở T10I4D100K, 0{,}41 ở Accidents, 0{,}49
-ở Mushroom và 0{,}51 ở Chess. Độ trải tứ phân vị (interquartile range, IQR) của hai cột
-Cơ bản và Tối ưu không vượt quá 3{,}3\% trung vị ở mọi ngưỡng.
-
-Bộ nhớ đỉnh sau bước~\ref{step:single-allocation} thấp hơn bản cơ bản ở mọi ngưỡng. Mức giảm lớn nhất nằm ở
-Accidents (804 còn 397 MiB ở 0{,}65), nhờ hàm đọc không cấp phát thừa và tidset trong lúc
-tìm kiếm chỉ chiếm vài MiB. Trên máy đo, cả ba chương trình Julia, Eclat và PrePost+ của
-SPMF đều cho giá trị nhỏ nhất trong khoảng 253{,}0 đến 253{,}6 MiB, nên phép đo có một mức
-sàn chung và các ô ghi $\le 254$ trong Bảng~\ref{tab:final} chỉ là cận trên.
+Bảng~\ref{tab:steps} ghi lại cách biến thể tối ưu được xây dựng qua từng bước, không phải
+phép so sánh hai biến thể đã nộp. Các bước~\ref{step:precompile-package},
+\ref{step:precompile-cli} và~\ref{step:byte-io} nằm trong mã dùng chung, nên bản cơ bản đã
+nộp cũng hưởng các bước này. Mục~\ref{sec:minsup} so sánh hai biến thể đã nộp ở cùng một
+revision trong cùng một phiên, và các số đo ở đó là mức tăng tốc bài báo này báo cáo.
 
 Ba kỹ thuật đã được thử, đo và không giữ lại. Diffset~\cite{zaki2003} lưu các tid mà
 một phần tử thiếu so với tiền tố; trong phép quét tỉ số chuyển đổi, không giá trị nào

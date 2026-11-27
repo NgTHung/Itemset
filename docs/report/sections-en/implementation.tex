@@ -166,7 +166,7 @@ their item codes, so the output files of the two variants are identical byte for
 
 \subsection{Automated tests}
 \label{sec:tests}
-The command \texttt{julia --project=. test/runtests.jl} runs 1\,091 checks, and all of
+The command \texttt{julia --project=. test/runtests.jl} runs 1\,458 checks, and all of
 them pass on Julia 1.13.2. Each mining test compares the whole \texttt{SupportMap} and
 also the number of itemsets recorded, because the dictionary would hide an itemset
 recorded twice. Both variants run the following groups of tests.
@@ -195,10 +195,9 @@ checked.
 \end{itemize}
 
 The brute-force counter is only a test tool. Outside the test suite, every measurement
-campaign in Section~\ref{sec:measure} compares each output file with an independent run
-of SPMF's Eclat after timing ends. The final campaign produced 820 output files on the
-five benchmark databases (615 from the optimized variant and 205 from PrePost+), and all
-820 match 100\%.
+campaign compares each output file with an independent run of SPMF's Eclat after timing
+ends. In the runtime campaign of Section~\ref{sec:minsup}, all 660 output files on the
+five benchmark databases, 165 from each of the four programs, match 100\%.
 
 \subsection{Optimized variant}
 \label{sec:optimized}
@@ -344,13 +343,13 @@ points, which is within noise, so we do not use it.
 \label{sec:measure}
 Every number in this subsection is the median time of five cold \texttt{demo.jl}
 processes: each run is a fresh process that includes Julia start-up, reading, mining, and
-writing the file. The campaigns ran on a Linux machine (Intel Core i7-11800H, 7.4 GiB
-RAM, clock fixed at 2.3 GHz) with single-threaded Julia 1.13.2. The grid has 33
+writing the file. The campaigns ran on the grading machine described in
+Section~\ref{sec:protocol}. The grid has 33
 thresholds on the five databases Chess, Mushroom, Retail, T10I4D100K, and Accidents,
 plus some stress thresholds below the grid that only probe the limits. Besides SPMF's
 Eclat, we compare with PrePost+~\cite{deng2015} from the
-\href{https://github.com/NgTHung/Itemset/blob/main/tools/spmf/release.toml}{pinned SPMF release}
-(Java Temurin 25.0.4.1, 4 GiB heap), because it is faster than SPMF's Eclat on dense
+\href{https://github.com/NgTHung/Itemset/blob/main/tools/spmf/release.toml}{pinned SPMF release},
+because it is faster than SPMF's Eclat on dense
 data. The ratio $R = T_\text{opt} / T_\text{PrePost+}$ divides the median time of the
 optimized variant by the median time of PrePost+ at the same threshold.
 
@@ -393,62 +392,12 @@ most of the time. We keep it because it does not raise memory and because
 step~\ref{step:single-allocation} builds on it. No step slows any threshold by more than
 4.4\%.
 
-Table~\ref{tab:final} shows the combined effect of steps~\ref{step:bitset}
-to~\ref{step:single-allocation} at the highest and lowest threshold of each database. It
-compares the baseline after step~\ref{step:precompile-package} with the optimized variant
-after step~\ref{step:single-allocation}. Steps~\ref{step:precompile-cli}
-and~\ref{step:byte-io} are in shared code, so the baseline of the submitted version also
-benefits from them; the comparison of the two variants on the same code version is
-step~\ref{step:bitset} of Table~\ref{tab:steps}. The two columns were measured in two
-sessions three days apart on the same machine and configuration. PrePost+ ran in both
-sessions, and its median differed between them by $-3.8\%$ to $+5.8\%$ (median
-$+0.3\%$), so the two sessions are comparable within that margin.
-
-\begin{table*}[t]
-\centering
-\small
-\caption{Median cold process time (s) and maximum peak memory (MiB) over five runs. The
-baseline (after step~\ref{step:precompile-package}) was measured on 2026-11-06, the
-optimized variant (after step~\ref{step:single-allocation}) and PrePost+ on 2026-11-09,
-and SPMF's Eclat on 2026-10-31, all on the same machine}
-\label{tab:final}
-\begin{tabular}{lrrrrrrrr}
-\hline
- & & \multicolumn{5}{c}{Time (s)} & \multicolumn{2}{c}{Peak memory (MiB)} \\
-Data / minsup & Itemsets & Baseline & Optimized & Speedup & SPMF Eclat & PrePost+ & Baseline & Optimized \\
-\hline
-Chess / 0.9 & 622 & 0.33 & 0.21 & 1.6 & 0.51 & 0.42 & 268 & $\le 254$ \\
-Chess / 0.6 & 254\,944 & 3.24 & 0.30 & 10.8 & 15.98 & 0.59 & 308 & 262 \\
-Mushroom / 0.5 & 153 & 0.33 & 0.22 & 1.5 & 0.51 & 0.44 & 256 & $\le 254$ \\
-Mushroom / 0.1 & 574\,431 & 6.28 & 0.40 & 15.7 & 7.44 & 0.68 & 414 & 302 \\
-Retail / 0.01 & 159 & 0.55 & 0.29 & 1.9 & 1.19 & 0.80 & 304 & $\le 254$ \\
-Retail / 0.001 & 7\,589 & 12.80 & 0.38 & 33.5 & 1.53 & 3.52 & 331 & 281 \\
-T10I4D100K / 0.01 & 385 & 2.93 & 0.32 & 9.1 & 0.78 & 1.42 & 304 & $\le 254$ \\
-T10I4D100K / 0.00025 & 96\,959 & 10.92 & 0.97 & 11.3 & 8.02 & 4.34 & 363 & 279 \\
-Accidents / 0.95 & 15 & 1.31 & 0.78 & 1.7 & 4.59 & 1.71 & 650 & 397 \\
-Accidents / 0.65 & 1\,093 & 7.13 & 0.86 & 8.3 & 26.87 & 2.34 & 804 & 397 \\
-\hline
-\end{tabular}
-\end{table*}
-
-Across all 33 thresholds, steps~\ref{step:bitset} to~\ref{step:single-allocation} shorten
-process time by 1.5 to 33.5 times (median 4.0). The geometric mean speedup per database is
-3.1 on Accidents, 3.3 on Mushroom, 3.4 on Chess, 6.5 on Retail, and 13.5 on T10I4D100K.
-The smallest gains are at the high thresholds of Chess and Mushroom, where a run takes
-only about 0.22 s, of which 0.19 s is Julia start-up and package loading. Most of the gain
-there comes from step~\ref{step:precompile-cli}. Against SPMF, the optimized variant is
-2.3 to 53 times faster than Eclat, using the Eclat measurements from the 2026-10-31
-session, and faster than PrePost+ at all 33 thresholds, with $R$ from 0.11 to 0.59. The
-geometric mean of $R$ per database is 0.20 on Retail, 0.21 on T10I4D100K, 0.41 on
-Accidents, 0.49 on Mushroom, and 0.51 on Chess. The interquartile range (IQR) of the
-Baseline and Optimized columns stays within 3.3\% of the median at every threshold.
-
-After step~\ref{step:single-allocation}, peak memory is lower than the baseline's at
-every threshold. The largest drop is on Accidents (804 to 397 MiB at 0.65), because the
-reader no longer over-allocates and the tidsets take only a few MiB during the search. On
-the measurement machine, all three programs (Julia, SPMF Eclat, and PrePost+) report
-their lowest values between 253.0 and 253.6 MiB, so the measurement has a common floor,
-and the cells marked $\le 254$ in Table~\ref{tab:final} are only upper bounds.
+Table~\ref{tab:steps} records how the optimized variant was built, one step at a time, and
+is not the comparison of the two submitted variants. Steps~\ref{step:precompile-package},
+\ref{step:precompile-cli}, and~\ref{step:byte-io} are in shared code, so the submitted
+baseline benefits from them too. Section~\ref{sec:minsup} compares the two submitted
+variants at one revision in one session, and its numbers are the speedups this paper
+reports.
 
 We tried, measured, and dropped three techniques. Diffsets~\cite{zaki2003} store the tids
 that a member lacks relative to its prefix. In a sweep of the switching ratio, no value
