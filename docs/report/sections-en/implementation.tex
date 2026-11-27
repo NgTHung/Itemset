@@ -1,0 +1,468 @@
+\section{Implementation}
+\label{sec:implementation}
+We reimplemented Eclat from Zaki's original paper~\cite{zaki2000} in Julia, using only
+the standard library and no frequent itemset mining (FIM) library. The package has two
+variants that return the same result: a baseline that follows the paper closely, and an
+optimized variant. This section explains the algorithm and why it is correct, how we test
+it, which optimizations we added, and how much each one improved on the baseline.
+
+\subsection{Vertical layout and tidsets}
+A database holds $N$ transactions. Each transaction gets a transaction identifier (tid),
+the index $1, 2, \dots, N$ in the order it is read. Apriori stores the database in a
+horizontal layout, where each transaction carries its list of items. Eclat uses a
+vertical layout, where each item $x$ carries its tidset $t(x)$, the set of tids of the
+transactions that contain $x$. For an itemset $X$,
+\begin{equation}
+  t(X) = \{\, i \in \{1,\dots,N\} : X \subseteq T_i \,\}, \qquad
+  \sigma(X) = |t(X)|,
+  \label{eq:support}
+\end{equation}
+where $T_i$ is the $i$-th transaction and $\sigma(X)$ is the support of $X$, the number
+of transactions that contain $X$. An itemset $X$ is frequent when
+$\sigma(X) \ge \mathit{minsup}$, with $\mathit{minsup}$ the minimum support threshold
+counted in transactions. An empty transaction still has a tid and still counts toward
+$N$, but it appears in no tidset.
+
+The baseline stores each tidset as an increasing \texttt{Vector\{Int\}}, called a
+tid-list. The function \texttt{to\_class} reads the database once and appends tids in
+increasing order, so every tid-list is already sorted and never needs sorting again.
+
+The main advantage of the vertical layout is the intersection. A transaction contains
+$P \cup \{a, b\}$ if and only if it contains both $P \cup \{a\}$ and $P \cup \{b\}$, so
+\begin{equation}
+  t(P \cup \{a, b\}) = t(P \cup \{a\}) \cap t(P \cup \{b\}),
+  \label{eq:intersect}
+\end{equation}
+where $P$ is an itemset and $a, b$ are two items not in $P$. The support of the new
+itemset therefore comes from two tidsets that already exist, without another scan of the
+database.
+
+\subsection{Prefix-based equivalence classes and Bottom-Up search}
+Zaki partitions the search space into prefix-based equivalence
+classes~\cite{zaki2000}. The class with prefix $P$ holds the members
+$(b, t(P \cup \{b\}))$, one for each item $b$ greater than every item of $P$. Two itemsets
+in the same class differ only in their last item, so intersection~\eqref{eq:intersect}
+is valid only between members of the same class.
+
+The function \texttt{bottom\_up!} implements the paper's Bottom-Up procedure. For each
+member $a$ of the class with prefix $P$, it records $P \cup \{a\}$ and its support,
+intersects $t(P \cup \{a\})$ with the tidset of every member $b$ after $a$, keeps the
+frequent results as the child class with prefix $P \cup \{a\}$, and searches that child
+class before moving to the next member. The root class has the empty prefix and holds the
+frequent items. The paper allows a depth-first search (DFS) or a breadth-first search over
+the lattice of classes and reports results breadth-first. We chose depth-first so that
+memory holds only one class per level of the current path. The paper also counts the
+frequent 2-itemsets in advance with a triangular array over the horizontal database. The
+baseline starts intersecting from single items so that one procedure handles every
+level, and the optimized variant brings this counting step back in
+Section~\ref{sec:optimized}. Table~\ref{tab:mapping} maps the parts of the paper to the
+source code.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Mapping from the paper~\cite{zaki2000} to the source code in \texttt{src/algorithm/}}
+\label{tab:mapping}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.37\columnwidth}>{\raggedright\arraybackslash}p{0.53\columnwidth}}
+\hline
+Paper & Baseline; optimized variant \\
+\hline
+Item tid-lists (Section 4.1) & \texttt{to\_class}; \texttt{bitset\_tidsets} \\
+Prefix classes (Section 4.2) & vector of (item, tid-list) pairs; vector of
+\texttt{ClassMember\{T\}} \\
+Bottom-Up (Sections 4.3.1 and 5.2, Fig.~12) & \texttt{bottom\_up!}; \texttt{eclat\_search!} \\
+Intersecting two tid-lists & \texttt{intersect\_tidlists}; \texttt{intersect\_bitsets!} and
+\texttt{intersect\_lists!} \\
+Counting 2-itemsets with a triangular array (Section 5.1) & not used; \texttt{count\_pairs} \\
+\hline
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:trace} traces the algorithm on the database \texttt{baskets.txt}, which has
+four transactions $T_1 = \{1,2,3\}$, $T_2 = \{1,2\}$, $T_3 = \{1,3\}$, $T_4 = \{2,3\}$,
+with $\mathit{minsup} = 2$. The initial tidsets are $t(1) = \{1,2,3\}$,
+$t(2) = \{1,2,4\}$, and $t(3) = \{1,3,4\}$. The algorithm records exactly six frequent
+itemsets, and it prunes $\{1,2,3\}$ because only $T_1$ contains it.
+
+\begin{table}[t]
+\centering
+\caption{Bottom-Up trace on \texttt{baskets.txt} with $\mathit{minsup} = 2$}
+\label{tab:trace}
+\begin{tabular}{llll}
+\hline
+Prefix & Intersection & Tidset & Result \\
+\hline
+$\emptyset$ & -- & $t(1) = \{1,2,3\}$ & record $\{1\}$, $\sigma = 3$ \\
+$\{1\}$ & $t(1) \cap t(2)$ & $\{1,2\}$ & keep $2$ \\
+$\{1\}$ & $t(1) \cap t(3)$ & $\{1,3\}$ & keep $3$ \\
+$\{1\}$ & -- & $t(12) = \{1,2\}$ & record $\{1,2\}$, $\sigma = 2$ \\
+$\{1,2\}$ & $t(12) \cap t(13)$ & $\{1\}$ & prune, $1 < 2$ \\
+$\{1\}$ & -- & $t(13) = \{1,3\}$ & record $\{1,3\}$, $\sigma = 2$ \\
+$\emptyset$ & -- & $t(2) = \{1,2,4\}$ & record $\{2\}$, $\sigma = 3$ \\
+$\{2\}$ & $t(2) \cap t(3)$ & $\{1,4\}$ & keep $3$ \\
+$\{2\}$ & -- & $t(23) = \{1,4\}$ & record $\{2,3\}$, $\sigma = 2$ \\
+$\emptyset$ & -- & $t(3) = \{1,3,4\}$ & record $\{3\}$, $\sigma = 3$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Correctness}
+\label{sec:correctness}
+Every class that \texttt{bottom\_up!} receives satisfies four invariants: (i) each
+tid-list is increasing and has no duplicates; (ii) the members are sorted by item and
+every member item is greater than every item of the prefix; (iii) every member is
+frequent; (iv) the tid-list of member $b$ equals $t(P \cup \{b\})$. The root class
+satisfies all four when it is built. A child class takes the members after $a$, so it
+keeps (i) and (ii). The size check before a member is added gives (iii), and
+identity~\eqref{eq:intersect} gives (iv).
+
+Three properties follow. First, every recorded support is exact, by (iv)
+and~\eqref{eq:support}. Second, no itemset is recorded twice: by (ii) every key
+$(x_1, \dots, x_k)$ is strictly increasing, and it is recorded only when the class with
+prefix $(x_1, \dots, x_{k-1})$ reaches $x_k$, and each class is built only once. Third,
+the result is complete because support is anti-monotone: if $X \subseteq Y$ then
+$\sigma(X) \ge \sigma(Y)$, so pruning an infrequent itemset never loses a frequent
+superset. Induction on length shows that the class with prefix $(x_1, \dots, x_{j-1})$
+contains every item $y > x_{j-1}$ for which $(x_1, \dots, x_{j-1}, y)$ is frequent, so
+every frequent itemset is recorded. The repository file \texttt{docs/eclat.md} gives the
+full proof.
+
+\subsection{Complexity}
+Let $L$ be the total number of items over all transactions, $m$ the number of distinct
+items, and $C$ the number of intersections. Building the vertical layout takes $O(L)$
+expected time for the dictionary, $O(m \log m)$ for sorting, and $O(L)$ memory. One
+intersection costs $O(|t(P \cup \{a\})| + |t(P \cup \{b\})|)$, at most $O(N)$. A class
+with $k$ members performs $k(k-1)/2$ intersections, so the total time is
+\begin{equation}
+  O(L + m \log m + C \cdot N),
+  \label{eq:cost}
+\end{equation}
+where $C$ is the total number of intersections over all classes visited. Because the
+search is depth-first, memory holds only the classes on the current path, one class per
+level, each with at most $m$ members of at most $N$ tids. The output can grow
+exponentially: a frequent $k$-itemset has $2^k - 1$ non-empty subsets, and all of them
+are frequent.
+
+\subsection{Interface, SPMF format, and command line}
+The two applications and the experiments call only four public functions.
+\texttt{read\_transactions} reads an SPMF file (one transaction per line, items separated
+by spaces). \texttt{support\_threshold} converts $\mathit{minsup}$ to a transaction
+count. \texttt{mine} returns a \texttt{SupportMap} dictionary from itemset to support.
+\texttt{write\_itemsets} writes one itemset per line in the form
+\texttt{1 2 \#SUP: 2}. A real $\mathit{minsup}$ in $(0, 1]$ is a fraction and is
+rounded up to $\lceil \mathit{minsup} \cdot N \rceil$ transactions; an integer
+$\mathit{minsup}$ is an absolute transaction count. The \texttt{variant} argument
+selects \texttt{:baseline} or \texttt{:optimized}, so each variant can be run on its own
+and compared on the same input.
+
+The command-line program \texttt{demo.jl} takes an input path, \texttt{--output},
+exactly one of the two thresholds \texttt{--minsup} (a fraction) or
+\texttt{--min-count} (a transaction count), and \texttt{--variant}, for example
+\texttt{julia --project=. demo.jl --minsup 0.5 --output out.txt data/toy/baskets.txt}.
+Invalid input stops the program with exit code 1 and a message that names the offending
+line. The writer validates the whole result before it opens the file, so a failed run
+leaves an existing output file untouched. Itemsets are written in lexicographic order of
+their item codes, so the output files of the two variants are identical byte for byte.
+
+\subsection{Automated tests}
+\label{sec:tests}
+The command \texttt{julia --project=. test/runtests.jl} runs 1\,091 checks, and all of
+them pass on Julia 1.13.2. Each mining test compares the whole \texttt{SupportMap} and
+also the number of itemsets recorded, because the dictionary would hide an itemset
+recorded twice. Both variants run the following groups of tests.
+
+\begin{itemize}
+\item Hand-derived results: eight small databases, including an empty database, a
+database with no frequent itemset, duplicate transactions, thresholds just above and
+just below an itemset's support, and an image database with empty transactions.
+\item Comparison with SPMF's Eclat~\cite{spmf2016}: eight runs on seven small databases
+and one run on T25I10D10K (9\,976 transactions, 929 items), where SPMF reports 14\,782
+itemsets of 1 to 13 items at $\mathit{minsup} = 0.008$. Both variants match 100\% on all
+nine runs, with no missing, extra, or wrong-support itemset.
+\item Comparison with a brute-force counter that enumerates every subset: 10 random
+databases generated with seed 42 for each variant. The optimized variant also runs eight
+databases with 0, 1, 63, 64, 65, 127, 128, and 129 transactions, which sit around the
+boundary of one 64-bit bitset word. Half of them contain groups of items that always
+occur together, to produce perfect extensions. Each database runs under 18
+configurations that switch each technique of Section~\ref{sec:optimized} on and off.
+\item Type stability: \texttt{Test.@inferred} on \texttt{mine}, \texttt{mine\_packed},
+and the search functions of both variants.
+\item Reading, writing, and the command line: the byte-level reader is checked against a
+line-based parser on edge-case inputs (\texttt{Int} overflow, unexpected characters,
+blank lines, Windows line endings) and on every small database. The writer is compared
+byte for byte with a reference formatter, and argument errors and process exit codes are
+checked.
+\end{itemize}
+
+The brute-force counter is only a test tool. Outside the test suite, every measurement
+campaign in Section~\ref{sec:measure} compares each output file with an independent run
+of SPMF's Eclat after timing ends. The final campaign produced 820 output files on the
+five benchmark databases (615 from the optimized variant and 205 from PrePost+), and all
+820 match 100\%.
+
+\subsection{Optimized variant}
+\label{sec:optimized}
+The optimized variant keeps the Bottom-Up procedure and changes three things: how
+tidsets are stored, which intersections are skipped, and how the result is written. Each
+change keeps the output exact, and the proofs are in \texttt{docs/eclat-optimized.md}.
+Start-up, reading, and writing live in shared code, so both variants benefit from the
+changes there.
+
+\subsubsection{Bitset tidsets and search order}
+At the lowest threshold of each database, the baseline's mining call allocates 3.3 to
+5.7 GiB, mostly for the new tid-list of each intersection. The optimized variant stores
+each tidset as a bitset, a bit string in which bit $i$ stands for transaction $i$, made of
+$W = \lceil N/64 \rceil$ 64-bit words. An intersection is a word-by-word AND, and the
+support is the number of set bits, counted with \texttt{count\_ones} in the same loop.
+The result goes into a bitset taken from a reusable pool. The bitset of an infrequent
+intersection goes back to the pool, so a failed intersection allocates no memory. An
+intersection reads $2W$ words whatever the support: $W = 50$ on Chess and $5\,316$ on
+Accidents.
+
+Items are visited in increasing order of support. The rare item that comes first is
+intersected with the most items, but most of those intersections fail, and the frequent
+item that comes last has few members after it, so child classes are smaller. The proof
+in Section~\ref{sec:correctness} only needs a total order on the items, so it holds for
+this order too.
+
+\subsubsection{Perfect-extension pruning and single allocation of the result}
+An item $b$ is a perfect extension~\cite{borgelt2012} of an itemset $X$ when
+$t(X \cup \{b\}) = t(X)$, that is, when every transaction that contains $X$ also contains
+$b$. Since $t(X \cup \{b\}) \subseteq t(X)$, the condition is equivalent to the two
+supports being equal, so a single count comparison decides it. Every itemset $X \cup Y$
+in the subtree of $X$ then has the same support as $X \cup Y \cup S$, where $S$ is any
+subset of the set $E$ of perfect extensions. The optimized variant therefore removes $b$
+from the child class and never intersects $b$'s tidset again. Each node of the search
+tree stands for $2^{|E|}$ itemsets with the same support. On Mushroom 0.05 the search tree
+has only 33\,819 nodes for 3\,755\,511 itemsets.
+
+The search records only the nodes, in preorder. Each node holds its depth, the item it
+adds, the perfect extensions it found, and its support. The function
+\texttt{expand\_nodes} computes the final size of the result from the nodes, with an
+overflow check, allocates the three result arrays exactly once, and then writes the
+subsets $S$ in Gray-code order, so that two consecutive itemsets differ by one item. If
+the result arrays grow one itemset at a time, each doubling of capacity copies the whole
+array. On Mushroom 0.05, the mining call in an already warm process allocated 1\,068 MiB
+to build a 306 MiB result and took 0.40 s. With a single allocation it allocates 310 MiB
+and takes 0.17 s.
+
+\subsubsection{Sparse data: pair counting, tid lists, and block bounds}
+On sparse data, a bitset intersection still reads all $W$ words even when the tidsets are
+short ($W = 1\,378$ on Retail and $1\,563$ on T10I4D100K), and most intersections fail.
+On Retail 0.001, 99.9\% of the 2\,239\,786 intersections in the root class miss the
+threshold. On T10I4D100K 0.00025, most intersections happen at depth 2 (2\,256\,822 of
+them, 99.1\% failing) on tidsets of only about 100 tids. Three techniques address these
+two patterns.
+
+\emph{Pair counting at the root.} The function \texttt{count\_pairs} counts the support
+of every pair of frequent items in a triangular array of $m_f(m_f-1)/2$ cells during one
+pass over the horizontal database, as in Section 5.1 of the paper~\cite{zaki2000}, where
+$m_f$ is the number of frequent items. The root class intersects only the pairs that
+reach the threshold. At the root the prefix is empty, so the count of pair $(a, b)$ is
+exactly $|t(\{a, b\})|$ and no frequent intersection is skipped. The counting runs only
+when its estimated cost is below one tenth of the cost of the root intersections, that
+is, when $10 \sum_i |T_i|(|T_i| - 1)/2 < W m_f(m_f-1)/2$. Retail and T10I4D100K meet this
+condition. Chess, Mushroom, and Accidents, with long transactions and few frequent items,
+intersect at the root as before.
+
+\emph{Per-class tid lists.} A child class with $k$ members switches from bitsets to
+increasing tid lists when
+\begin{equation}
+  kW + c\,(k - 1) \sum_{i=1}^{k} \sigma_i < W\,\frac{k(k-1)}{2},
+  \label{eq:lists}
+\end{equation}
+where the right-hand side is the number of words the class's bitset intersections would
+read, $kW$ is the cost of the conversion, $\sigma_i$ is the support of the $i$-th
+member, and $c = 8$ is the cost of one merge step in words, chosen from a sweep of $c$
+from 2 to 16 on the measurement machine. Rule~\eqref{eq:lists} depends on tidset lengths
+and $N$, not on the name of the database. The merge of two lists has no data-dependent
+branches, and it stops early once the common tids found so far plus the rest of the
+shorter list cannot reach $\mathit{minsup}$.
+
+\emph{Block bounds.} On T10I4D100K 0.00025, 98.7\% of the 2\,076\,972 merges still fail,
+on two lists that hold 126 tids between them on average. Before it searches a class of
+tid lists, the program splits the tid range into at most $K = 256$ blocks whose width is a
+power of two, and counts the tids of each member in each block. For two members $X$ and
+$Y$ of the class,
+\begin{equation}
+  \sigma(X \cup Y) \le \sum_{j=1}^{K} \min(c_{X,j}, c_{Y,j}),
+  \label{eq:bound}
+\end{equation}
+where $c_{X,j}$ and $c_{Y,j}$ are the numbers of tids of $X$ and $Y$ in block $j$,
+because a common tid lies in exactly one block and is counted once for each member. A
+merge whose bound is below $\mathit{minsup}$ is skipped without reading any tid.
+Bound~\eqref{eq:bound} never rejects a frequent intersection, so the output does not
+change. We chose $K = 256$ from a sweep of 64 to 512 blocks.
+
+\subsubsection{Start-up, reading, and writing}
+The changes in this subsection are in the code shared by both variants. At high
+thresholds, the runtime is not spent in the algorithm. One \texttt{demo.jl} process of
+the baseline on Chess 0.9 takes 2.36 s, while Julia start-up takes only 0.17 s. The rest
+is just-in-time (JIT) compilation. We run the public functions and the command-line
+handling on a small database while Julia builds the package image, so their machine code
+is stored with the package. The command-line handling lives in the package
+(\texttt{src/cli.jl}) and not in the script file, because script code is not stored in
+the package image and would be recompiled for 108.6 ms on every run. A test runs
+\texttt{demo.jl} in a fresh process with \texttt{--trace-compile} and requires that no
+method needs compiling.
+
+At low thresholds on dense data, most of the time goes into writing the result. The
+\texttt{Profile} sampler on Mushroom 0.05 showed that the comparison sort of the output
+took 64\% of the time, formatting and writing the file 25\%, and mining only 11\%. The
+optimized variant visits items by support, so it has to sort the result back into
+lexicographic order. We replaced that sort with a radix sort on a 128-bit key that holds
+the first items of the itemset and its index. The writer takes the digits of every number
+below $2^{20}$ from a lookup table and writes them with one 8-byte store. The reader parses
+each line into a reused vector and copies it once at its final length, so reading
+Accidents (34 MB) in a warm process dropped from 0.57 s to 0.29 s and allocates 151 MiB
+instead of 354 MiB.
+
+\subsubsection{Julia features}
+The type \texttt{ClassMember\{T\}} has a parameter \texttt{T}, which is \texttt{UInt64}
+for bitsets or \texttt{Int} for tid lists. The search function \texttt{eclat\_search!}
+is written once, and multiple dispatch (choosing a method from the types of all
+arguments) picks the intersection, the conversion rule, and the intersection filter from
+\texttt{T}. Julia compiles a specialized version for each tidset form, so the inner loop
+has no run-time type checks. We use \texttt{Vector\{UInt64\}} instead of
+\texttt{BitVector} because the intersection loop writes into reused memory and counts
+bits in the same pass.
+
+The key type \texttt{Tuple\{Vararg\{Int\}\}} of \texttt{SupportMap} has no fixed length,
+so building millions of keys costs more than mining itself. In an early test on
+Mushroom 0.05, inserting 3.76 million itemsets into the dictionary took 12.4 s, while
+counting their supports took 0.63 s. Both variants therefore write their result into
+three flat \texttt{Vector\{Int\}} arrays (the items, the start position of each itemset,
+and the supports). The file writer reads these arrays directly, and \texttt{mine} builds
+a \texttt{SupportMap} only at the interface boundary for the applications. Every tuning
+constant is \texttt{const}, and every container on a hot path has a concrete element type.
+\texttt{@inbounds} appears only in the tid-list merge and the number writer, with a
+comment that proves the indices valid. On the bitset intersection loop,
+\texttt{@inbounds @simd} changed mining time by $-8\%$ to $+11\%$ over five measurement
+points, which is within noise, so we do not use it.
+
+\subsection{Measuring the improvement}
+\label{sec:measure}
+Every number in this subsection is the median time of five cold \texttt{demo.jl}
+processes: each run is a fresh process that includes Julia start-up, reading, mining, and
+writing the file. The campaigns ran on a Linux machine (Intel Core i7-11800H, 7.4 GiB
+RAM, clock fixed at 2.3 GHz) with single-threaded Julia 1.13.2. The grid has 33
+thresholds on the five databases Chess, Mushroom, Retail, T10I4D100K, and Accidents,
+plus some stress thresholds below the grid that only probe the limits. Besides SPMF's
+Eclat, we compare with PrePost+~\cite{deng2015} from the
+\href{https://github.com/NgTHung/Itemset/blob/main/tools/spmf/release.toml}{pinned SPMF release}
+(Java Temurin 25.0.4.1, 4 GiB heap), because it is faster than SPMF's Eclat on dense
+data. The ratio $R = T_\text{opt} / T_\text{PrePost+}$ divides the median time of the
+optimized variant by the median time of PrePost+ at the same threshold.
+
+Each technique was measured in its own session, in which the versions before and after
+the change alternate on every repeat, so machine drift affects both equally. Only the
+precompilation step was measured as two consecutive campaigns. Table~\ref{tab:steps} gives
+the after-over-before time ratio of each step over the 33 thresholds, and the matching
+peak-memory ratio. Peak memory is the peak resident set size (RSS), the largest amount of
+physical memory the process holds, as measured by the operating system.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{Effect of each optimization step over 33 thresholds: after-over-before ratios of
+time and peak memory (below 1 is better), and the threshold that improved most}
+\label{tab:steps}
+\begin{tabular}{rllll}
+\hline
+Step & Technique & Time ratio & Example, time before $\to$ after (s) & Memory ratio \\
+\hline
+\optstep{step:precompile-package} & Precompile the package functions & 0.14 to 0.83 & Chess 0.9: 2.36 $\to$ 0.33 & 0.82 to 0.97 \\
+\optstep{step:bitset} & Bitsets and increasing-support order & 0.10 to 0.97 & Mushroom 0.1: 6.28 $\to$ 0.88 & 0.68 to 0.99 \\
+\optstep{step:perfect-extension} & Perfect-extension pruning & 0.93 to 1.04 & Mushroom 0.1: 0.89 $\to$ 0.83 & 0.95 to 1.00 \\
+\optstep{step:radix-sort} & Radix sort for output order & 0.77 to 1.02 & Mushroom 0.1: 0.83 $\to$ 0.64 & 1.00 to 1.02 \\
+\optstep{step:precompile-cli} & Precompile the command line & 0.66 to 0.94 & Chess 0.9: 0.33 $\to$ 0.22 & 0.91 to 1.03 \\
+\optstep{step:pair-count} & Pair counting at the root & 0.24 to 1.01 & Retail 0.001: 1.72 $\to$ 0.42 & 1.00 to 1.03 \\
+\optstep{step:tid-lists} & Per-class tid lists & 0.83 to 1.02 & T10I4D100K 0.00025: 1.46 $\to$ 1.21 & 1.00 to 1.01 \\
+\optstep{step:byte-io} & Byte-level reading and writing, digit table & 0.76 to 0.99 & Accidents 0.65: 1.10 $\to$ 0.85 & 0.74 to 1.00 \\
+\optstep{step:single-allocation} & Single result allocation, block bounds & 0.82 to 1.03 & T10I4D100K 0.00025: 1.18 $\to$ 0.97 & 0.83 to 1.02 \\
+\hline
+\end{tabular}
+\end{table*}
+
+Step~\ref{step:bitset} has the largest effect: time drops to 10\% to 97\% of the baseline
+(median 37\%), and peak memory falls at every threshold. Step~\ref{step:pair-count} only
+affects sparse data, where it cuts the time of Retail 0.001 by 76\%.
+Step~\ref{step:perfect-extension} on its own shortens process time by at most 6.9\%,
+because at that threshold sorting and writing hundreds of thousands of itemsets takes
+most of the time. We keep it because it does not raise memory and because
+step~\ref{step:single-allocation} builds on it. No step slows any threshold by more than
+4.4\%.
+
+Table~\ref{tab:final} shows the combined effect of steps~\ref{step:bitset}
+to~\ref{step:single-allocation} at the highest and lowest threshold of each database. It
+compares the baseline after step~\ref{step:precompile-package} with the optimized variant
+after step~\ref{step:single-allocation}. Steps~\ref{step:precompile-cli}
+and~\ref{step:byte-io} are in shared code, so the baseline of the submitted version also
+benefits from them; the comparison of the two variants on the same code version is
+step~\ref{step:bitset} of Table~\ref{tab:steps}. The two columns were measured in two
+sessions three days apart on the same machine and configuration. PrePost+ ran in both
+sessions, and its median differed between them by $-3.8\%$ to $+5.8\%$ (median
+$+0.3\%$), so the two sessions are comparable within that margin.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{Median cold process time (s) and maximum peak memory (MiB) over five runs. The
+baseline (after step~\ref{step:precompile-package}) was measured on 2026-11-06, the
+optimized variant (after step~\ref{step:single-allocation}) and PrePost+ on 2026-11-09,
+and SPMF's Eclat on 2026-10-31, all on the same machine}
+\label{tab:final}
+\begin{tabular}{lrrrrrrrr}
+\hline
+ & & \multicolumn{5}{c}{Time (s)} & \multicolumn{2}{c}{Peak memory (MiB)} \\
+Data / minsup & Itemsets & Baseline & Optimized & Speedup & SPMF Eclat & PrePost+ & Baseline & Optimized \\
+\hline
+Chess / 0.9 & 622 & 0.33 & 0.21 & 1.6 & 0.51 & 0.42 & 268 & $\le 254$ \\
+Chess / 0.6 & 254\,944 & 3.24 & 0.30 & 10.8 & 15.98 & 0.59 & 308 & 262 \\
+Mushroom / 0.5 & 153 & 0.33 & 0.22 & 1.5 & 0.51 & 0.44 & 256 & $\le 254$ \\
+Mushroom / 0.1 & 574\,431 & 6.28 & 0.40 & 15.7 & 7.44 & 0.68 & 414 & 302 \\
+Retail / 0.01 & 159 & 0.55 & 0.29 & 1.9 & 1.19 & 0.80 & 304 & $\le 254$ \\
+Retail / 0.001 & 7\,589 & 12.80 & 0.38 & 33.5 & 1.53 & 3.52 & 331 & 281 \\
+T10I4D100K / 0.01 & 385 & 2.93 & 0.32 & 9.1 & 0.78 & 1.42 & 304 & $\le 254$ \\
+T10I4D100K / 0.00025 & 96\,959 & 10.92 & 0.97 & 11.3 & 8.02 & 4.34 & 363 & 279 \\
+Accidents / 0.95 & 15 & 1.31 & 0.78 & 1.7 & 4.59 & 1.71 & 650 & 397 \\
+Accidents / 0.65 & 1\,093 & 7.13 & 0.86 & 8.3 & 26.87 & 2.34 & 804 & 397 \\
+\hline
+\end{tabular}
+\end{table*}
+
+Across all 33 thresholds, steps~\ref{step:bitset} to~\ref{step:single-allocation} shorten
+process time by 1.5 to 33.5 times (median 4.0). The geometric mean speedup per database is
+3.1 on Accidents, 3.3 on Mushroom, 3.4 on Chess, 6.5 on Retail, and 13.5 on T10I4D100K.
+The smallest gains are at the high thresholds of Chess and Mushroom, where a run takes
+only about 0.22 s, of which 0.19 s is Julia start-up and package loading. Most of the gain
+there comes from step~\ref{step:precompile-cli}. Against SPMF, the optimized variant is
+2.3 to 53 times faster than Eclat, using the Eclat measurements from the 2026-10-31
+session, and faster than PrePost+ at all 33 thresholds, with $R$ from 0.11 to 0.59. The
+geometric mean of $R$ per database is 0.20 on Retail, 0.21 on T10I4D100K, 0.41 on
+Accidents, 0.49 on Mushroom, and 0.51 on Chess. The interquartile range (IQR) of the
+Baseline and Optimized columns stays within 3.3\% of the median at every threshold.
+
+After step~\ref{step:single-allocation}, peak memory is lower than the baseline's at
+every threshold. The largest drop is on Accidents (804 to 397 MiB at 0.65), because the
+reader no longer over-allocates and the tidsets take only a few MiB during the search. On
+the measurement machine, all three programs (Julia, SPMF Eclat, and PrePost+) report
+their lowest values between 253.0 and 253.6 MiB, so the measurement has a common floor,
+and the cells marked $\le 254$ in Table~\ref{tab:final} are only upper bounds.
+
+We tried, measured, and dropped three techniques. Diffsets~\cite{zaki2003} store the tids
+that a member lacks relative to its prefix. In a sweep of the switching ratio, no value
+was faster than bitsets: Accidents 0.2 slowed by up to 10\% and T10I4D100K 0.00025 by up
+to 71\%. The reason is that perfect-extension pruning already removes every member with
+an empty diffset, which is exactly where diffsets help most. Even with the best choice for
+each class, the number of words read dropped by at most 0.3\%. Printing itemsets directly
+from the sort key was 5\% to 7\% slower. The \texttt{@inbounds @simd} annotation on the
+bitset intersection gave no improvement beyond noise.
+
+The optimized variant has three measured limits. First, at the stress threshold
+Mushroom 0.05, the program has to write 3\,755\,511 lines and remains slower than
+PrePost+ (1.45 s against 1.38 s). Second, each process spends about 0.19 s on Julia
+start-up and package loading, which could only be removed by compiling the whole program
+ahead of time into an executable. Third, pair counting raises peak memory by 20\% at the
+stress threshold Retail 0.00025, because the triangular array for 5\,918 frequent items
+takes 67 MiB.

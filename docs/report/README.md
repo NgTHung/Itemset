@@ -20,6 +20,15 @@ Tectonic tự chạy XeTeX, BibTeX và số lần biên dịch lại cần thi�
 tectonic -X compile main.tex
 ```
 
+Bản tiếng Anh `main-en.tex` dịch cùng nội dung trong `sections-en/` cho người đọc
+không đọc tiếng Việt. Bản nộp chấm điểm vẫn là bản tiếng Việt theo đề. Bản tiếng Anh
+dùng chung `references.bib` và các hình, trừ hai hình có nhãn tiếng Việt đã có bản tiếng
+Anh trong `figures/en/`. Khi sửa một mục, sửa cả hai bản. Biên dịch:
+
+```sh
+tectonic -X compile main-en.tex
+```
+
 Xuất bản hoàn thiện thành `docs/Report.pdf`: 10–15 trang nội dung chính, không tính
 tài liệu tham khảo/phụ lục; ba chương theo đề; mọi hình/bảng có caption và dẫn chiếu,
 công thức giải thích biến. Trích bài gốc và ít nhất ba tài liệu liên quan khác.
