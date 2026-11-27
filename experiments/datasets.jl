@@ -14,7 +14,7 @@ end
 mean_width(stats::DatasetStats) =
     stats.transactions == 0 ? 0.0 : stats.total_items / stats.transactions
 
-"""One location of a dataset. `format` is `:text` or `:gzip`."""
+"""One location of a dataset. ZIP sources contain one file with the dataset's basename."""
 Base.@kwdef struct DatasetSource
     url::String
     format::Symbol
@@ -97,8 +97,8 @@ function parse_manifest(text::AbstractString)
         sources = DatasetSource[]
         for source in field("sources", Vector)
             format = Symbol(get(source, "format", ""))
-            format in (:text, :gzip) ||
-                throw(ArgumentError("dataset $name: source format must be text or gzip, got $(repr(format))"))
+            format in (:text, :gzip, :zip) ||
+                throw(ArgumentError("dataset $name: source format must be text, gzip, or zip, got $(repr(format))"))
             url = get(source, "url", nothing)
             url isa String || throw(ArgumentError("dataset $name: every source needs a url"))
             push!(sources, DatasetSource(; url, format))
@@ -118,16 +118,26 @@ pass, so an interrupted or wrong download never looks prepared. Throws
 `ErrorException` listing each source's failure when no source verifies, or when
 the verified file's statistics differ from the manifest.
 """
-function prepare_dataset(entry::DatasetEntry, dir::AbstractString; fetch=Downloads.download)
+prepare_dataset(entry::DatasetEntry, dir::AbstractString; fetch=Downloads.download) =
+    prepare_dataset_with_source(entry, dir; fetch).path
+
+"""
+    prepare_dataset_with_source(entry, dir; fetch=Downloads.download) -> NamedTuple
+
+Prepare the same file as `prepare_dataset` and return its path and the URL that
+provided the verified bytes. A verified cached file has an empty `source_url`
+because this call did not download it.
+"""
+function prepare_dataset_with_source(entry::DatasetEntry, dir::AbstractString; fetch=Downloads.download)
     path = joinpath(dir, entry.file)
-    isfile(path) && file_sha256(path) == entry.sha256 && return path
+    isfile(path) && file_sha256(path) == entry.sha256 && return (; path, source_url="")
     isempty(entry.sources) && error("dataset $(entry.name): $path is missing or has other bytes, and it " *
         "has no download source; regenerate it with experiments/prepare_subsets.jl")
     failures = String[]
     for source in entry.sources
         staged = tempname(dir; cleanup=false)
         try
-            failure = stage_source(source, staged, entry.sha256; fetch)
+            failure = stage_source(source, staged, entry.file, entry.sha256; fetch)
             if failure === nothing
                 # Verified bytes with the wrong statistics mean the manifest
                 # itself is wrong, so this stops the search instead of trying
@@ -138,7 +148,7 @@ function prepare_dataset(entry::DatasetEntry, dir::AbstractString; fetch=Downloa
                         error("dataset $(entry.name): computed $stats differs from manifest $(entry.stats)")
                 end
                 mv(staged, path; force=true)
-                return path
+                return (; path, source_url=source.url)
             end
             push!(failures, "$(source.url): $failure")
         finally
@@ -150,9 +160,10 @@ function prepare_dataset(entry::DatasetEntry, dir::AbstractString; fetch=Downloa
 end
 
 """Fetch one source into `staged`. Return `nothing` when its bytes verify, else the reason."""
-function stage_source(source::DatasetSource, staged::AbstractString, expected::AbstractString; fetch)
+function stage_source(source::DatasetSource, staged::AbstractString, file::AbstractString,
+                      expected::AbstractString; fetch)
     try
-        fetch_source(source, staged; fetch)
+        fetch_source(source, staged, file; fetch)
     catch err
         # A broken mirror rules out only that source, so the caller tries the next.
         return sprint(showerror, err)
@@ -161,15 +172,36 @@ function stage_source(source::DatasetSource, staged::AbstractString, expected::A
     return actual == expected ? nothing : "SHA-256 $actual, expected $expected"
 end
 
-function fetch_source(source::DatasetSource, staged::AbstractString; fetch)
+function fetch_source(source::DatasetSource, staged::AbstractString, file::AbstractString; fetch)
     if source.format == :text
         fetch(source.url, staged)
     else
         archive = staged * ".download"
         fetch(source.url, archive)
+        command = if source.format == :zip
+            member = zip_dataset_member(archive, file)
+            `$(p7zip()) e -so -tzip -spd -ssc -i!$member -- $archive`
+        else
+            `$(p7zip()) e -so -tgzip $archive`
+        end
         open(staged, "w") do io
-            run(pipeline(`$(p7zip()) e -so -tgzip $archive`; stdout=io, stderr=devnull))
+            run(pipeline(command; stdout=io, stderr=devnull))
         end
     end
     return staged
+end
+
+function zip_dataset_member(archive, file)
+    listing = read(`$(p7zip()) l -slt -ba -tzip -sccUTF-8 -- $archive`, String)
+    entries = String[]
+    for record in split(listing, r"\r?\n\r?\n")
+        occursin(r"(?m)^Folder = -\r?$", record) || continue
+        path = match(r"(?m)^Path = ([^\r\n]+)", record)
+        path === nothing || push!(entries, path[1])
+    end
+    # The manifest gives the filename, and a mirror may wrap it in a directory.
+    matches = filter(path -> last(split(replace(path, '\\' => '/'), '/')) == file, entries)
+    length(matches) == 1 || throw(ArgumentError("expected one ZIP member named $file, found $(length(matches)). " *
+        "Archive files: $(join(entries, ", "))"))
+    return only(matches)
 end
