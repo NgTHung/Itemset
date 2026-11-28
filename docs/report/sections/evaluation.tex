@@ -328,19 +328,32 @@ Chess and Accidents to a factor of 40 on T10I4D100K, and $F$ spans from 15 to
 \end{equation}
 where $F$ is the number of frequent itemsets at a threshold, $c$ is a per-database
 constant, and $s$ is the slope on a log-log scale: when minsup falls by a factor $q$, $F$
-grows by about $q^s$. Taking logarithms on both sides makes $s$ depend only on ratios, so
-it does not change with the size of the database or the width of its minsup range. A slope
-of $\log F$ per unit of minsup would not have this property: per 0.01 of minsup, it
-gives 4.2 on Retail and 0.19 on Chess, because 0.01 is the whole top threshold of Retail
-but only about 1\% of the top threshold of Chess, and it ranks the sparse databases above
-the dense ones. The fit is close, with a coefficient of determination $R^2$ (the share of the variance of
-$\log F$ that the model explains) between 0.963 and 0.998, but $s$ is an
-average over each database's range rather than a constant: between adjacent thresholds,
-the slope of Chess falls from 25.5 to 10.4, and that of Mushroom jumps to 10.2 where its
-longest itemset grows from 11 to 15 items. In Table~\ref{tab:output-growth}, $s$ ranges from 5.2 to 14.3 on
-the three dense databases but is only 1.6 and 1.7 on the two sparse ones. The output of
-Chess grows 410-fold when minsup drops merely from 0.9 to 0.6, whereas Retail's grows
-48-fold over a tenfold drop.
+grows by about $q^s$. Because $s$ depends only on ratios, it can be compared across
+databases whose minsup ranges differ.
+
+Model~\eqref{eq:output-growth} is the logarithm of a power law,
+$F \approx e^{c}\,\mathrm{minsup}^{-s}$, and a simple model of the data explains why a power law
+fits. Suppose each of the $|I|$ items occurs in a transaction independently with
+probability $d$, the density of Table~\ref{tab:datasets}. A $k$-itemset then occurs in a
+fraction $d^k$ of the transactions, so it is frequent when $d^k \ge \mathrm{minsup}$, that is,
+when $k \le k^* = \log(1/\mathrm{minsup}) / \log(1/d)$. The number of itemsets of length up
+to $k^*$ grows like $|I|^{k^*}$, so
+\begin{equation}
+  \log F \approx k^* \log|I| = s \log(1/\mathrm{minsup}), \qquad
+  s \approx \frac{\log|I|}{\log(1/d)}.
+  \label{eq:output-slope}
+\end{equation}
+Estimate~\eqref{eq:output-slope} gives 1.5 for T10I4D100K and 1.3 for Retail, close to
+the measured 1.6 and 1.7. It also predicts that denser data grows faster, since a larger
+$d$ shrinks $\log(1/d)$. On the dense databases it gives only 2.3 to 6.1, because their
+items are correlated and their frequent items occur far more often than the average
+density $d$, the co-occurrence described below.
+
+The fit is close ($R^2$ between 0.963 and 0.998), but $s$ is an average over each range:
+between adjacent thresholds, the slope of Chess falls from 25.5 to 10.4. In
+Table~\ref{tab:output-growth}, $s$ ranges from 5.2 to 14.3 on the three dense databases
+but is only 1.6 and 1.7 on the two sparse ones. The output of Chess grows 410-fold when
+minsup drops merely from 0.9 to 0.6, whereas Retail's grows 48-fold over a tenfold drop.
 
 \begin{table}[t]
 \centering
@@ -396,8 +409,12 @@ The runtime campaign of Section~\ref{sec:minsup} also records the peak RSS of ev
 covering start-up, reading the data, mining, and writing the whole output.
 Table~\ref{tab:peak-rss} gives the medians at the lowest minsup of each database, where
 both the output and the search are largest. No run of any program reports less than
-252\,MiB, a floor set by the measurement itself, so a median at that floor (between 253.3
-and 253.6\,MiB) is only an upper bound.
+252\,MiB, a floor set by the measurement itself. The runner that reads the peak RSS is a
+Julia process, and it starts each program by copying itself and then replacing the copy
+with the program (\texttt{fork} and \texttt{exec}). On Linux, the peak RSS reported for
+the child also counts the copy's resident memory before the replacement, which is the
+size of the runner's own Julia runtime. A median at that floor (between 253.3 and
+253.6\,MiB) is therefore only an upper bound.
 
 \begin{table}[t]
 \centering
