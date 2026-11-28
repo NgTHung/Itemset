@@ -11,7 +11,7 @@ Every figure and measured table in the report comes from a raw run on the gradin
 
 ## Correctness, runtime, and output size
 
-The plotting script refuses to draw a run whose outputs do not all match SPMF. The report's peak RSS table is the median of the `peak_rss_bytes` column of `runs.csv` at the lowest minsup of each database.
+The plotting script refuses to draw a run whose outputs do not all match SPMF. The report's peak RSS table is the median of the `peak_rss_bytes` column of the `process` rows of `runs.csv` at two thresholds of each database: the fourth from the top of its grid and the lowest.
 
 ```sh
 R=results/raw/bbq-all-variants-cli-5repeat-20261117T041922Z

@@ -7,9 +7,9 @@ benchmark machine, the optimized variant is the fastest program at all 33 points
 lowest minsup of each database it runs 7.9 times (Accidents) to 33.3 times (Retail)
 faster than the baseline (Section~\ref{sec:minsup}), and Section~\ref{sec:optimized}
 breaks this gain down by optimization step. The baseline's time tracks the total length of
-the tidsets it merges, at 2.0 to 6.9\,ns per element. At the lowest minsup of each
-database, the optimized variant also uses 3.0\% to 34.5\% less peak memory than the
-baseline (Section~\ref{sec:memory}). When the transaction length grows from 5 to 40 with
+the tidsets it merges, at 2.0 to 6.9\,ns per element. The optimized variant also uses
+6.2\% to 29.0\% less peak memory than the baseline at a medium minsup of each database and
+3.0\% to 34.5\% less at the lowest (Section~\ref{sec:memory}). When the transaction length grows from 5 to 40 with
 the output held fixed, the baseline's mining time grows 42-fold, while the optimized
 variant's grows only 1.8-fold (Section~\ref{sec:width}).
 

@@ -1,0 +1,265 @@
+\section{Bottom-Up trace}
+\label{app:trace}
+Table~\ref{tab:trace} traces the algorithm on \texttt{baskets.txt}, a small database with
+the four transactions $T_1 = \{1,2,3\}$, $T_2 = \{1,2\}$, $T_3 = \{1,3\}$, and
+$T_4 = \{2,3\}$, at $\sigma_{\min} = 2$. The search starts from the tidsets
+$t(1) = \{1,2,3\}$, $t(2) = \{1,2,4\}$, and $t(3) = \{1,3,4\}$. It records exactly six
+frequent itemsets and prunes $\{1,2,3\}$, which only $T_1$ contains.
+
+\begin{table}[t]
+\centering
+\caption{Bottom-Up trace on \texttt{baskets.txt} with $\sigma_{\min} = 2$}
+\label{tab:trace}
+\begin{tabular}{llll}
+\hline
+Prefix & Intersection & Tidset & Result \\
+\hline
+$\emptyset$ & -- & $t(1) = \{1,2,3\}$ & record $\{1\}$, $\sigma = 3$ \\
+$\{1\}$ & $t(1) \cap t(2)$ & $\{1,2\}$ & keep $2$ \\
+$\{1\}$ & $t(1) \cap t(3)$ & $\{1,3\}$ & keep $3$ \\
+$\{1\}$ & -- & $t(12) = \{1,2\}$ & record $\{1,2\}$, $\sigma = 2$ \\
+$\{1,2\}$ & $t(12) \cap t(13)$ & $\{1\}$ & prune, $1 < 2$ \\
+$\{1\}$ & -- & $t(13) = \{1,3\}$ & record $\{1,3\}$, $\sigma = 2$ \\
+$\emptyset$ & -- & $t(2) = \{1,2,4\}$ & record $\{2\}$, $\sigma = 3$ \\
+$\{2\}$ & $t(2) \cap t(3)$ & $\{1,4\}$ & keep $3$ \\
+$\{2\}$ & -- & $t(23) = \{1,4\}$ & record $\{2,3\}$, $\sigma = 2$ \\
+$\emptyset$ & -- & $t(3) = \{1,3,4\}$ & record $\{3\}$, $\sigma = 3$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Test groups}
+\label{app:tests}
+Both variants go through the following groups of tests.
+
+\begin{itemize}
+\item Hand-derived results: eight small databases, including an empty database, a
+database with no frequent itemset, duplicate transactions, thresholds just above and
+just below an itemset's support, and an image database with empty transactions.
+\item Comparison with SPMF's Eclat~\cite{spmf2016}: eight runs on seven small databases
+and one run on T25I10D10K (9\,976 transactions, 929 items), where SPMF reports 14\,782
+itemsets of 1 to 13 items at $\mathit{minsup} = 0.008$. Both variants match 100\% on all
+nine runs, with no missing, extra, or wrong-support itemset.
+\item Comparison with a brute-force counter that enumerates every subset, on 10 random
+databases generated with seed 42 for each variant. The optimized variant is also tested
+on eight databases with 0, 1, 63, 64, 65, 127, 128, and 129 transactions, sizes that
+straddle the boundary of a 64-bit bitset word. Half of them contain groups of items that
+always occur together, so that perfect extensions appear. Each database is mined under 18
+configurations that turn the techniques of Section~\ref{sec:optimized} on and off.
+\item Type stability: \texttt{Test.@inferred} on \texttt{mine}, \texttt{mine\_packed},
+and the search functions of both variants.
+\item Reading, writing, and the command line: the byte-level reader is checked against a
+line-based parser on edge-case inputs (\texttt{Int} overflow, unexpected characters,
+blank lines, Windows line endings) and on every small database. The writer's output is
+compared byte for byte with a reference formatter, and the tests also cover argument
+errors and process exit codes.
+\end{itemize}
+
+\section{Supplementary measurements}
+\label{app:measurements}
+
+\subsection{Correctness on small databases}
+\label{app:toy}
+Table~\ref{tab:toy-spmf} shows the results on seven small databases, with $N$ and
+$\sigma_{\min}$ as defined in Section~\ref{sec:protocol}. The ``Match'' column gives the
+number of itemsets whose support agrees with SPMF out of the total number of distinct
+itemsets. The baseline reaches 100\% in every comparison, with no missing, extra,
+duplicate, or wrong-support itemset. On \texttt{disjoint}, both programs return an empty
+map. The \texttt{boundary} database is mined at two thresholds to check itemsets that lie
+just above and just below the threshold, and each threshold is chosen so that SPMF and
+exact decimal arithmetic agree on $\sigma_{\min}$. The test suite checks every Eclat
+variant against the stored SPMF outputs each time it runs.
+
+\begin{table}[t]
+\centering
+\caption{Full itemset and support comparison of the baseline Eclat with SPMF on small
+databases}
+\label{tab:toy-spmf}
+\begin{tabular}{lrrr}
+\hline
+Data & $N$ & $\sigma_{\min}$ & Match \\
+\hline
+Baskets & 4 & 2 & 6/6 \\
+Duplicates & 3 & 2 & 3/3 \\
+Disjoint & 3 & 2 & 0/0 \\
+Dense & 2 & 2 & 7/7 \\
+Groceries & 5 & 2 & 5/5 \\
+Boundary & 4 & 2 & 2/2 \\
+Boundary & 4 & 1 & 4/4 \\
+Nested & 4 & 2 & 3/3 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Measurement noise}
+\label{app:noise}
+Relative to the median, the interquartile range of the runtime campaign is at most 2.9\%
+for the baseline and 1.9\% for the optimized variant. It is wider for the Java programs,
+reaching 11.3\% for SPMF and 13.9\% for PrePost+, although only one SPMF point and three
+PrePost+ points exceed 10\%. To estimate drift between sessions, we compared this session
+with three others on the same machine. PrePost+, which runs the same Java command every
+time, differs by $+3.0\%$, $+1.9\%$, and $-2.3\%$ in geometric mean, and by at most
+14.4\% at a single point. The optimized variant, measured in another session at the same
+revision, differs by $-1.5\%$ on average and by at most 5.6\%. Because the four programs
+in the tables ran in the same session, a ratio between two of them carries only
+within-session noise. We treat a ratio as a real difference when it exceeds the sum of
+the two largest interquartile ranges, which comes to about 5\% between the two Julia
+variants and about 16\% when one side is a Java program. Drift between sessions only
+matters when comparing with another campaign.
+
+At the highest minsup of Chess, Mushroom, Accidents, and Retail, the baseline is only
+1.09, 1.06, 1.27, and 1.46 times slower than the optimized variant. All four ratios
+exceed the 5\% margin, so the differences are real, but they are small. On Chess and
+Mushroom the gap is a few percent of a run that consists mostly of start-up and file
+reading. On Accidents and Retail the absolute gap is only 0.21\,s and 0.13\,s, about as
+long as start-up and file reading themselves (some 0.21\,s on Chess at minsup 0.9, a
+point that does little else). These small ratios therefore do not mean that the two
+algorithms are equally fast.
+
+\subsection{Runtime ratios over the whole grid}
+\label{app:ratios}
+Table~\ref{tab:runtime-ratio} summarizes each benchmark's runtime curves of
+Fig.~\ref{fig:runtime} with one number per program.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Geometric mean over every point of each benchmark of the \emph{process} time
+ratio: the time of the program named in the column header divided by the time of the
+optimized variant. ``SPMF'' is SPMF's Eclat. A value above 1 means slower than the
+optimized variant.}
+\label{tab:runtime-ratio}
+\begin{tabular}{lrrr}
+\hline
+Data & Baseline & SPMF & PrePost+ \\
+\hline
+Chess & 2.83 & 10.33 & 2.08 \\
+Mushroom & 2.73 & 6.01 & 2.22 \\
+Retail & 5.89 & 4.34 & 5.01 \\
+T10I4D100K & 13.14 & 4.53 & 4.76 \\
+Accidents & 2.62 & 10.76 & 2.39 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Intersection work of the baseline}
+\label{app:join-work}
+To measure the baseline's work, we reran its search on one thread and counted the
+intersections (joins), how many of them produced a frequent itemset, and the combined
+length of the two tidsets summed over all intersections, which we call merged elements
+(Table~\ref{tab:join-work}). Taking the time at the lowest minsup, subtracting the time at
+the highest minsup (mostly start-up and file reading), and dividing by the difference in
+merged elements gives 2.0 to 6.9\,ns per element across the five benchmarks. This is the
+same order of magnitude as the 9.0 to 10.0\,ns measured in the transaction-length
+experiment of Section~\ref{sec:width}. The intersection counts come from a separate run,
+outside the timed runs.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\caption{Work done by the baseline at the lowest minsup of each benchmark. ``Success'' is
+the share of intersections that produce a frequent itemset, ``Elements'' is the combined
+length of the two tidsets over all intersections (billions), and ns/el is the time per
+merged element after subtracting the time at the highest minsup.}
+\label{tab:join-work}
+\begin{tabular}{lrrrr}
+\hline
+Data / minsup & Joins & Success & Elements & ns/el \\
+\hline
+Chess / 0.6 & 326\,545 & 78.1\% & 1.43 & 2.0 \\
+Mushroom / 0.1 & 722\,721 & 79.5\% & 1.66 & 3.6 \\
+Retail / 0.001 & 3\,932\,582 & 0.14\% & 2.17 & 5.7 \\
+T10I4D100K / 0.00025 & 4\,192\,075 & 2.3\% & 1.48 & 6.9 \\
+Accidents / 0.65 & 2\,333 & 46.1\% & 1.22 & 4.8 \\
+\hline
+\end{tabular}
+\end{table}
+
+On Retail 0.001, each frequent itemset costs about 286\,000 merged elements. On
+T10I4D100K, even minsup 0.01 takes 70\,127 intersections and 297.7 million merged elements
+to find just 10 two-item sets, so the baseline is already 8.5 times slower than the
+optimized variant at the first point.
+
+\subsection{A model of output growth}
+\label{app:output-model}
+Model~\eqref{eq:output-growth} is the logarithm of a power law,
+$F \approx e^{c}\,\mathrm{minsup}^{-s}$, and a simple model of the data explains why a
+power law fits. Suppose each of the $|I|$ items occurs in a transaction independently with
+probability $d$, the density of Table~\ref{tab:datasets}. A $k$-itemset then occurs in a
+fraction $d^k$ of the transactions, so it is frequent when $d^k \ge \mathrm{minsup}$, that
+is, when $k \le k^* = \log(1/\mathrm{minsup}) / \log(1/d)$. The number of itemsets of
+length up to $k^*$ grows like $|I|^{k^*}$, so
+\begin{equation}
+  \log F \approx k^* \log|I| = s \log(1/\mathrm{minsup}), \qquad
+  s \approx \frac{\log|I|}{\log(1/d)}.
+  \label{eq:output-slope}
+\end{equation}
+Estimate~\eqref{eq:output-slope} gives 1.5 for T10I4D100K and 1.3 for Retail, close to
+the measured 1.6 and 1.7. It also predicts that denser data grows faster, since a larger
+$d$ shrinks $\log(1/d)$. On the dense databases it gives only 2.3 to 6.1, because their
+items are correlated and their frequent items occur far more often than the average
+density $d$.
+
+\subsection{Output size and runtime}
+\label{app:count-runtime}
+On Retail, most of the two million root intersections fail without producing any itemset
+(Section~\ref{sec:optimized}). The optimized variant avoids them by counting pairs and
+runs Retail 0.001 in 0.38\,s. Even so, it takes 0.41\,s on Mushroom 0.1 with
+574\,431 itemsets but 0.96\,s on T10I4D100K 0.00025 with only 96\,959, because the
+tidsets of T10I4D100K span 100\,000 transactions and most intersections at depth 2 fail.
+The count dominates the runtime only when it is very large: on Mushroom 0.05, before the
+radix sort was added, sorting and writing 3\,755\,511 itemsets took 89\% of the time and
+mining only 11\% (Section~\ref{sec:optimized}). Conversely, when the relative minsup is
+fixed, the count barely changes and the runtime grows with $N$, as
+Section~\ref{sec:scalability} shows.
+
+\subsection{Other factors in the scalability subsets}
+\label{app:scal-factors}
+Two factors besides $N$ could change the amount of work between subsets, and we measured
+both. The first is the number of distinct items, which grows with $N$ from 343 to 468 on
+Accidents and from 10\,208 to 16\,470 on Retail. The number of frequent items, however,
+barely changes: exactly 18 in all five Accidents subsets and between 2\,100 and 2\,270 on
+Retail. The new items are all rare and drop out in the first counting pass. The second
+factor is the very low absolute threshold on Retail 10\%, where $\sigma_{\min} = 9$. In a
+small sample, the supports of itemsets that sit just below the threshold fluctuate more,
+and since there are very many such itemsets, more of them rise above the threshold than
+fall below it. The 10\% subset therefore has the most frequent items of the five subsets
+(2\,270) and 8\,895 frequent itemsets, 17\% more than the 7\,589 of the full database.
+This extra work is small compared with the growth in $N$: the point farthest from the
+fitted line is off by only 4\,ms for the optimized variant on Retail and by 0.12\,s for
+the baseline, which is 1\% of its time on the full database.
+
+\subsection{Search trees of the two width protocols}
+\label{app:width-tree}
+The two protocols of Section~\ref{sec:width} shape the search tree differently. With
+minsup fixed, the tree gains a level at $w = 25$ (pairs) and again at $w = 40$ (triples),
+and it widens as well: the number of intersections grows from 4\,950 to 166\,650 and then
+to 4\,087\,798. With the output matched, the tree has the same size at every $w$, and only
+the cost of each intersection changes.
+
+\section{Tradeoffs and tests of the two proposals}
+\label{app:proposals}
+\emph{Proposal 1, tradeoff.} The CLI would gain a second reader and a second layout
+builder alongside the general ones, and the two would have to stay equivalent. The
+item-code cutoff also needs a fallback path because SPMF files allow large, sparse codes,
+although the codes of all five benchmarks are small enough for an array.
+\emph{Tests.} The new layout must equal \texttt{bitset\_class} on seeded random databases,
+including $N = 63, 64, 65$, code 0, and codes above the cutoff. The CLI output must stay
+byte-identical to the current output at all 33 points and match SPMF's full map. The
+layout share, slope, and peak RSS would then be measured again, and the change kept only
+if it gains at least 10\% at the targeted points without slowing any other point by more
+than 10\%.
+
+\emph{Proposal 2, tradeoff.} Files written in search order could no longer be compared
+byte for byte across variants or across code revisions, which the package interface
+currently guarantees through its fixed order. The comparator reads both files into maps,
+so it would not be affected, but a benchmark would have to record which order it used,
+because CLI time would then exclude the sort, as it already does for the SPMF programs.
+Since the measured gain is concentrated at the dense points, and above all at Mushroom
+0.05, the package keeps the fixed order. \emph{Tests.} A search-order file, once sorted
+externally, must be byte-identical to the default output, and the full map must match
+SPMF at every grid and stress point. Two runs of the same code must produce the same
+bytes. A five-repeat campaign of both orders on Chess 0.6, Mushroom 0.1, and Mushroom 0.05
+would test the prediction, which fails if $R$ on Mushroom 0.05 stays at 1.0 or above.

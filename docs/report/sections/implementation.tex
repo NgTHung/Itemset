@@ -61,7 +61,8 @@ counting them in a triangular array over the horizontal database. The baseline s
 step and starts intersecting from single items, so a single procedure handles every
 level; the optimized variant brings the counting step back
 (Section~\ref{sec:optimized}). Table~\ref{tab:mapping} shows where each part of the paper
-lives in the source code.
+lives in the source code, and Appendix~\ref{app:trace} traces the search step by step on a
+four-transaction database.
 
 \begin{table}[t]
 \centering
@@ -79,34 +80,6 @@ Bottom-Up (Sections 4.3.1 and 5.2, Fig.~12) & \texttt{bottom\_up!}; \texttt{ecla
 Intersecting two tid-lists & \texttt{intersect\_tidlists}; \texttt{intersect\_bitsets!} and
 \texttt{intersect\_lists!} \\
 Counting 2-itemsets with a triangular array (Section 5.1) & not used; \texttt{count\_pairs} \\
-\hline
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:trace} traces the algorithm on \texttt{baskets.txt}, a small database with
-the four transactions $T_1 = \{1,2,3\}$, $T_2 = \{1,2\}$, $T_3 = \{1,3\}$, and
-$T_4 = \{2,3\}$, at $\sigma_{\min} = 2$. The search starts from the tidsets
-$t(1) = \{1,2,3\}$, $t(2) = \{1,2,4\}$, and $t(3) = \{1,3,4\}$. It records exactly six
-frequent itemsets and prunes $\{1,2,3\}$, which only $T_1$ contains.
-
-\begin{table}[t]
-\centering
-\caption{Bottom-Up trace on \texttt{baskets.txt} with $\sigma_{\min} = 2$}
-\label{tab:trace}
-\begin{tabular}{llll}
-\hline
-Prefix & Intersection & Tidset & Result \\
-\hline
-$\emptyset$ & -- & $t(1) = \{1,2,3\}$ & record $\{1\}$, $\sigma = 3$ \\
-$\{1\}$ & $t(1) \cap t(2)$ & $\{1,2\}$ & keep $2$ \\
-$\{1\}$ & $t(1) \cap t(3)$ & $\{1,3\}$ & keep $3$ \\
-$\{1\}$ & -- & $t(12) = \{1,2\}$ & record $\{1,2\}$, $\sigma = 2$ \\
-$\{1,2\}$ & $t(12) \cap t(13)$ & $\{1\}$ & prune, $1 < 2$ \\
-$\{1\}$ & -- & $t(13) = \{1,3\}$ & record $\{1,3\}$, $\sigma = 2$ \\
-$\emptyset$ & -- & $t(2) = \{1,2,4\}$ & record $\{2\}$, $\sigma = 3$ \\
-$\{2\}$ & $t(2) \cap t(3)$ & $\{1,4\}$ & keep $3$ \\
-$\{2\}$ & -- & $t(23) = \{1,4\}$ & record $\{2,3\}$, $\sigma = 2$ \\
-$\emptyset$ & -- & $t(3) = \{1,3,4\}$ & record $\{3\}$, $\sigma = 3$ \\
 \hline
 \end{tabular}
 \end{table}
@@ -311,37 +284,17 @@ points, which is within noise, so we left it out.
 
 \subsection{Automated tests}
 \label{sec:tests}
-The command \texttt{julia --project=. test/runtests.jl} runs 1\,500 checks, and all of
+The command \texttt{julia --project=. test/runtests.jl} runs 1\,519 checks, and all of
 them pass on Julia 1.13.2. Each mining test compares the whole \texttt{SupportMap} and
 also checks the number of itemsets recorded, since a dictionary would silently hide an
-itemset recorded twice. Both variants go through the following groups of tests.
-
-\begin{itemize}
-\item Hand-derived results: eight small databases, including an empty database, a
-database with no frequent itemset, duplicate transactions, thresholds just above and
-just below an itemset's support, and an image database with empty transactions.
-\item Comparison with SPMF's Eclat~\cite{spmf2016}: eight runs on seven small databases
-and one run on T25I10D10K (9\,976 transactions, 929 items), where SPMF reports 14\,782
-itemsets of 1 to 13 items at $\mathit{minsup} = 0.008$. Both variants match 100\% on all
-nine runs, with no missing, extra, or wrong-support itemset.
-\item Comparison with a brute-force counter that enumerates every subset, on 10 random
-databases generated with seed 42 for each variant. The optimized variant is also tested
-on eight databases with 0, 1, 63, 64, 65, 127, 128, and 129 transactions, sizes that
-straddle the boundary of a 64-bit bitset word. Half of them contain groups of items that
-always occur together, so that perfect extensions appear. Each database is mined under 18
-configurations that turn the techniques of Section~\ref{sec:optimized} on and off.
-\item Type stability: \texttt{Test.@inferred} on \texttt{mine}, \texttt{mine\_packed},
-and the search functions of both variants.
-\item Reading, writing, and the command line: the byte-level reader is checked against a
-line-based parser on edge-case inputs (\texttt{Int} overflow, unexpected characters,
-blank lines, Windows line endings) and on every small database. The writer's output is
-compared byte for byte with a reference formatter, and the tests also cover argument
-errors and process exit codes.
-\end{itemize}
-
-The brute-force counter is too slow for anything but tests. For the benchmarks, every
-measurement campaign instead compares each output file with an independent run of SPMF's
-Eclat once timing has finished (Section~\ref{sec:exact}).
+itemset recorded twice. Both variants are checked against hand-derived results on eight
+small databases, against SPMF's Eclat~\cite{spmf2016} on nine runs, where both match
+100\%, and against a brute-force counter on random databases generated with seed 42.
+Further tests cover type stability, the bitset word boundary, and reading, writing, and
+the command line; Appendix~\ref{app:tests} lists every group. The brute-force counter is
+too slow for the benchmarks, so every measurement campaign instead compares each output
+file with an independent run of SPMF's Eclat once timing has finished
+(Section~\ref{sec:exact}).
 
 \subsection{Measuring the improvement}
 \label{sec:measure}
