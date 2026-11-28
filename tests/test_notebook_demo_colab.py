@@ -104,6 +104,20 @@ class DemoColabNotebookTest(unittest.TestCase):
                 self.assertIn("timing_scope", code()[cell_id])
                 self.assertIn('"process"', code()[cell_id])
 
+    def test_a_failed_or_inexact_sweep_row_stops_the_notebook(self):
+        # run.jl records a failed attempt as a row and still exits 0, so the cell itself must raise.
+        text = code()["itemset-demo-sweep"]
+        for expected in ('runs["status"] != "ok"', 'runs["correctness_status"] != "exact"', "raise RuntimeError",
+                         '"status"', '"error"'):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, text)
+        self.assertLess(text.index("raise RuntimeError"), text.index("display("))
+
+    def test_variants_that_disagree_stop_the_notebook(self):
+        text = code()["itemset-demo-mine"]
+        self.assertIn("if not same:", text)
+        self.assertIn("raise RuntimeError", text)
+
     def test_the_chart_draws_inline(self):
         text = code()["itemset-demo-chart"]
         self.assertIn("matplotlib", text)

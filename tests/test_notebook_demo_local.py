@@ -59,6 +59,17 @@ class DemoLocalNotebookTest(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, helper)
 
+    def test_a_failed_or_inexact_sweep_row_stops_the_notebook(self):
+        # run.jl records a failed attempt as a row and still exits 0, so the cell itself must throw.
+        text = code()["itemset-demo-sweep"]
+        for expected in ('row["status"] != "ok"', 'row["correctness_status"] != "exact"', "error(", '"status"'):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, text)
+
+    def test_variants_that_disagree_stop_the_notebook(self):
+        text = code()["itemset-demo-mine"]
+        self.assertIn("|| error(", text)
+
     def test_no_report_experiment_remains(self):
         text = "\n".join("".join(cell["source"]) for cell in cells())
         for name in ("runtime_curves.jl", "width_experiment.jl", "stage_profile.jl", "bbq-all-variants"):
