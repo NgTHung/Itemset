@@ -52,10 +52,11 @@ class DemoLocalNotebookTest(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, text)
 
-    def test_the_helper_prints_child_output_in_the_cell(self):
+    def test_the_helper_prints_the_command_and_its_output_in_the_cell(self):
         # A notebook kernel shows only what Julia itself prints; a child process writes past it.
         helper = code()["itemset-demo-tests"]
-        for expected in ("IOBuffer()", "pipeline(", "stdout=output", "stderr=output", "finally", "take!(output)"):
+        for expected in ("IOBuffer()", "pipeline(", "stdout=output", "stderr=output", "finally", "take!(output)",
+                         "shell_escape("):
             with self.subTest(expected=expected):
                 self.assertIn(expected, helper)
 
