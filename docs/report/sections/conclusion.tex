@@ -3,7 +3,7 @@ We implemented Eclat from the original paper~\cite{zaki2000} as two variants tha
 the same result. Both match SPMF's Eclat exactly at every database and threshold we
 tested: across 330 outputs on 33 pairs, no itemset is missing, extra, duplicated, or
 given the wrong support (Section~\ref{sec:exact}). In a single timing session on the
-grading machine, the optimized variant is the fastest program at all 33 points. At the
+benchmark machine, the optimized variant is the fastest program at all 33 points. At the
 lowest minsup of each database it runs 7.9 times (Accidents) to 33.3 times (Retail)
 faster than the baseline (Section~\ref{sec:minsup}), and Section~\ref{sec:optimized}
 breaks this gain down by optimization step. The baseline's time tracks the total length of
@@ -19,7 +19,7 @@ them by lift (Section~\ref{sec:basket}). On the 1\,593 Semeion images, a 24-word
 codebook turns each image into a transaction, and the frequent itemsets describe stroke
 combinations that recur across images (Section~\ref{sec:visual-patterns}).
 
-These conclusions have limits. Every measurement ran on a single machine, the grading
+These conclusions have limits. Every measurement ran on a single machine, the benchmark
 machine, and programs are compared only within the same session. The \emph{process}
 scope includes Julia or JVM start-up, which accounts for most of the time at high
 thresholds, where the two Julia variants are close. Because we treat SPMF as a black box,

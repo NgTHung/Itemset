@@ -243,7 +243,7 @@ increasing tid lists when
 where the right-hand side is the number of words the class's bitset intersections would
 read, $kW$ is the cost of the conversion, $\sigma_i$ is the support of the $i$-th
 member, and $c = 8$ is the cost of one merge step in words, chosen from a sweep of $c$
-from 2 to 16 on the grading machine. Rule~\eqref{eq:lists} looks only at tidset lengths
+from 2 to 16 on the benchmark machine. Rule~\eqref{eq:lists} looks only at tidset lengths
 and $N$, never at which database is being mined. Each step of the merge advances through the two
 lists without a branch on the compared tids, and a bound check before each step stops the
 merge once the common tids found so far plus the rest of the shorter list cannot reach
@@ -347,7 +347,7 @@ Eclat once timing has finished (Section~\ref{sec:exact}).
 \label{sec:measure}
 Every number in this subsection is the median time of five cold \texttt{demo.jl}
 processes, where each run is a fresh process that covers Julia start-up, reading, mining,
-and writing the file. The campaigns ran on the grading machine described in
+and writing the file. The campaigns ran on the benchmark machine described in
 Section~\ref{sec:protocol}, over a grid of 33 thresholds on the five databases Chess,
 Mushroom, Retail, T10I4D100K, and Accidents, plus a few stress thresholds below the grid
 that only probe the limits. Besides SPMF's Eclat, we compare with
@@ -398,10 +398,10 @@ and Step~\ref{step:single-allocation} builds on it. No step slows any threshold 
 than 4.4\%.
 
 Table~\ref{tab:steps} documents how the optimized variant was built one step at a time; it
-does not compare the two submitted variants. Steps~\ref{step:precompile-package},
-\ref{step:precompile-cli}, and~\ref{step:byte-io} changed shared code, so the submitted
+does not compare the two final variants. Steps~\ref{step:precompile-package},
+\ref{step:precompile-cli}, and~\ref{step:byte-io} changed shared code, so the final
 baseline benefits from them too. The speedups this paper reports come from
-Section~\ref{sec:minsup}, which compares the two submitted variants at one revision in a
+Section~\ref{sec:minsup}, which compares the two final variants at one revision in a
 single session.
 
 We also tried two techniques that did not survive measurement, besides the

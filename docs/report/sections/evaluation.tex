@@ -32,8 +32,7 @@ Accidents & 340\,183 & 468 & 33.81 & 51 & 0.072 \\
 
 We identify each file by its SHA-256 hash rather than by its name, because the same name
 can refer to different versions. For example, the \texttt{mushrooms.txt} file on the SPMF
-site has 8\,416 transactions, whereas the FIMI version used by the assignment and by most
-papers has 8\,124; we use the FIMI version. Retail contains the anonymized receipts of a
+site has 8\,416 transactions, whereas the FIMI version used by most papers has 8\,124; we use the FIMI version. Retail contains the anonymized receipts of a
 Belgian retail store~\cite{brijs1999}, and Accidents contains records of injury traffic
 accidents in Flanders, Belgium~\cite{geurts2003}. The SPMF copies of Chess and Accidents
 are byte-identical to the FIMI ones. The FIMI versions of Retail and T10I4D100K, however,
@@ -63,7 +62,7 @@ is the peak RSS (Section~\ref{sec:measure}) that the operating system reports th
 \texttt{getrusage}; we use it because it is the only quantity that can be compared between
 a Julia process and a Java process.
 
-Every measurement in this paper ran on the grading machine: Linux, an Intel Core
+Every measurement in this paper ran on the benchmark machine: Linux, an Intel Core
 i7-11800H with its clock fixed at 2.3\,GHz, 7.4\,GiB RAM, single-threaded Julia 1.13.2,
 and the pinned SPMF release~\cite{spmf2016} on Java Temurin 25.0.4.1 with a 4\,GiB heap.
 We treat SPMF as a black box: we report how its programs behave but do not attribute the
@@ -146,7 +145,7 @@ Accidents & 7/7 & 7/7 & 15--1\,093 \\
 
 \subsection{Runtime against minimum support}
 \label{sec:minsup}
-We timed four programs in a single session on the grading machine
+We timed four programs in a single session on the benchmark machine
 (Section~\ref{sec:protocol}): the baseline, the optimized variant, SPMF 2.67 Eclat, and
 SPMF PrePost+. Both Julia variants ran through the \texttt{demo.jl} command-line
 interface at the same revision (\texttt{ca60f43}), so all times are in the
@@ -289,7 +288,7 @@ the two cannot be told apart.
 
 These conclusions rest on one machine, five repeats per point, and a \emph{process} scope
 that includes start-up, which the Java programs pay as well. The baseline measured here is
-the submitted one at revision \texttt{ca60f43}, so it includes the shared start-up,
+the final one at revision \texttt{ca60f43}, so it includes the shared start-up,
 reading, and writing changes of Steps~\ref{step:precompile-package},
 \ref{step:precompile-cli}, and~\ref{step:byte-io} in Table~\ref{tab:steps}. Its times are
 therefore lower than those of the baseline before any optimization step, and the speedups
@@ -654,7 +653,7 @@ target of 5\,000 itemsets is also a choice rather than a derived value.
 
 \subsection{Analysis and future directions}
 \label{sec:future}
-The assignment suggests two directions for optimization: an adaptive tidset
+Two common directions for optimizing Eclat are an adaptive tidset
 representation that switches between lists and \emph{bitsets}, and early termination of
 tidset intersections. The optimized variant already does both: per-class tid lists, the
 early stop in the list merge, and block bounds (Section~\ref{sec:optimized}). Before
@@ -753,7 +752,7 @@ than 10\%.
 \paragraph{Proposal 2: output in search order.}
 \emph{Bottleneck.} On Chess 0.6, Mushroom 0.1, and Mushroom 0.05, output takes 83\% to
 98\% of the samples, and the lexicographic sort alone takes 35\% to 43\%. Timed directly
-in a warm process on the grading machine at the same revision (median of seven calls),
+in a warm process on the benchmark machine at the same revision (median of seven calls),
 computing the sorted order takes 0.025, 0.059, and 0.475\,s at these three points.
 Printing in storage order instead of sorted order saves another 0.005, 0.021, and
 0.222\,s, because the sorted order reads the result arrays out of sequence.
@@ -772,9 +771,9 @@ guarantees through its fixed order. The comparator reads both files into maps, s
 would not be affected, but a benchmark would have to record which order it used, because
 CLI time would then exclude the sort, as it already does for the SPMF programs. Since the
 measured gain is concentrated at the dense points, and above all at Mushroom 0.05, the
-submitted version keeps the fixed order. \emph{Tests.} A search-order file, once sorted
+package keeps the fixed order. \emph{Tests.} A search-order file, once sorted
 externally, must be byte-identical to the default output, and the full map must match
-SPMF at every required and stress point. Two runs of the same code must produce the same
+SPMF at every grid and stress point. Two runs of the same code must produce the same
 bytes. A five-repeat campaign of both orders on Chess 0.6, Mushroom 0.1, and Mushroom 0.05
 would test the prediction, which fails if $R$ on Mushroom 0.05 stays at 1.0 or above.
 
