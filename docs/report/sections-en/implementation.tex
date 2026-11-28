@@ -10,10 +10,9 @@ variants, and how much each optimization gains over the baseline.
 \subsection{Vertical layout and tidsets}
 \label{sec:vertical}
 Consider a database of $N$ transactions, numbered $1, 2, \dots, N$ in the order they are
-read. This number is the transaction identifier (tid). Apriori works on the horizontal
-layout, in which each transaction lists its items. Eclat uses the vertical layout
-instead, in which each item $x$ is paired with its tidset $t(x)$, the set of tids of the
-transactions that contain $x$. For an itemset $X$,
+read. This number is the transaction identifier (tid). Unlike Apriori's horizontal
+layout, Eclat uses the vertical layout, in which each item $x$ is paired with its tidset
+$t(x)$, the set of tids of the transactions that contain $x$. For an itemset $X$,
 \begin{equation}
   t(X) = \{\, i \in \{1,\dots,N\} : X \subseteq T_i \,\}, \qquad
   \sigma(X) = |t(X)|,
@@ -127,9 +126,11 @@ These invariants make the output correct in three ways. First, every recorded su
 exact, which follows from (iv) and~\eqref{eq:support}. Second, no itemset is recorded
 twice. By (ii), every key $(x_1, \dots, x_k)$ is strictly increasing, it is recorded only
 when the class with prefix $(x_1, \dots, x_{k-1})$ reaches $x_k$, and each class is built
-only once. Third, the result is complete because support is anti-monotone: if
-$X \subseteq Y$ then $\sigma(X) \ge \sigma(Y)$, so pruning an infrequent itemset never
-loses a frequent superset. An induction on length shows that the class with prefix
+only once. Third, the result is complete because support is
+anti-monotone~\cite{agrawal1994}: if $X \subseteq Y$, every transaction that contains $Y$
+also contains $X$, so by~\eqref{eq:support} $t(Y) \subseteq t(X)$ and
+$\sigma(X) \ge \sigma(Y)$. Pruning an infrequent itemset therefore never loses a frequent
+superset. An induction on length shows that the class with prefix
 $(x_1, \dots, x_{j-1})$ contains every item $y > x_{j-1}$ for which
 $(x_1, \dots, x_{j-1}, y)$ is frequent, and therefore every frequent itemset is recorded.
 The full proof is in \texttt{docs/eclat.md} in the repository.

@@ -11,9 +11,8 @@ giao diện của gói, các kỹ thuật tối ưu, cách kiểm thử cả hai
 \label{sec:vertical}
 Cơ sở dữ liệu (CSDL) gồm $N$ giao dịch (transaction). Mỗi giao dịch được gán một mã
 giao dịch (transaction identifier, tid) là chỉ số $1, 2, \dots, N$ theo thứ tự đọc.
-Apriori lưu CSDL theo chiều ngang (horizontal layout): mỗi giao dịch kèm danh sách item.
-Eclat dùng biểu diễn dọc (vertical layout): mỗi item $x$ kèm tidset $t(x)$, tức tập mã
-các giao dịch chứa $x$. Với itemset $X$, ta có
+Khác với biểu diễn ngang của Apriori, Eclat dùng biểu diễn dọc: mỗi item $x$ kèm tidset
+$t(x)$, tức tập mã các giao dịch chứa $x$. Với itemset $X$, ta có
 \begin{equation}
   t(X) = \{\, i \in \{1,\dots,N\} : X \subseteq T_i \,\}, \qquad
   \sigma(X) = |t(X)|,
@@ -120,9 +119,10 @@ Từ đó suy ra ba tính chất. Thứ nhất, độ hỗ trợ được ghi l�
 và~\eqref{eq:support}. Thứ hai, không itemset nào bị ghi hai lần: theo (ii) mọi khóa
 $(x_1, \dots, x_k)$ tăng ngặt, và nó chỉ được ghi khi lớp tiền tố
 $(x_1, \dots, x_{k-1})$ duyệt tới $x_k$; mỗi lớp chỉ được tạo một lần. Thứ ba, kết quả
-đầy đủ nhờ tính đơn điệu giảm (anti-monotone) của độ hỗ trợ: nếu $X \subseteq Y$ thì
-$\sigma(X) \ge \sigma(Y)$, nên việc tỉa một itemset không phổ biến không làm mất tập cha
-phổ biến nào. Quy nạp theo độ dài cho thấy lớp tiền tố $(x_1, \dots, x_{j-1})$ chứa
+đầy đủ nhờ tính đơn điệu giảm (anti-monotone) của độ hỗ trợ~\cite{agrawal1994}: nếu
+$X \subseteq Y$ thì mọi giao dịch chứa $Y$ đều chứa $X$, nên theo~\eqref{eq:support} ta có
+$t(Y) \subseteq t(X)$ và $\sigma(X) \ge \sigma(Y)$. Vì vậy việc tỉa một itemset không phổ
+biến không làm mất tập cha phổ biến nào. Quy nạp theo độ dài cho thấy lớp tiền tố $(x_1, \dots, x_{j-1})$ chứa
 mọi item $y > x_{j-1}$ sao cho $(x_1, \dots, x_{j-1}, y)$ phổ biến, nên mọi itemset phổ
 biến đều được ghi. Tài liệu \texttt{docs/eclat.md} trong repository trình bày chứng minh
 đầy đủ.

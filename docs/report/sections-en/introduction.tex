@@ -6,10 +6,23 @@ step of association rule mining and underlies many other pattern-mining tasks. B
 the number of frequent itemsets can grow very quickly as the threshold drops, the way an
 algorithm lays out the data and counts support decides how low a threshold it can reach.
 
-Eclat~\cite{zaki2000} stores the database vertically, pairing each item with its tidset,
-the set of identifiers of the transactions that contain it. The support of an itemset is
-then the size of the intersection of its items' tidsets, and Eclat searches depth-first
-over prefix-based equivalence classes. We reimplemented the algorithm from the original
+The classic answer is Apriori~\cite{agrawal1994}. It keeps the database in the
+horizontal layout, where each transaction is a row of items, and grows itemsets one level
+at a time: from the frequent itemsets of size $k$ it generates candidate itemsets of size
+$k+1$, then scans the whole database again to count their support. The lower the
+threshold, the more and the longer the frequent itemsets, so both the number of
+candidates and the number of levels grow, and every level costs another full scan.
+
+Eclat~\cite{zaki2000} replaces those repeated scans with set intersections by turning the
+layout around. It stores the database vertically, pairing each item with its tidset, the
+set of identifiers of the transactions that contain it. After one pass that builds the
+tidsets, the support of an itemset is the size of the intersection of its items'
+tidsets, so a new itemset is counted from two tidsets already in memory rather than from
+another scan. Eclat also groups itemsets into prefix-based equivalence classes and
+explores each class depth-first. Each class can be mined on its own and needs only its
+own tidsets.
+
+We reimplemented the algorithm from the original
 paper in Julia using only the standard library, compared it with SPMF's Eclat and
 PrePost+~\cite{spmf2016}, and used it in two applications. The rest of the paper is
 organized in three parts:

@@ -6,10 +6,22 @@ thác luật kết hợp và là nền của nhiều bài toán khai thác mẫu
 rất nhanh khi ngưỡng giảm, nên cách biểu diễn dữ liệu và cách đếm support quyết định thuật
 toán chạy được ở ngưỡng nào.
 
-Eclat~\cite{zaki2000} biểu diễn cơ sở dữ liệu theo chiều dọc: mỗi item đi kèm tidset,
-tức tập mã giao dịch chứa nó. Support của một tập item bằng kích thước giao của các
-tidset, và Eclat tìm kiếm theo chiều sâu trên các lớp tương đương (equivalence class)
-chia theo tiền tố. Nhóm cài đặt lại thuật toán này từ bài báo gốc bằng Julia, chỉ dùng thư
+Lời giải kinh điển là Apriori~\cite{agrawal1994}. Apriori lưu cơ sở dữ liệu theo chiều
+ngang (horizontal layout), mỗi giao dịch là một dòng gồm các item, và mở rộng tập item theo
+từng mức: từ các tập phổ biến kích thước $k$, thuật toán sinh tập ứng viên (candidate) kích
+thước $k+1$ rồi quét lại toàn bộ cơ sở dữ liệu để đếm support của chúng. Ngưỡng càng thấp
+thì tập phổ biến càng nhiều và càng dài, nên số ứng viên và số mức đều tăng, và mỗi mức lại
+tốn thêm một lần quét.
+
+Eclat~\cite{zaki2000} thay các lần quét lặp lại đó bằng phép giao tập hợp, nhờ đảo chiều
+biểu diễn dữ liệu. Thuật toán lưu cơ sở dữ liệu theo chiều dọc (vertical layout): mỗi item
+đi kèm tidset, tức tập mã giao dịch chứa nó. Sau một lần quét để dựng các tidset, support
+của một tập item bằng kích thước giao của các tidset, nên tập item mới được đếm từ hai
+tidset đã có trong bộ nhớ thay vì từ một lần quét nữa. Eclat còn chia các tập item thành
+các lớp tương đương (equivalence class) theo tiền tố và duyệt từng lớp theo chiều sâu. Mỗi
+lớp được khai thác độc lập và chỉ cần các tidset của chính nó.
+
+Nhóm cài đặt lại thuật toán này từ bài báo gốc bằng Julia, chỉ dùng thư
 viện chuẩn, so với Eclat và PrePost+ của SPMF~\cite{spmf2016}, và dùng nó cho hai ứng dụng
 thực tế. Bài báo gồm ba phần chính theo đề:
 \begin{itemize}
