@@ -777,11 +777,13 @@ SPMF at every grid and stress point. Two runs of the same code must produce the 
 bytes. A five-repeat campaign of both orders on Chess 0.6, Mushroom 0.1, and Mushroom 0.05
 would test the prediction, which fails if $R$ on Mushroom 0.05 stays at 1.0 or above.
 
-We do not propose three other directions. Adaptive representation and early termination
-already exist, and Table~\ref{tab:stage-profile} shows that intersection dominates only on T10I4D100K
-0.00025, where converting bitsets to lists takes 16\% of the samples against 50\% for the
-two kinds of intersection. Diffsets lost or tied at every point we tested (Section~\ref{sec:measure}). For parallel
-search over equivalence classes, we have not yet measured how the work is spread across
-the root classes, so the evidence here neither supports nor rules it out. The profile
-itself has limits: it ran in a warm process and only for the optimized variant's CLI path,
-and the expected benefits are predictions for changes that have not been implemented.
+Other directions look less promising on this evidence. More work on adaptive
+representations or early termination would pay off only where intersection dominates the
+run, and Table~\ref{tab:stage-profile} shows that happening at a single point,
+T10I4D100K 0.00025, where the two kinds of intersection take 50\% of the samples and
+converting bitsets to lists another 16\%. Diffsets lost to or tied with bitsets at every
+point we tested (Section~\ref{sec:measure}). Parallel search over equivalence classes
+might help, but we have not measured how evenly the work divides among the root classes,
+so we leave it open. Finally, both proposals rest on a profile taken in a warm process
+and only on the optimized variant's CLI path, so their benefits remain predictions until
+the changes are built and measured.
