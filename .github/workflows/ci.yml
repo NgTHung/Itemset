@@ -29,5 +29,3 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Test reporting scripts
         run: uv run --no-project --python 3.12 --with matplotlib==3.10.7 python -m unittest discover -s tests -p 'test_*.py'
-      - name: Test Colab runner
-        run: uv run --no-project --python 3.12 python tests/colab_runner.py

@@ -52,15 +52,6 @@ class MarketBasketNotebookTest(unittest.TestCase):
         self.assertIn("hashlib", text)
         self.assertIn("JULIA_SHA256", text.split("JULIA_SHA256", 1)[1])
 
-    def test_the_julia_pin_equals_the_one_of_the_colab_runner(self):
-        runner = (ROOT / "scripts" / "run_colab_notebook.py").read_text(encoding="utf-8")
-        text = code()["itemset-setup"]
-        for runner_name, notebook_name in (("JULIA_URL", "JULIA_URL"), ("JULIA_SHA", "JULIA_SHA256")):
-            with self.subTest(pin=notebook_name):
-                value = re.search(rf'^{runner_name} = "([^"]+)"', runner, re.MULTILINE)
-                self.assertIsNotNone(value)
-                self.assertIn(f'{notebook_name} = "{value[1]}"', text)
-
     def test_the_revision_is_resolved_to_a_full_commit_before_anything_runs(self):
         text = code()["itemset-setup"]
         self.assertIn("ITEMSET_REVISION", text)

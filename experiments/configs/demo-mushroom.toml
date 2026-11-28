@@ -1,0 +1,13 @@
+# The demo notebooks run this sweep to compare both variants with SPMF on one benchmark in a few minutes.
+name = "demo-mushroom"
+variants = ["baseline", "optimized", "spmf"]
+mode = "cli"
+repeats = 1
+timeout_seconds = 300
+keep_outputs = true
+verify_outputs = true
+skip_after_timeout = false
+
+[[series]]
+dataset = "mushroom"
+minsup = [0.5, 0.4, 0.3, 0.2, 0.1]
