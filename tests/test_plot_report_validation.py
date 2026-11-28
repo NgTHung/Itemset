@@ -49,16 +49,14 @@ class ReportValidationTest(TestCase):
         with self.assertRaisesRegex(ValueError, "both Julia variants"):
             report.plot_coverage([result()], Path("unused.pdf"))
 
-    def test_labels_coverage_in_the_chosen_language(self):
+    def test_labels_coverage_with_percent_thresholds(self):
         rows = [result(), result("optimized"), result(minsup_relative="0.0025"),
                 result("optimized", minsup_relative="0.0025")]
-        for language, xlabel, cell in (("en", "Threshold position in the grid", "0.25"),
-                                       ("vi", "Thứ tự ngưỡng trong lưới", "0,25")):
-            with patch.object(Figure, "savefig", autospec=True) as save:
-                report.plot_coverage(rows, Path("unused.pdf"), language)
-            ax = save.call_args.args[0].axes[0]
-            self.assertEqual(ax.get_xlabel(), xlabel)
-            self.assertIn(cell, [text.get_text() for text in ax.texts])
+        with patch.object(Figure, "savefig", autospec=True) as save:
+            report.plot_coverage(rows, Path("unused.pdf"))
+        ax = save.call_args.args[0].axes[0]
+        self.assertEqual(ax.get_xlabel(), "Threshold position in the grid")
+        self.assertIn("0.25", [text.get_text() for text in ax.texts])
 
     def test_coverage_ignores_the_spmf_programs_of_a_runtime_campaign(self):
         rows = [result(), result("optimized"), result("spmf"), result("prepost"),

@@ -25,11 +25,6 @@ DATASETS = {
     "T10I4D100K": "T10I4D100K",
     "accidents": "Accidents",
 }
-# The Vietnamese report writes decimals with a comma, so its copy of each figure needs its own text.
-LABELS = {
-    "en": dict(decimal=".", grid="Threshold position in the grid"),
-    "vi": dict(decimal=",", grid="Thứ tự ngưỡng trong lưới"),
-}
 
 
 def attempt_key(row):
@@ -68,8 +63,7 @@ def require_exact(rows):
         raise ValueError("Expected one SPMF reference per dataset and count threshold")
 
 
-def plot_coverage(rows, destination, language="en"):
-    text = LABELS[language]
+def plot_coverage(rows, destination):
     thresholds = defaultdict(set)
     variants = defaultdict(set)
     for row in (row for row in rows if row["variant"] in VARIANTS):
@@ -83,14 +77,14 @@ def plot_coverage(rows, destination, language="en"):
     fig, ax = plt.subplots(figsize=(4.4, 1.95), layout="constrained")
     ax.set_yticks(range(len(dataset_order)), [DATASETS[name] for name in dataset_order])
     ax.set_xticks(range(columns), range(1, columns + 1))
-    ax.set_xlabel(text["grid"])
+    ax.set_xlabel("Threshold position in the grid")
     ax.set_ylim(len(dataset_order) - 0.5, -0.5)
     ax.set_xlim(-0.5, columns - 0.5)
     for index, name in enumerate(dataset_order):
         values = sorted(thresholds[name], reverse=True)
         ax.barh(index, len(values) - 0.12, left=-0.44, height=0.76, color="#176681")
         for column, value in enumerate(values):
-            percent = format((value * 100).normalize(), "f").replace(".", text["decimal"])
+            percent = format((value * 100).normalize(), "f")
             ax.text(column, index, percent, color="white", ha="center", va="center", fontsize=9)
         for column in range(len(values) - 1):
             ax.vlines(column + 0.5, index - 0.38, index + 0.38, color="white", linewidth=0.8)
@@ -105,12 +99,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run", type=Path, help="run directory of the runtime campaign")
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--language", choices=sorted(LABELS), default="en")
     args = parser.parse_args()
     rows = read_process_rows(args.run)
     require_exact(rows)
     args.out.mkdir(parents=True, exist_ok=True)
-    plot_coverage(rows, args.out / "correctness-grid.pdf", args.language)
+    plot_coverage(rows, args.out / "correctness-grid.pdf")
 
 
 if __name__ == "__main__":

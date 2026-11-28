@@ -1,99 +1,102 @@
-\section{Thực nghiệm và đánh giá}
+\section{Experiments and evaluation}
 \label{sec:evaluation}
-\subsection{Dữ liệu và giao thức chung}
+\subsection{Data and shared protocol}
 \label{sec:protocol}
-Nhóm thực nghiệm trên năm cơ sở dữ liệu chuẩn (benchmark, bộ dữ liệu dùng để so
-sánh thuật toán) của cộng đồng FIM: Chess, Mushroom, Retail, T10I4D100K và
-Accidents, đều có nguồn gốc từ kho FIMI~\cite{fimi}. Bảng~\ref{tab:datasets} liệt kê các thống kê
-do nhóm tự tính từ chính các tệp dữ liệu, trong đó $N$ là số giao dịch, $|I|$ là
-số item phân biệt, $\bar{w}$ là độ dài giao dịch trung bình và mật độ
-$d = \bar{w} / |I|$ là tỉ lệ item trung bình có mặt trong một giao dịch. Chess và
-Mushroom là dữ liệu dày đặc (dense, $d \ge 0{,}19$), còn Retail và T10I4D100K là
-dữ liệu thưa (sparse, $d \le 0{,}012$). Accidents có $d = 0{,}072$, nằm giữa hai
-nhóm, nhưng được xếp cùng dữ liệu dày vì giao dịch dài ($\bar{w} = 33{,}81$, gần Chess),
-khiến số tập phổ biến tăng nhanh như các CSDL dày (mục~\ref{sec:output-size}).
+We ran the experiments on five standard benchmark databases from the FIM community:
+Chess, Mushroom, Retail, T10I4D100K, and Accidents, all originally from the FIMI
+repository~\cite{fimi}. Table~\ref{tab:datasets} lists statistics we computed from the
+data files themselves: $N$ is the number of transactions, $|I|$ the number of distinct
+items, $\bar{w}$ the mean transaction length, and the density $d = \bar{w} / |I|$ the
+average fraction of all items that appear in a transaction. Chess and Mushroom are dense
+($d \ge 0.19$), while Retail and T10I4D100K are sparse ($d \le 0.012$). Accidents falls
+between the two groups with $d = 0.072$, but we count it as dense because its long
+transactions ($\bar{w} = 33.81$, close to Chess) make its output grow as fast as that of
+the dense databases (Section~\ref{sec:output-size}).
 
 \begin{table}[t]
 \centering
-\caption{Thống kê năm benchmark, tính từ tệp đã kiểm tra SHA-256}
+\caption{Statistics of the five benchmarks, computed from SHA-256-checked files}
 \label{tab:datasets}
 \begin{tabular}{lrrrrr}
 \hline
-Dữ liệu & $N$ & $|I|$ & $\bar{w}$ & $w_{\max}$ & $d$ \\
+Data & $N$ & $|I|$ & $\bar{w}$ & $w_{\max}$ & $d$ \\
 \hline
-Chess & 3\,196 & 75 & 37,00 & 37 & 0,493 \\
-Mushroom & 8\,124 & 119 & 23,00 & 23 & 0,193 \\
-Retail & 88\,162 & 16\,470 & 10,31 & 76 & 0,0006 \\
-T10I4D100K & 100\,000 & 870 & 10,10 & 29 & 0,0116 \\
-Accidents & 340\,183 & 468 & 33,81 & 51 & 0,072 \\
+Chess & 3\,196 & 75 & 37.00 & 37 & 0.493 \\
+Mushroom & 8\,124 & 119 & 23.00 & 23 & 0.193 \\
+Retail & 88\,162 & 16\,470 & 10.31 & 76 & 0.0006 \\
+T10I4D100K & 100\,000 & 870 & 10.10 & 29 & 0.0116 \\
+Accidents & 340\,183 & 468 & 33.81 & 51 & 0.072 \\
 \hline
 \end{tabular}
 \end{table}
 
-Mỗi tệp được định danh bằng mã băm SHA-256 thay vì bằng tên, vì cùng một tên có
-thể ứng với nhiều phiên bản khác nhau. Bản \texttt{mushrooms.txt} trên SPMF có
-8\,416 giao dịch, khác với bản 8\,124 giao dịch của FIMI mà đề bài và đa số bài
-báo sử dụng, nên nhóm dùng bản của FIMI. Retail là các hóa đơn ẩn danh của một cửa
-hàng bán lẻ ở Bỉ~\cite{brijs1999}, còn Accidents là hồ sơ tai nạn giao thông có
-người bị thương ở vùng Flanders, Bỉ~\cite{geurts2003}; bản Chess và Accidents trên
-SPMF giống hệt bản của FIMI từng byte. Retail và T10I4D100K của FIMI
-chứa item 0 trong khi SPMF chỉ nhận item nguyên dương, nên nhóm dùng bản của SPMF,
-trong đó mọi mã item được cộng thêm 1. Phép đổi tên này giữ nguyên support của
-mọi itemset. Kịch bản \texttt{experiments/prepare\_benchmarks.jl} tải lại dữ liệu,
-kiểm tra mã băm và thống kê trước khi đưa tệp vào sử dụng.
+We identify each file by its SHA-256 hash rather than by its name, because the same name
+can refer to different versions. For example, the \texttt{mushrooms.txt} file on the SPMF
+site has 8\,416 transactions, whereas the FIMI version used by most papers has 8\,124; we use the FIMI version. Retail contains the anonymized receipts of a
+Belgian retail store~\cite{brijs1999}, and Accidents contains records of injury traffic
+accidents in Flanders, Belgium~\cite{geurts2003}. The SPMF copies of Chess and Accidents
+are byte-identical to the FIMI ones. The FIMI versions of Retail and T10I4D100K, however,
+contain item 0, which SPMF does not accept, so for these two we use the SPMF versions, in
+which every item code is shifted up by 1. Renaming items this way leaves the support of
+every itemset unchanged. Before any file is used, the script
+\texttt{experiments/prepare\_benchmarks.jl} downloads the data again and checks its hash
+and statistics.
 
-Ngưỡng support tối thiểu tương đối minsup được đổi thành số giao dịch
-$\sigma = \lceil \mathrm{minsup} \cdot N \rceil$. Khi đo thực nghiệm, nhóm phát
-hiện SPMF tính phép nhân này bằng số thực dấu phẩy động 64 bit, nên với
-$\mathrm{minsup} = 0{,}07$ và $N = 100$, SPMF yêu cầu $\sigma = 8$ trong khi phép
-tính thập phân chính xác cho $\sigma = 7$. Vì vậy, trình chạy thực nghiệm từ chối
-mọi ngưỡng mà hai cách tính cho kết quả khác nhau, để sai lệch giữa hai cài đặt
-chỉ có thể đến từ thuật toán.
+A relative minsup is converted to the transaction count
+$\sigma_{\min} = \lceil \mathrm{minsup} \cdot N \rceil$. During the experiments we found
+that SPMF computes this product in 64-bit floating point: with $\mathrm{minsup} = 0.07$
+and $N = 100$, SPMF requires $\sigma_{\min} = 8$, while exact decimal arithmetic gives
+$\sigma_{\min} = 7$. The experiment runner therefore rejects any threshold on which the two
+computations disagree, so that a difference between the two implementations can only come
+from the algorithm.
 
-Mọi lần chạy (attempt) diễn ra trong một tiến trình (process) mới, có giới hạn
-thời gian (timeout) và được ghi thành các dòng CSV với cùng một tập trường: dữ
-liệu và mã băm, minsup và $\sigma$, revision Git, phiên bản thuật toán, môi trường,
-seed, thời gian, bộ nhớ đỉnh, số itemset và trạng thái. Lần chạy lỗi hoặc quá
-thời gian vẫn được giữ lại với trạng thái tương ứng, không bao giờ được thay bằng
-giá trị 0. Thời gian được tách theo phạm vi đo (timing scope): \emph{process} đo
-toàn bộ tiến trình, gồm cả khởi động Julia, biên dịch JIT hoặc khởi động JVM; \emph{mine} đo riêng lời gọi \texttt{mine} sau khi
-đã chạy khởi động (warm-up) trên một cơ sở dữ liệu nhỏ, nên không chứa thời gian
-biên dịch. Với SPMF, nhóm dùng thêm thời gian do SPMF tự báo cáo. Bộ nhớ đỉnh là
-peak RSS (mục~\ref{sec:measure}) do hệ điều hành báo qua \texttt{getrusage}, vì chỉ đại lượng này so sánh được giữa tiến
-trình Julia và Java.
+Every attempt runs in a fresh process with a timeout and is recorded as CSV rows with a
+fixed set of fields: dataset and hash, minsup and $\sigma_{\min}$, Git revision, algorithm
+variant, environment, seed, time, peak memory, itemset count, and status. A failed or
+timed-out attempt is kept with its status and is never replaced by a zero. Time is
+reported in two scopes. The \emph{process} scope measures the whole process, including
+Julia start-up and JIT compilation or JVM start-up. The \emph{mine} scope measures only the
+call to \texttt{mine} after a warm-up run on a small database, so it contains no
+compilation time. For SPMF we also record the time that SPMF reports itself. Peak memory
+is the peak RSS (Section~\ref{sec:measure}) that the operating system reports through
+\texttt{getrusage}; we use it because it is the only quantity that can be compared between
+a Julia process and a Java process.
 
-Mọi phép đo trong bài đều chạy trên máy chấm điểm: Linux, Intel Core i7-11800H với
-xung nhịp cố định 2{,}3\,GHz, 7{,}4\,GiB RAM, Julia 1.13.2 một luồng và bản SPMF đã
-ghim~\cite{spmf2016} trên Java Temurin 25.0.4.1 với heap 4\,GiB.
-\subsection{Độ đúng so với SPMF}
+Every measurement in this paper ran on the benchmark machine: Linux, an Intel Core
+i7-11800H with its clock fixed at 2.3\,GHz, 7.4\,GiB RAM, single-threaded Julia 1.13.2,
+and the pinned SPMF release~\cite{spmf2016} on Java Temurin 25.0.4.1 with a 4\,GiB heap.
+We treat SPMF as a black box: we report how its programs behave but do not attribute the
+differences to causes inside them.
+
+\subsection{Correctness against SPMF}
 \label{sec:exact}
-Hai cài đặt có thể sinh cùng số lượng tập mục nhưng gán support khác nhau.
-Vì vậy, nhóm dùng Eclat của SPMF làm tham chiếu độc lập và đối chiếu toàn bộ
-ánh xạ từ tập mục sang số giao dịch hỗ trợ. Bộ so sánh bỏ dòng siêu dữ liệu và
-sắp xếp các mục trong từng khóa để thứ tự in không ảnh hưởng đến kết quả.
-Tỉ lệ khớp lấy số khóa xuất hiện đúng một lần ở mỗi phía với cùng support chia
-cho số khóa phân biệt trong hợp hai đầu ra. Hai ánh xạ trống được tính là
-khớp hoàn toàn. Báo cáo ghi riêng số khóa thiếu, thừa, lặp và sai support.
+Two implementations can report the same number of itemsets and still disagree on their
+supports, so counting itemsets is not enough. We use SPMF's Eclat as an independent
+reference and compare the full map from itemset to support count. The comparator skips
+metadata lines and sorts the items inside each key, so the order in which itemsets are
+printed does not matter. The match rate is the number of keys that appear exactly once on
+each side with the same support, divided by the number of distinct keys in the union of
+the two outputs; two empty maps count as a full match. Missing, extra, duplicate, and
+wrong-support keys are reported separately.
 
-Bảng~\ref{tab:toy-spmf} trình bày kết quả trên bảy cơ sở dữ liệu nhỏ. $N$ là
-số giao dịch; $\sigma$ là ngưỡng hỗ trợ theo số giao dịch như ở
-Mục~\ref{sec:protocol}. Cột ``Khớp'' ghi số tập mục có cùng độ hỗ trợ với SPMF
-trên tổng số tập mục khác nhau. Mỗi phép so sánh của bản cơ bản đạt 100\%,
-không có tập mục thiếu, thừa, lặp hoặc sai độ hỗ trợ; với \texttt{disjoint},
-cả hai chương trình đều trả về ánh xạ trống. Cơ sở dữ liệu \texttt{boundary}
-được chạy ở hai ngưỡng để kiểm tra tập mục vừa nằm trên và dưới ngưỡng. Mỗi
-ngưỡng được chọn sao cho SPMF và phép tính thập phân cho cùng $\sigma$. Bộ
-kiểm thử đối chiếu các đầu ra SPMF đã lưu với mọi phiên bản Eclat ở mỗi lần
-chạy.
+Table~\ref{tab:toy-spmf} shows the results on seven small databases, with $N$ and
+$\sigma_{\min}$ as defined in Section~\ref{sec:protocol}. The ``Match'' column gives the
+number of itemsets whose support agrees with SPMF out of the total number of distinct
+itemsets. The baseline reaches 100\% in every comparison, with no missing, extra,
+duplicate, or wrong-support itemset. On \texttt{disjoint}, both programs return an empty
+map. The \texttt{boundary} database is mined at two thresholds to check itemsets that lie
+just above and just below the threshold, and each threshold is chosen so that SPMF and
+exact decimal arithmetic agree on $\sigma_{\min}$. The test suite checks every Eclat
+variant against the stored SPMF outputs each time it runs.
 
 \begin{table}[t]
 \centering
-\caption{Đối chiếu toàn bộ tập mục và độ hỗ trợ của bản Eclat cơ bản với SPMF
-trên cơ sở dữ liệu nhỏ.}
+\caption{Full itemset and support comparison of the baseline Eclat with SPMF on small
+databases}
 \label{tab:toy-spmf}
 \begin{tabular}{lrrr}
 \hline
-Dữ liệu & $N$ & $\sigma$ & Khớp \\
+Data & $N$ & $\sigma_{\min}$ & Match \\
 \hline
 Baskets & 4 & 2 & 6/6 \\
 Duplicates & 3 & 2 & 3/3 \\
@@ -107,29 +110,29 @@ Nested & 4 & 2 & 3/3 \\
 \end{tabular}
 \end{table}
 
-Trên năm benchmark, nhóm đối chiếu mọi đầu ra của đợt đo thời gian ở
-mục~\ref{sec:minsup}: cả hai biến thể ở revision \texttt{ca60f43}, năm lần lặp ở mỗi
-trong 33 cặp bộ dữ liệu và ngưỡng, với một kết quả Eclat của SPMF độc lập cho mỗi cặp.
-Cả 330 đầu ra của hai biến thể đạt tỉ lệ khớp 100\%, với 0 tập mục thiếu, thừa, lặp
-hoặc sai support. Bảng~\ref{tab:bench-exact} ghi số ngưỡng khớp của mỗi biến thể và
-khoảng kích thước đầu ra SPMF. Hình~\ref{fig:exact-grid} ghi các giá trị minsup được
-kiểm tra.
+On the five benchmarks, we checked every output of the runtime campaign of
+Section~\ref{sec:minsup}, which ran both variants at revision \texttt{ca60f43} five times
+on each of 33 database and threshold pairs, against one independent SPMF Eclat result per
+pair. All 330 outputs of the two variants reach a 100\% match rate, with no missing,
+extra, duplicate, or wrong-support itemset. Table~\ref{tab:bench-exact} gives the number
+of matching thresholds for each variant together with the range of SPMF output sizes, and
+Fig.~\ref{fig:exact-grid} shows which minsup values were checked.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/correctness-grid.pdf}
-\caption{Lưới minsup theo bộ dữ liệu. Mỗi ô ghi minsup theo phần trăm và
-biểu thị cả hai biến thể khớp toàn bộ tập mục và support với SPMF.}
+\caption{Minsup grid per database. Each cell gives minsup as a percentage and marks a
+point where both variants match SPMF on every itemset and support.}
 \label{fig:exact-grid}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{Số ngưỡng khớp toàn bộ đầu ra với SPMF và số tập mục tham chiếu}
+\caption{Thresholds whose full output matches SPMF, and the number of reference itemsets}
 \label{tab:bench-exact}
 \begin{tabular}{lrrr}
 \hline
-Dữ liệu & Cơ bản & Tối ưu & Khoảng số tập mục \\
+Data & Baseline & Optimized & Itemset range \\
 \hline
 Chess & 7/7 & 7/7 & 622--254\,944 \\
 Mushroom & 7/7 & 7/7 & 153--574\,431 \\
@@ -140,62 +143,64 @@ Accidents & 7/7 & 7/7 & 15--1\,093 \\
 \end{tabular}
 \end{table}
 
-\subsection{Thời gian chạy theo ngưỡng hỗ trợ}
+\subsection{Runtime against minimum support}
 \label{sec:minsup}
-Nhóm đo bốn chương trình trong một phiên duy nhất trên máy chấm điểm
-(mục~\ref{sec:protocol}): bản cơ bản, bản tối ưu, Eclat của SPMF 2.66
-và PrePost+ cũng của SPMF. Hai bản Julia chạy qua giao diện dòng lệnh
-\texttt{demo.jl} ở cùng một revision (\texttt{ca60f43}), nên thời gian là phạm vi
-\emph{process}: từ lúc khởi chạy tiến trình đến lúc ghi xong tệp, gồm cả khởi động
-Julia hoặc JVM, đọc và ghi. Lưới có 33 điểm (benchmark, minsup) trên năm benchmark
-của Bảng~\ref{tab:datasets}, mỗi điểm lặp năm lần. Cả 660 lần chạy đều được đối
-chiếu toàn bộ tập mục với một lần chạy SPMF Eclat độc lập và khớp hoàn toàn.
+We timed four programs in a single session on the benchmark machine
+(Section~\ref{sec:protocol}): the baseline, the optimized variant, SPMF 2.67 Eclat, and
+SPMF PrePost+. Both Julia variants ran through the \texttt{demo.jl} command-line
+interface at the same revision (\texttt{ca60f43}), so all times are in the
+\emph{process} scope (Section~\ref{sec:protocol}). The grid covers 33 (benchmark, minsup) points
+on the five benchmarks of Table~\ref{tab:datasets}, each repeated five times, and every
+one of the 660 runs matched an independent SPMF Eclat run itemset for itemset.
 
-Mỗi điểm lấy trung vị của năm lần lặp. Độ rộng tứ phân vị so với trung vị không quá
-2{,}9\% ở bản cơ bản và 1{,}9\% ở bản tối ưu trên mọi điểm; ở SPMF và PrePost+ nó
-lớn nhất là 11{,}3\% và 13{,}9\%, và chỉ một điểm của SPMF cùng ba điểm của PrePost+
-vượt 10\%. Để ước lượng độ trôi giữa các phiên, nhóm so với ba phiên đo khác của cùng
-máy. Thời gian PrePost+ (cùng một lệnh Java) của phiên này lệch $+3{,}0\%$, $+1{,}9\%$
-và $-2{,}3\%$ theo trung bình nhân, và lớn nhất 14{,}4\% ở một điểm. Bản tối ưu đo ở
-một phiên khác cùng revision lệch $-1{,}5\%$ trung bình, lớn nhất 5{,}6\%. Bốn chương
-trình trong bảng chạy trong cùng một phiên, nên tỉ số giữa hai chương trình chỉ chịu
-nhiễu trong phiên. Nhóm coi một tỉ số là khác biệt có thật khi nó vượt tổng hai độ rộng
-tứ phân vị lớn nhất: khoảng 5\% giữa hai bản Julia và khoảng 16\% khi một bên là chương
-trình Java. Độ trôi giữa các phiên chỉ dùng khi so với một đợt đo khác, với mức 5{,}6\%
-cho bản tối ưu và 14{,}4\% cho PrePost+.
+Each point is the median of its five repeats. Relative to the median, the interquartile
+range is at most 2.9\% for the baseline and 1.9\% for the optimized variant. It is wider
+for the Java programs, reaching 11.3\% for SPMF and 13.9\% for PrePost+, although only one
+SPMF point and three PrePost+ points exceed 10\%. To estimate drift between sessions, we
+compared this session with three others on the same machine. PrePost+, which runs the same
+Java command every time, differs by $+3.0\%$, $+1.9\%$, and $-2.3\%$ in geometric mean,
+and by at most 14.4\% at a single point. The optimized variant, measured in another session
+at the same revision, differs by $-1.5\%$ on average and by at most 5.6\%. Because the four
+programs in the tables ran in the same session, a ratio between two of them carries only
+within-session noise. We treat a ratio as a real difference when it exceeds the sum of
+the two largest interquartile ranges, which comes to about 5\% between the two Julia
+variants and about 16\% when one side is a Java program. Drift between sessions only
+matters when comparing with another campaign, where it reaches 5.6\% for the optimized
+variant and 14.4\% for PrePost+.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/runtime-curves.png}
-\caption{Thời gian \emph{process} theo minsup của bốn chương trình trên năm
-benchmark; trục tung theo thang log, điểm là trung vị của năm lần lặp và thanh là
-khoảng tứ phân vị. Dưới mỗi nhãn trục hoành là số tập phổ biến.}
+\caption{\emph{Process} time against minsup for the four programs on the five
+benchmarks. The vertical axis is logarithmic, points are medians of five repeats, and bars
+are interquartile ranges. Below each horizontal-axis label is the number of frequent
+itemsets.}
 \label{fig:runtime}
 \end{figure*}
 
-Bản tối ưu nhanh nhất ở cả 33 điểm, với thời gian từ 0{,}21 đến 0{,}96\,s. Ở minsup
-thấp nhất của mỗi benchmark (Bảng~\ref{tab:runtime-low}) nó nhanh hơn bản cơ bản
-khoảng 7{,}9 lần ở Accidents, 10{,}4 lần ở Chess, 11{,}3 lần ở T10I4D100K, 15{,}1 lần
-ở Mushroom và 33{,}3 lần ở Retail. Bảng~\ref{tab:runtime-ratio} cho trung bình nhân
-của tỉ số này trên mọi điểm của từng benchmark, cùng tỉ số của SPMF Eclat và PrePost+
-so với bản tối ưu.
+The optimized variant is the fastest program at all 33 points, taking between 0.21 and
+0.96\,s. At the lowest minsup of each benchmark (Table~\ref{tab:runtime-low}) it beats the
+baseline by a factor of about 7.9 on Accidents, 10.4 on Chess, 11.3 on T10I4D100K, 15.1
+on Mushroom, and 33.3 on Retail. Table~\ref{tab:runtime-ratio} gives the geometric mean of
+this ratio over all points of each benchmark, along with the same ratio for SPMF Eclat and
+PrePost+.
 
 \begin{table}[t]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
-\caption{Thời gian \emph{process} (giây) ở minsup thấp nhất của mỗi benchmark,
-trung vị của năm lần lặp. ``Tập'' là số tập phổ biến.}
+\caption{\emph{Process} time (seconds) at the lowest minsup of each benchmark, median of
+five repeats. ``Sets'' is the number of frequent itemsets, and ``SPMF'' is SPMF's Eclat.}
 \label{tab:runtime-low}
 \begin{tabular}{lrrrrrr}
 \hline
-Dữ liệu / minsup & Tập & Cơ bản & Tối ưu & SPMF & PrePost+ \\
+Data / minsup & Sets & Baseline & Optimized & SPMF & PrePost+ \\
 \hline
-Chess / 0{,}6 & 254\,944 & 3{,}07 & 0{,}30 & 16{,}07 & 0{,}62 \\
-Mushroom / 0{,}1 & 574\,431 & 6{,}15 & 0{,}41 & 6{,}93 & 0{,}74 \\
-Retail / 0{,}001 & 7\,589 & 12{,}59 & 0{,}38 & 1{,}57 & 3{,}52 \\
-T10I4D100K / 0{,}00025 & 96\,959 & 10{,}86 & 0{,}96 & 8{,}11 & 4{,}36 \\
-Accidents / 0{,}65 & 1\,093 & 6{,}76 & 0{,}86 & 26{,}70 & 2{,}36 \\
+Chess / 0.6 & 254\,944 & 3.07 & 0.30 & 16.07 & 0.62 \\
+Mushroom / 0.1 & 574\,431 & 6.15 & 0.41 & 6.93 & 0.74 \\
+Retail / 0.001 & 7\,589 & 12.59 & 0.38 & 1.57 & 3.52 \\
+T10I4D100K / 0.00025 & 96\,959 & 10.86 & 0.96 & 8.11 & 4.36 \\
+Accidents / 0.65 & 1\,093 & 6.76 & 0.86 & 26.70 & 2.36 \\
 \hline
 \end{tabular}
 \end{table}
@@ -204,512 +209,581 @@ Accidents / 0{,}65 & 1\,093 & 6{,}76 & 0{,}86 & 26{,}70 & 2{,}36 \\
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
-\caption{Trung bình nhân của tỉ số thời gian \emph{process} trên mọi điểm của từng
-benchmark: thời gian của biến thể ghi ở đầu cột chia cho thời gian của bản tối ưu.
-Giá trị lớn hơn 1 nghĩa là chậm hơn bản tối ưu.}
+\caption{Geometric mean over every point of each benchmark of the \emph{process} time
+ratio: the time of the program named in the column header divided by the time of the
+optimized variant. ``SPMF'' is SPMF's Eclat. A value above 1 means slower than the
+optimized variant.}
 \label{tab:runtime-ratio}
 \begin{tabular}{lrrr}
 \hline
-Dữ liệu & Cơ bản & SPMF & PrePost+ \\
+Data & Baseline & SPMF & PrePost+ \\
 \hline
-Chess & 2{,}83 & 10{,}33 & 2{,}08 \\
-Mushroom & 2{,}73 & 6{,}01 & 2{,}22 \\
-Retail & 5{,}89 & 4{,}34 & 5{,}01 \\
-T10I4D100K & 13{,}14 & 4{,}53 & 4{,}76 \\
-Accidents & 2{,}62 & 10{,}76 & 2{,}39 \\
+Chess & 2.83 & 10.33 & 2.08 \\
+Mushroom & 2.73 & 6.01 & 2.22 \\
+Retail & 5.89 & 4.34 & 5.01 \\
+T10I4D100K & 13.14 & 4.53 & 4.76 \\
+Accidents & 2.62 & 10.76 & 2.39 \\
 \hline
 \end{tabular}
 \end{table}
 
-Hình dạng đường cong của bản cơ bản giải thích được bằng khối lượng việc. Bản cơ
-bản giao hai tidset đã sắp xếp bằng phép trộn, nên mỗi phép giao tốn công tỉ lệ với
-tổng độ dài hai tidset. Nhóm chạy lại phép tìm kiếm của bản cơ bản trên một luồng
-và đếm số phép giao (join), số phép giao cho ra tập phổ biến, và tổng độ dài hai
-tidset qua mọi phép giao, gọi là số phần tử trộn (Bảng~\ref{tab:join-work}). Trừ
-thời gian ở minsup cao nhất (chủ yếu là khởi động và đọc tệp) khỏi thời gian ở
-minsup thấp nhất rồi chia cho phần chênh của số phần tử trộn, bản cơ bản tốn từ 2{,}0
-đến 6{,}9\,ns mỗi phần tử trên cả năm benchmark, cùng bậc với 9{,}0 đến 10{,}0\,ns của
-thực nghiệm về độ dài giao dịch ở mục~\ref{sec:width}.
+The shape of the baseline's curves follows from the amount of work it does. The baseline
+intersects two sorted tidsets by merging them, so each intersection costs time
+proportional to the combined length of the two tidsets. To measure this work, we reran the
+baseline's search on one thread and counted the intersections (joins), how many of them
+produced a frequent itemset, and the combined length of the two tidsets summed over all
+intersections, which we call merged elements (Table~\ref{tab:join-work}). Taking the time
+at the lowest minsup, subtracting the time at the highest minsup (mostly start-up and file
+reading), and dividing by the difference in merged elements gives 2.0 to 6.9\,ns per
+element across the five benchmarks. This is the same order of magnitude as the 9.0 to
+10.0\,ns measured in the transaction-length experiment of Section~\ref{sec:width}.
 
 \begin{table}[t]
 \centering
 \small
 \setlength{\tabcolsep}{3pt}
-\caption{Công việc của bản cơ bản ở minsup thấp nhất của mỗi benchmark. ``Thành
-công'' là tỉ lệ phép giao cho ra tập phổ biến, ``Phần tử'' là tổng độ dài hai
-tidset trên mọi phép giao (tỉ phần tử), và ns/pt là thời gian mỗi phần tử trộn sau
-khi trừ thời gian ở minsup cao nhất.}
+\caption{Work done by the baseline at the lowest minsup of each benchmark. ``Success'' is
+the share of intersections that produce a frequent itemset, ``Elements'' is the combined
+length of the two tidsets over all intersections (billions), and ns/el is the time per
+merged element after subtracting the time at the highest minsup.}
 \label{tab:join-work}
 \begin{tabular}{lrrrr}
 \hline
-Dữ liệu / minsup & Phép giao & Thành công & Phần tử & ns/pt \\
+Data / minsup & Joins & Success & Elements & ns/el \\
 \hline
-Chess / 0{,}6 & 326\,545 & 78{,}1\% & 1{,}43 & 2{,}0 \\
-Mushroom / 0{,}1 & 722\,721 & 79{,}5\% & 1{,}66 & 3{,}6 \\
-Retail / 0{,}001 & 3\,932\,582 & 0{,}14\% & 2{,}17 & 5{,}7 \\
-T10I4D100K / 0{,}00025 & 4\,192\,075 & 2{,}3\% & 1{,}48 & 6{,}9 \\
-Accidents / 0{,}65 & 2\,333 & 46{,}1\% & 1{,}22 & 4{,}8 \\
+Chess / 0.6 & 326\,545 & 78.1\% & 1.43 & 2.0 \\
+Mushroom / 0.1 & 722\,721 & 79.5\% & 1.66 & 3.6 \\
+Retail / 0.001 & 3\,932\,582 & 0.14\% & 2.17 & 5.7 \\
+T10I4D100K / 0.00025 & 4\,192\,075 & 2.3\% & 1.48 & 6.9 \\
+Accidents / 0.65 & 2\,333 & 46.1\% & 1.22 & 4.8 \\
 \hline
 \end{tabular}
 \end{table}
 
-Cấu trúc dữ liệu quyết định phần việc đó. Ở Chess và Mushroom, số phép giao chỉ
-bằng 1{,}26 đến 1{,}28 lần số tập phổ biến và khoảng 78\% đến 80\% phép giao thành
-công, nên công việc tăng cùng số tập phổ biến. Ở Retail, minsup 0{,}001 sinh
-3{,}93 triệu phép giao nhưng chỉ 5\,472 phép thành công, tức mỗi tập phổ biến kéo
-theo khoảng 286\,000 phần tử trộn, và bản cơ bản mất 12{,}59\,s, gấp 8{,}0 lần SPMF
-Eclat (1{,}57\,s) và 3{,}6 lần PrePost+ (3{,}52\,s) ở cùng điểm. Ở T10I4D100K, ngay
-minsup 0{,}01 có 70\,127 phép giao tốn 297{,}7 triệu phần tử trộn để cho ra đúng 10
-tập hai item, nên tỉ số cơ bản trên tối ưu đã là 8{,}5 ở điểm đầu tiên. Đường cong
-của bản tối ưu gần như phẳng và chỉ tăng rõ ở các điểm có đầu ra lớn nhất (Mushroom
-0{,}1, T10I4D100K 0{,}00025). Nguyên nhân bên trong bản tối ưu được phân tích ở mục
-``Phân tích và hướng phát triển''.
+How much work there is depends on the structure of the data. On Chess and Mushroom, the
+baseline performs only 1.26 to 1.28 intersections per frequent itemset and about 78\% to
+80\% of them succeed, so the work grows with the number of frequent itemsets. Retail is
+the opposite case: at minsup 0.001 it produces 3.93 million intersections, of which only
+5\,472 succeed. Each frequent itemset therefore costs about 286\,000 merged elements, and
+the baseline needs 12.59\,s, 8.0 times as long as SPMF Eclat (1.57\,s) and 3.6 times as
+long as PrePost+ (3.52\,s) at the same point. On T10I4D100K, even minsup 0.01 takes 70\,127
+intersections and 297.7 million merged elements to find just 10 two-item sets, so the
+baseline is already 8.5 times slower than the optimized variant at the first point. The
+optimized variant's curve, in contrast, is nearly flat and rises clearly only at the
+points with the largest output (Mushroom 0.1 and T10I4D100K 0.00025).
+Section~\ref{sec:future} looks at where the optimized variant spends its time.
 
-Ở minsup cao nhất của Chess, Mushroom, Accidents và Retail, tỉ số cơ bản trên tối
-ưu chỉ là 1{,}09, 1{,}06, 1{,}27 và 1{,}46. Cả bốn đều vượt nhiễu trong phiên giữa hai
-bản Julia (khoảng 5\%), nên là khác biệt có thật, nhưng nhỏ: ở Chess và Mushroom chênh
-lệch chỉ vài phần trăm của một lượt chạy mà phần lớn là khởi động và đọc tệp, còn ở
-Accidents và Retail chênh lệch tuyệt đối chỉ 0{,}21\,s và 0{,}13\,s, cùng bậc với thời
-gian khởi động và đọc tệp (khoảng 0{,}21\,s ở Chess, minsup 0{,}9, điểm gần như chỉ gồm
-các bước đó). Vì vậy đó không phải bằng chứng rằng hai thuật toán ngang nhau. Ở minsup
-thấp nhất, SPMF Eclat nhanh hơn bản cơ bản ở Retail (8{,}0 lần) và T10I4D100K (1{,}3
-lần), nhưng chậm hơn ở Chess (5{,}2 lần) và Accidents (4{,}0 lần). Ở Mushroom, SPMF Eclat
-mất 6{,}93\,s và bản cơ bản 6{,}15\,s; chênh lệch 13\% nằm trong nhiễu của chương trình
-Java (khoảng 16\%) nên hai chương trình không phân biệt được. Nhóm xem SPMF như hộp đen
-nên không giải thích nguyên nhân của sự đảo chiều ở các điểm kia.
+At the highest minsup of Chess, Mushroom, Accidents, and Retail, the baseline is only 1.09,
+1.06, 1.27, and 1.46 times slower than the optimized variant. All four ratios exceed the
+roughly 5\% within-session noise between the two Julia variants, so the differences are
+real, but they are small. On Chess and Mushroom the gap is a few percent of a run that
+consists mostly of start-up and file reading. On Accidents and Retail the absolute gap is
+only 0.21\,s and 0.13\,s, about as long as start-up and file reading themselves (some
+0.21\,s on Chess at minsup 0.9, a point that does little else). These small ratios
+therefore do not mean that the two algorithms are equally fast. At the lowest minsup,
+SPMF Eclat is faster than the baseline on Retail (by a factor of 8.0) and T10I4D100K (1.3)
+but slower on Chess (5.2) and Accidents (4.0). On Mushroom, SPMF Eclat takes 6.93\,s and
+the baseline 6.15\,s; this 13\% gap is within the noise of a Java program (about 16\%), so
+the two cannot be told apart.
 
-Giới hạn của các kết luận: một máy, năm lần lặp mỗi điểm, phạm vi \emph{process}
-gồm cả khởi động Julia hoặc JVM (các chương trình Java chịu thêm khởi động JVM),
-và bản cơ bản là bản hiện có ở revision \texttt{ca60f43}, đã hưởng phần đọc và ghi
-nhanh hơn của các giai đoạn sau, nên không phải bản cơ bản của lần đo ngày 31/10.
-Số đếm phép giao chạy riêng, không nằm trong lần đo thời gian.
+These conclusions rest on one machine, five repeats per point, and a \emph{process} scope
+that includes start-up, which the Java programs pay as well. The baseline measured here is
+the final one at revision \texttt{ca60f43}, so it includes the shared start-up,
+reading, and writing changes of Steps~\ref{step:precompile-package},
+\ref{step:precompile-cli}, and~\ref{step:byte-io} in Table~\ref{tab:steps}. Its times are
+therefore lower than those of the baseline before any optimization step, and the speedups
+above compare the two mining algorithms, not the shared code. The intersection counts come
+from a separate run, outside the timed runs.
 
-\subsection{Số lượng tập phổ biến theo minsup}
+\subsection{Number of frequent itemsets against minsup}
 \label{sec:output-size}
-Số tập phổ biến (output size) trong Hình~\ref{fig:output-size} được lấy lại từ đợt đo
-thời gian ở Mục~\ref{sec:minsup}, nên không cần khai thác thêm lần nào. Kịch bản \texttt{scripts/output\_size.jl} kiểm tra thêm ba tính chất trên
-các đầu ra được giữ lại. Thứ nhất, bốn chương trình báo cùng một số tập ở mỗi ngưỡng. Thứ
-hai, số tập không giảm khi minsup giảm, vì theo tính chất phản đơn điệu (anti-monotone),
-mọi tập con của một tập phổ biến đều phổ biến, nên hạ ngưỡng không làm mất tập nào. Thứ
-ba, các đầu ra lồng nhau: ở mỗi cặp ngưỡng liền kề $\sigma_1 > \sigma_2$, các tập có
-support ít nhất $\sigma_1$ trong đầu ra ở $\sigma_2$ đúng bằng đầu ra ở $\sigma_1$, với
-cùng support. Support không phụ thuộc vào ngưỡng, nên phép kiểm tra này phát hiện một
-support chỉ sai ở một lần chạy. Cả 28 cặp ngưỡng đều đạt ba tính chất.
+The output sizes in Fig.~\ref{fig:output-size} come from the runtime campaign of
+Section~\ref{sec:minsup}, so they needed no extra mining. On the kept outputs, the script
+\texttt{scripts/output\_size.jl} checks three further properties. First, the four programs
+report the same number of itemsets at every threshold. Second, the count never falls as
+minsup falls, as the anti-monotone property (Section~\ref{sec:correctness}) requires. Third, the outputs are
+nested. For each pair of adjacent thresholds $\sigma_{\min,1} > \sigma_{\min,2}$, the
+itemsets with support at least $\sigma_{\min,1}$ in the output at $\sigma_{\min,2}$ must
+be exactly the output at $\sigma_{\min,1}$, with the same supports. Since support does not
+depend on the threshold, this check catches a support that is wrong in a single run. All
+28 pairs of adjacent thresholds pass all three checks.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/output-size.pdf}
-\caption{Số tập phổ biến (trái, thang log) và độ dài trung bình của tập phổ biến (phải)
-theo minsup giảm dần trên năm CSDL. Đường liền là dữ liệu dày, đường đứt là dữ liệu thưa.}
+\caption{Number of frequent itemsets (left, log scale) and mean frequent-itemset length
+(right) as minsup decreases on the five databases. Solid lines are dense data and dashed
+lines are sparse data.}
 \label{fig:output-size}
 \end{figure*}
 
-Hình~\ref{fig:output-size} cho thấy số tập phổ biến tăng nhanh hơn nhiều ở dữ liệu dày.
-Để so sánh tốc độ tăng giữa các CSDL có khoảng minsup khác nhau, nhóm khớp mô hình
+As Fig.~\ref{fig:output-size} shows, the number of frequent itemsets grows much faster on
+dense data. The minsup ranges of the five databases differ widely, from a factor of 1.5 on
+Chess and Accidents to a factor of 40 on T10I4D100K, and $F$ spans from 15 to
+574\,431. To compare growth rates across them, we fit the model
 \begin{equation}
   \log F = c - s \log(\mathrm{minsup}),
   \label{eq:output-growth}
 \end{equation}
-trong đó $F$ là số tập phổ biến ở một ngưỡng, $c$ là hằng số của CSDL và $s$ là độ dốc
-trên thang log-log: khi minsup giảm $q$ lần, $F$ tăng khoảng $q^s$ lần.
-Bảng~\ref{tab:output-growth} cho thấy $s$ từ 5{,}2 đến 14{,}3 ở ba CSDL dày, nhưng chỉ
-1{,}6 và 1{,}7 ở hai CSDL thưa. Chess tăng 410 lần khi minsup chỉ giảm từ 0{,}9 xuống
-0{,}6, trong khi Retail tăng 48 lần khi minsup giảm mười lần.
+where $F$ is the number of frequent itemsets at a threshold, $c$ is a per-database
+constant, and $s$ is the slope on a log-log scale: when minsup falls by a factor $q$, $F$
+grows by about $q^s$. Because $s$ depends only on ratios, it can be compared across
+databases whose minsup ranges differ.
+
+Model~\eqref{eq:output-growth} is the logarithm of a power law,
+$F \approx e^{c}\,\mathrm{minsup}^{-s}$, and a simple model of the data explains why a power law
+fits. Suppose each of the $|I|$ items occurs in a transaction independently with
+probability $d$, the density of Table~\ref{tab:datasets}. A $k$-itemset then occurs in a
+fraction $d^k$ of the transactions, so it is frequent when $d^k \ge \mathrm{minsup}$, that is,
+when $k \le k^* = \log(1/\mathrm{minsup}) / \log(1/d)$. The number of itemsets of length up
+to $k^*$ grows like $|I|^{k^*}$, so
+\begin{equation}
+  \log F \approx k^* \log|I| = s \log(1/\mathrm{minsup}), \qquad
+  s \approx \frac{\log|I|}{\log(1/d)}.
+  \label{eq:output-slope}
+\end{equation}
+Estimate~\eqref{eq:output-slope} gives 1.5 for T10I4D100K and 1.3 for Retail, close to
+the measured 1.6 and 1.7. It also predicts that denser data grows faster, since a larger
+$d$ shrinks $\log(1/d)$. On the dense databases it gives only 2.3 to 6.1, because their
+items are correlated and their frequent items occur far more often than the average
+density $d$, the co-occurrence described below.
+
+The fit is close ($R^2$ between 0.963 and 0.998), but $s$ is an average over each range:
+between adjacent thresholds, the slope of Chess falls from 25.5 to 10.4. In
+Table~\ref{tab:output-growth}, $s$ ranges from 5.2 to 14.3 on the three dense databases
+but is only 1.6 and 1.7 on the two sparse ones. The output of Chess grows 410-fold when
+minsup drops merely from 0.9 to 0.6, whereas Retail's grows 48-fold over a tenfold drop.
 
 \begin{table}[t]
 \centering
 \small
-\caption{Số tập phổ biến $F$ ở ngưỡng cao nhất và thấp nhất, độ dốc $s$ của
-mô hình~\eqref{eq:output-growth} và độ dài lớn nhất $k_{\max}$ của tập phổ biến ở ngưỡng
-thấp nhất}
+\caption{Number of frequent itemsets $F$ at the highest and lowest threshold, slope $s$
+of model~\eqref{eq:output-growth}, and maximum frequent-itemset length $k_{\max}$ at the
+lowest threshold}
 \label{tab:output-growth}
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrrrr}
 \hline
-Dữ liệu & minsup & $F$ cao & $F$ thấp & $s$ & $k_{\max}$ \\
+Data & minsup & $F$ high & $F$ low & $s$ & $k_{\max}$ \\
 \hline
-Chess & 0{,}9--0{,}6 & 622 & 254\,944 & 14{,}3 & 14 \\
-Accidents & 0{,}95--0{,}65 & 15 & 1\,093 & 11{,}3 & 8 \\
-Mushroom & 0{,}5--0{,}1 & 153 & 574\,431 & 5{,}2 & 16 \\
-Retail & 0{,}01--0{,}001 & 159 & 7\,589 & 1{,}7 & 5 \\
-T10I4D100K & 0{,}01--0{,}00025 & 385 & 96\,959 & 1{,}6 & 11 \\
+Chess & 0.9--0.6 & 622 & 254\,944 & 14.3 & 14 \\
+Accidents & 0.95--0.65 & 15 & 1\,093 & 11.3 & 8 \\
+Mushroom & 0.5--0.1 & 153 & 574\,431 & 5.2 & 16 \\
+Retail & 0.01--0.001 & 159 & 7\,589 & 1.7 & 5 \\
+T10I4D100K & 0.01--0.00025 & 385 & 96\,959 & 1.6 & 11 \\
 \hline
 \end{tabular}
 \end{table}
 
-Độ dài của tập phổ biến giải thích khác biệt này. Trong dữ liệu dày, mỗi giao dịch chứa
-một phần lớn các item, nên nhiều item cùng xuất hiện trong phần lớn giao dịch và tạo thành
-các tập phổ biến dài. Một $k$-itemset phổ biến kéo theo $2^k - 1$ tập con khác rỗng cũng
-phổ biến, nên mỗi khi hạ ngưỡng làm xuất hiện các tập dài hơn, số tập tăng theo hàm mũ của
-độ dài. Độ dài trung bình ở Chess tăng từ 3{,}8 lên 7{,}4 và ở Mushroom từ 2{,}9 lên 8{,}0
-trên lưới ngưỡng. Mushroom tăng 9{,}7 lần, từ 5\,545 lên 53\,583 tập, khi minsup giảm từ
-0{,}25 xuống 0{,}2, và cũng ở bước đó độ dài lớn nhất tăng từ 11 lên 15. Trong dữ liệu thưa,
-giao dịch ngắn và các item hiếm khi đi cùng nhau, nên hạ ngưỡng chủ yếu thêm item đơn và
-cặp item. Độ dài trung bình ở Retail chỉ từ 1{,}8 đến 2{,}1. Ở T10I4D100K 0{,}00025,
-45\,660 trong 96\,959 tập, tức 47\%, là 2-itemset.
+The difference comes from itemset length. In dense data, each transaction contains a
+large share of all items, so many items occur together in most transactions and form long
+frequent itemsets. Since a frequent $k$-itemset brings $2^k - 1$ non-empty subsets that
+are also frequent, a lower threshold that admits longer itemsets makes the count grow
+exponentially in their length. Across the threshold grid, the mean length rises from 3.8
+to 7.4 on Chess and from 2.9 to 8.0 on Mushroom. When minsup on Mushroom drops from 0.25
+to 0.2, the count grows 9.7-fold, from 5\,545 to 53\,583 itemsets, and the maximum length
+jumps from 11 to 15. In sparse data, transactions are short and items rarely occur
+together, so lowering the threshold mostly adds single items and pairs. The mean length on
+Retail stays between 1.8 and 2.1, and on T10I4D100K 0.00025, 45\,660 of the 96\,959
+itemsets (47\%) are 2-itemsets.
 
-Số tập phổ biến không một mình quyết định thời gian chạy. Trong cùng lần chạy, bản cơ bản
-mất 12{,}59 s ở Retail 0{,}001 với 7\,589 tập, nhưng chỉ 3{,}07 s ở Chess 0{,}6 với
-254\,944 tập. Theo~\eqref{eq:cost}, chi phí là số phép giao nhân với độ dài tidset, không
-phải số kết quả: Retail có 2\,117 item phổ biến, nên lớp gốc có hơn hai triệu cặp cần giao,
-và hầu hết các phép giao đó thất bại mà không sinh tập nào (Mục~\ref{sec:optimized}). Biến
-thể tối ưu tránh phần lớn các phép giao này bằng cách đếm cặp, và chạy Retail 0{,}001
-trong 0{,}38 s. Ngay cả với biến thể tối ưu, Mushroom 0{,}1 với 574\,431 tập mất 0{,}41 s,
-còn T10I4D100K 0{,}00025 với 96\,959 tập mất 0{,}96 s, vì tidset ở T10I4D100K dài theo
-100\,000 giao dịch và phần lớn phép giao ở độ sâu 2 thất bại. Số tập chỉ chi phối thời gian
-khi nó rất lớn: ở Mushroom 0{,}05, trước khi có radix sort, phép sắp xếp và ghi
-3\,755\,511 itemset chiếm 89\% thời gian, còn khai thác chỉ 11\% (Mục~\ref{sec:optimized}). Ngược lại, khi minsup tương đối cố định thì số tập gần
-như không đổi, và thời gian tăng theo $N$ như Mục~\ref{sec:scalability} cho thấy.
+The number of frequent itemsets alone does not determine the runtime. In the same
+campaign, the baseline takes 12.59 s on Retail 0.001 with 7\,589 itemsets, but only
+3.07 s on Chess 0.6 with 254\,944 itemsets. According to~\eqref{eq:cost}, the cost depends
+on the number of intersections times the tidset length, not on the number of results.
+On Retail, most of the two million root intersections fail without producing any itemset
+(Section~\ref{sec:optimized}). The optimized variant avoids them by counting pairs and
+runs Retail 0.001 in 0.38 s. Even so, it takes 0.41 s on Mushroom 0.1 with
+574\,431 itemsets but 0.96 s on T10I4D100K 0.00025 with only 96\,959, because the tidsets
+of T10I4D100K span 100\,000 transactions and most intersections at depth 2 fail. The
+count dominates the runtime only when it is very large: on Mushroom 0.05, before the
+radix sort was added, sorting and writing 3\,755\,511 itemsets took 89\% of the time and
+mining only 11\% (Section~\ref{sec:optimized}). Conversely, when the relative minsup is
+fixed, the count barely changes and the runtime grows with $N$, as
+Section~\ref{sec:scalability} shows.
 
-\subsection{Bộ nhớ đỉnh của tiến trình}
+\subsection{Process peak memory}
 \label{sec:memory}
-Đợt đo thời gian ở Mục~\ref{sec:minsup} cũng ghi peak RSS của mọi lần chạy. Phép đo bao gồm khởi động, đọc dữ liệu,
-khai thác và ghi toàn bộ đầu ra. Bảng~\ref{tab:peak-rss} ghi trung vị ở minsup thấp nhất
-của mỗi CSDL, nơi đầu ra và phép tìm kiếm lớn nhất. Mọi chương trình đều báo ít nhất
-252\,MiB ở mọi điểm, một mức sàn do chính phép đo đặt ra, nên giá trị ở mức sàn chỉ là
-cận trên.
+The runtime campaign of Section~\ref{sec:minsup} also records the peak RSS of every run,
+covering start-up, reading the data, mining, and writing the whole output.
+Table~\ref{tab:peak-rss} gives the medians at the lowest minsup of each database, where
+both the output and the search are largest. No run of any program reports less than
+252\,MiB, a floor set by the measurement itself. The runner that reads the peak RSS is a
+Julia process, and it starts each program by copying itself and then replacing the copy
+with the program (\texttt{fork} and \texttt{exec}). On Linux, the peak RSS reported for
+the child also counts the copy's resident memory before the replacement, which is the
+size of the runner's own Julia runtime. A median at that floor (between 253.3 and
+253.6\,MiB) is therefore only an upper bound.
 
 \begin{table}[t]
 \centering
 \small
 \setlength{\tabcolsep}{3pt}
-\caption{Trung vị peak RSS (MiB) qua năm lần lặp ở minsup thấp nhất của mỗi CSDL. $R$ là
-trung vị của bản cơ bản chia cho trung vị của bản tối ưu.}
+\caption{Median peak RSS (MiB) over five repeats at the lowest minsup of each database.
+$M_b$ and $M_o$ are the medians of the baseline and the optimized variant, and ``SPMF'' is
+SPMF's Eclat. An asterisk marks a median at the measurement floor.}
 \label{tab:peak-rss}
 \begin{tabular}{lrrrrr}
 \hline
-Dữ liệu / minsup & Cơ bản & Tối ưu & $R$ & SPMF & PrePost+ \\
+Data / minsup & $M_b$ & $M_o$ & $M_b/M_o$ & SPMF & PrePost+ \\
 \hline
-Chess / 0{,}6 & 285{,}1 & 261{,}5 & 1{,}090 & 526{,}5 & $\le 254$ \\
-Mushroom / 0{,}1 & 366{,}0 & 299{,}2 & 1{,}223 & 514{,}2 & $\le 254$ \\
-Retail / 0{,}001 & 289{,}6 & 280{,}9 & 1{,}031 & 844{,}4 & $\le 254$ \\
-T10I4D100K / 0{,}00025 & 303{,}7 & 278{,}5 & 1{,}090 & 556{,}0 & 297{,}4 \\
-Accidents / 0{,}65 & 608{,}4 & 398{,}3 & 1{,}528 & 4\,248{,}1 & 340{,}9 \\
+Chess / 0.6 & 285.1 & 261.5 & 1.090 & 526.5 & 253.4* \\
+Mushroom / 0.1 & 366.0 & 299.2 & 1.223 & 514.2 & 253.5* \\
+Retail / 0.001 & 289.6 & 280.9 & 1.031 & 844.4 & 253.6* \\
+T10I4D100K / 0.00025 & 303.7 & 278.5 & 1.090 & 556.0 & 297.4 \\
+Accidents / 0.65 & 608.4 & 398.3 & 1.528 & 4\,248.1 & 340.9 \\
 \hline
 \end{tabular}
 \end{table}
 
-Từ các trung vị trong bảng, phần trăm giảm là $100(1-M_o/M_b)$, với $M_b$ và $M_o$ lần
-lượt là trung vị peak RSS của bản cơ bản và bản tối ưu. Mức giảm nằm trong khoảng từ
-3{,}0\% ở Retail đến 34{,}5\% ở Accidents. Eclat của SPMF dùng gấp 1{,}7 đến 10{,}7 lần bộ
-nhớ của bản tối ưu. PrePost+ dùng ít hơn ở Accidents (340{,}9 so với 398{,}3\,MiB) và nằm ở
-mức sàn trên Chess, Mushroom và Retail.
-Bản tối ưu dùng \emph{bitset} (mảng bit) và tái sử dụng vùng đệm khi giao
-các tidset trong tìm kiếm theo tiền tố của Eclat~\cite{zaki2000}. Với cơ sở
-dữ liệu có $N$ giao dịch, một tidset có $s$ mã chiếm $8s$ byte dưới dạng
-danh sách số nguyên 64 bit và $8\lceil N/64\rceil$ byte dưới dạng mảng bit,
-tính riêng phần tử. Mảng bit giảm dung lượng cho tidset dài, còn bản tối
-ưu có thể chuyển các lớp có tidset ngắn sang danh sách. Peak RSS gộp dữ liệu,
-cấu trúc tìm kiếm, kết quả và bộ nhớ môi trường chạy. Số đo cho biết chênh
-lệch toàn tiến trình tại các ngưỡng đã chọn.
+The optimized variant reduces peak memory by $100(1-M_o/M_b)$ percent, which ranges from
+3.0\% on Retail to 34.5\% on Accidents. SPMF Eclat uses 1.7 to 10.7 times as much memory
+as the optimized variant. PrePost+ uses less on Accidents (340.9 against 398.3\,MiB) and
+stays at the floor on Chess, Mushroom, and Retail. The optimized variant saves memory with
+bitsets and reused buffers (Section~\ref{sec:optimized}). For a database of $N$ transactions, a tidset with $\ell$
+tids takes $8\ell$ bytes as a list of 64-bit integers but $8\lceil N/64\rceil$ bytes as a
+bit array, counting elements only. The bit array is smaller for long tidsets, and classes
+with short tidsets can still switch to lists. Peak RSS, however, also includes the data,
+the search structures, the result, and the runtime's own memory, so these numbers show
+the difference for the whole process at the chosen thresholds.
 
-\subsection{Khả năng mở rộng}
+\subsection{Scalability}
 \label{sec:scalability}
-Thực nghiệm này trả lời câu hỏi: khi CSDL lớn lên mà ngưỡng tương đối giữ nguyên, thời
-gian chạy tăng tuyến tính (linear) hay phi tuyến (nonlinear) theo số giao dịch $N$.
-Nhóm chọn Accidents, CSDL lớn nhất trong Bảng~\ref{tab:datasets}, và Retail, CSDL thưa
-với nhiều item nhất. Mỗi CSDL được hoán vị ngẫu nhiên một lần với seed 42, và tập con
-$p\%$ gồm $p\%$ giao dịch đầu của hoán vị đó, với $p \in \{10, 25, 50, 75, 100\}$. Nhờ
-vậy các tập con lồng nhau (nested): tập lớn hơn chỉ thêm giao dịch, không thay giao dịch
-của tập nhỏ hơn, nên chênh lệch giữa hai điểm chỉ đến từ phần dữ liệu thêm vào. Kịch bản
-\texttt{experiments/prepare\_subsets.jl} sinh lại các tập con, và mã băm SHA-256 của
-từng tệp được ghi trong \texttt{data/benchmark/subsets.toml}. Độ dài giao dịch trung bình
-gần như không đổi giữa các tập con, từ 33{,}79 đến 33{,}81 ở Accidents và từ 10{,}30 đến
-10{,}37 ở Retail, nên lấy mẫu không làm thay đổi hình dạng dữ liệu.
+This experiment asks whether runtime grows linearly with the number of transactions $N$
+when the database grows and the relative threshold stays fixed. We used Accidents, the
+largest database in Table~\ref{tab:datasets}, and Retail, the sparse database with the
+most items. Each database was shuffled once with seed 42, and the $p\%$ subset consists of
+the first $p\%$ of the shuffled transactions, for $p \in \{10, 25, 50, 75, 100\}$. The
+subsets are therefore nested: a larger subset only adds transactions to a smaller one and
+never replaces any, so the difference between two points comes entirely from the added
+data. The script \texttt{experiments/prepare\_subsets.jl} regenerates the subsets, and
+\texttt{data/benchmark/subsets.toml} records the SHA-256 hash of each file. The mean
+transaction length barely changes between subsets, staying between 33.79 and 33.81 on
+Accidents and between 10.30 and 10.37 on Retail, so sampling preserves the shape of the
+data.
 
-Ngưỡng được giữ ở minsup 0{,}65 cho Accidents và 0{,}001 cho Retail, là hai ngưỡng thấp
-nhất trong lưới thời gian chạy của mỗi CSDL. Ngưỡng tuyệt đối vì vậy tăng theo $N$, từ
-$\sigma = 22\,112$ đến $221\,119$ ở Accidents và từ 9 đến 89 ở Retail. Bốn chương trình
-được đo bằng dòng lệnh, mỗi lần chạy là một tiến trình mới, với năm lần lặp xen kẽ. Cả 200 đầu ra đều khớp hoàn toàn với một
-lần chạy Eclat của SPMF độc lập. Độ trải tứ phân vị không vượt quá 1{,}9\% trung vị ở hai
-bản của nhóm và 7{,}6\% ở hai chương trình của SPMF.
+The threshold stays at minsup 0.65 for Accidents and 0.001 for Retail, the lowest
+threshold of each database in the runtime grid, so the absolute threshold grows with $N$:
+from $\sigma_{\min} = 22\,112$ to $221\,119$ on Accidents and from 9 to 89 on Retail. We
+timed the four programs through the command line, each run in a fresh process, with five
+interleaved repeats. All 200 outputs match an independent SPMF Eclat run exactly, and the
+interquartile range stays within 1.9\% of the median for our two variants and within 7.6\%
+for the two SPMF programs.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/scalability.pdf}
-\caption{Trung vị thời gian tiến trình theo số giao dịch trên năm tập con lồng nhau của
-Accidents (minsup 0{,}65) và Retail (minsup 0{,}001), thanh lỗi là khoảng tứ phân vị của
-năm lần chạy. Hàng số thứ hai dưới trục hoành là số tập phổ biến ở mỗi tập con.}
+\caption{Median process time against number of transactions on five nested subsets of
+Accidents (minsup 0.65) and Retail (minsup 0.001); error bars are the interquartile range
+of five runs. The second row of numbers under the horizontal axis is the number of
+frequent itemsets in each subset.}
 \label{fig:scalability}
 \end{figure*}
 
-Hình~\ref{fig:scalability} cho thấy cả tám đường gần như thẳng. Để kiểm tra, nhóm khớp
-mỗi đường bằng mô hình
+All eight lines in Fig.~\ref{fig:scalability} look close to straight. To check this, we
+fit each line with the model
 \begin{equation}
   T(N) = a + b\,N,
   \label{eq:linear-fit}
 \end{equation}
-trong đó $T(N)$ là trung vị thời gian (giây) trên tập con có $N$ giao dịch, $a$ là chi
-phí cố định không phụ thuộc vào dữ liệu và $b$ là chi phí biên của mỗi giao dịch. Hệ số
-xác định $R^2$ là tỉ lệ phương sai của $T$ được mô hình giải thích, bằng 1 khi năm điểm
-nằm đúng trên một đường thẳng. Bảng~\ref{tab:scalability-fit} cho thấy $R^2 \ge 0{,}992$
-ở mọi đường, nên trong khoảng đo, thời gian của cả bốn chương trình tăng tuyến tính theo
-$N$.
+where $T(N)$ is the median time (seconds) on the subset with $N$ transactions, $a$ is a
+fixed cost that does not depend on the data, and $b$ is the marginal cost per transaction.
+The coefficient of determination $R^2$ is the share of the variance of $T$ that the model
+explains; it equals 1 when the five points lie exactly on a line. Every line in
+Table~\ref{tab:scalability-fit} has $R^2 \ge 0.992$, so within the measured range the
+runtime of all four programs grows linearly with $N$.
 
 \begin{table}[t]
 \centering
 \small
-\caption{Hệ số của mô hình~\eqref{eq:linear-fit}: chi phí cố định $a$ (s), chi phí biên
-$b$ (s trên 100\,000 giao dịch), hệ số xác định $R^2$ và tỉ số thời gian giữa tập con
-100\% và 10\%}
+\caption{Coefficients of model~\eqref{eq:linear-fit}: fixed cost $a$ (s), marginal cost
+$b$ (s per 100\,000 transactions), coefficient of determination $R^2$, and the time ratio
+between the 100\% and 10\% subsets}
 \label{tab:scalability-fit}
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{llrrrr}
 \hline
-Dữ liệu & Chương trình & $a$ & $b$ & $R^2$ & $T_{100}/T_{10}$ \\
+Data & Program & $a$ & $b$ & $R^2$ & $T_{100}/T_{10}$ \\
 \hline
-Accidents & Cơ bản & 0{,}19 & 1{,}90 & 0{,}9999 & 8{,}1 \\
- & Tối ưu & 0{,}19 & 0{,}20 & 0{,}9986 & 3{,}3 \\
- & Eclat SPMF & $-1{,}16$ & 8{,}02 & 0{,}9951 & 12{,}3 \\
- & PrePost+ & 0{,}52 & 0{,}54 & 0{,}9987 & 3{,}5 \\
-Retail & Cơ bản & 0{,}61 & 12{,}87 & 0{,}9996 & 6{,}7 \\
- & Tối ưu & 0{,}22 & 0{,}18 & 0{,}9978 & 1{,}6 \\
- & Eclat SPMF & 1{,}00 & 0{,}69 & 0{,}9923 & 1{,}5 \\
- & PrePost+ & 0{,}48 & 3{,}51 & 0{,}9983 & 4{,}4 \\
+Accidents & Baseline & 0.19 & 1.90 & 0.9999 & 8.1 \\
+ & Optimized & 0.19 & 0.20 & 0.9986 & 3.3 \\
+ & SPMF Eclat & $-1.16$ & 8.02 & 0.9951 & 12.3 \\
+ & PrePost+ & 0.52 & 0.54 & 0.9987 & 3.5 \\
+Retail & Baseline & 0.61 & 12.87 & 0.9996 & 6.7 \\
+ & Optimized & 0.22 & 0.18 & 0.9978 & 1.6 \\
+ & SPMF Eclat & 1.00 & 0.69 & 0.9923 & 1.5 \\
+ & PrePost+ & 0.48 & 3.51 & 0.9983 & 4.4 \\
 \hline
 \end{tabular}
 \end{table}
 
-Phân tích độ phức tạp~\eqref{eq:cost} giải thích xu hướng này. Khi minsup tương đối cố
-định, tập các itemset phổ biến hầu như không đổi: Accidents có từ 1\,079 đến 1\,095 tập
-phổ biến ở cả năm kích thước. Các lớp tương đương được duyệt vì vậy giống nhau, nên số
-phép giao $C$ gần như không đổi. Trong khi đó tổng độ dài $L$ tăng tỉ lệ với $N$, và mỗi
-phép giao tốn thời gian tỉ lệ với độ dài tidset, mà độ dài này cũng xấp xỉ tỉ lệ với
-$N$, vì mẫu ngẫu nhiên giữ gần đúng tỉ lệ giao dịch chứa mỗi itemset. Với bitset, một phép giao
-đọc $\lceil N/64 \rceil$ từ máy, nên kết luận không đổi. Cả ba số hạng đều tuyến tính
-theo $N$, và Eclat không có bước nào phụ thuộc vào bình phương số giao dịch.
+The complexity bound~\eqref{eq:cost} explains why. With the relative minsup fixed, the
+set of frequent itemsets barely changes; Accidents, for instance, has between 1\,079 and
+1\,095 frequent itemsets at all five sizes. The search therefore visits the same
+equivalence classes, and the number of intersections $C$ stays nearly constant.
+Meanwhile, the total length $L$ grows in proportion to $N$, and so does the cost of each
+intersection, because a random sample keeps the share of transactions that contain each
+itemset nearly the same, so tidsets grow with $N$. With bitsets, an intersection reads
+$\lceil N/64 \rceil$ machine words, which is also proportional to $N$. All three terms are
+thus linear in $N$, and no step of Eclat depends on the square of the number of
+transactions.
 
-Chi phí cố định $a$ của bản tối ưu là 0{,}19 s ở Accidents và 0{,}22 s ở Retail, xấp xỉ
-thời gian khởi động Julia và nạp gói trong Mục~\ref{sec:measure}. Vì phần cố định này
-chiếm phần lớn thời gian ở các tập con nhỏ, thời gian của bản tối ưu chỉ tăng 3{,}3 lần ở
-Accidents và 1{,}6 lần ở Retail khi $N$ tăng 10 lần, dù đường vẫn thẳng. Hệ số $b$ mới là
-đại lượng so sánh khả năng mở rộng: chi phí biên của bản cơ bản lớn gấp 9{,}7 lần bản tối
-ưu ở Accidents và 71 lần ở Retail. Ở Retail, bản cơ bản giao từng cặp item phổ biến ở lớp
-gốc trên danh sách tid dài tỉ lệ với $N$, còn bản tối ưu đếm cặp trong một lượt duyệt CSDL
-ngang và chỉ giao các cặp đạt ngưỡng. Vì vậy tỉ số thời gian giữa hai bản tăng từ 7{,}7 lần
-ở tập con 10\% lên 31{,}9 lần ở tập con 100\%. Bản tối ưu nhanh hơn PrePost+ ở cả mười
-điểm, với tỉ số $R$ từ 0{,}35 đến 0{,}38 ở Accidents và từ 0{,}29 xuống 0{,}11 ở Retail,
-vì chi phí biên của PrePost+ lớn hơn 2{,}8 lần ở Accidents và 19 lần ở Retail.
+The fixed cost $a$ of the optimized variant is 0.19 s on Accidents and 0.22 s on Retail,
+close to the Julia start-up and package-loading time reported in Section~\ref{sec:measure}.
+Because this fixed part dominates on the small subsets, the optimized variant's time grows
+only 3.3-fold on Accidents and 1.6-fold on Retail when $N$ grows tenfold, even though its
+line is straight. The coefficient $b$ is the better measure of scalability. The baseline's
+marginal cost is 9.7 times the optimized variant's on Accidents and 71 times on Retail. On
+Retail, the baseline intersects every pair of frequent items at the root, on tid lists
+whose length grows with $N$, which pair counting avoids. As a result, the gap between the two variants widens from a factor of 7.7 on the 10\% subset
+to 31.9 on the full database. The optimized variant is also faster than PrePost+ at all
+ten points, with $R$ between 0.35 and 0.38 on Accidents and falling from 0.29 to 0.11 on
+Retail, because PrePost+ has a marginal cost 2.8 times larger on Accidents and 19 times
+larger on Retail.
 
-Hai yếu tố khác ngoài $N$ có thể làm khối lượng công việc thay đổi giữa các tập con, và
-nhóm đã đo cả hai. Thứ nhất là số item phân biệt, tăng theo $N$ từ 343 lên 468 ở Accidents
-và từ 10\,208 lên 16\,470 ở Retail. Số item phổ biến thì gần như không đổi: đúng 18 item ở
-cả năm tập con của Accidents, và từ 2\,100 đến 2\,270 ở Retail, nên các item mới đều hiếm và
-bị loại ở lượt đếm đầu tiên. Thứ hai, ở Retail 10\%, ngưỡng tuyệt đối chỉ là $\sigma = 9$.
-Với mẫu nhỏ, support của các itemset có độ hỗ trợ thật ngay dưới ngưỡng dao động mạnh hơn,
-và vì có rất nhiều itemset như vậy, số itemset vượt lên trên ngưỡng nhiều hơn số rơi xuống.
-Tập con 10\% vì thế có 2\,270 item phổ biến, nhiều nhất trong năm tập con, và 8\,895 tập phổ
-biến, nhiều hơn 17\% so với 7\,589 tập của toàn bộ CSDL. Khối lượng dôi ra này nhỏ so với phần
-tăng theo $N$: điểm đo xa đường khớp nhất của bản tối ưu ở Retail chỉ lệch 4 ms, và của bản
-cơ bản lệch 0{,}12 s, tức 1\% thời gian ở tập con 100\%.
+Two factors besides $N$ could change the amount of work between subsets, and we measured
+both. The first is the number of distinct items, which grows with $N$ from 343 to 468 on
+Accidents and from 10\,208 to 16\,470 on Retail. The number of frequent items, however,
+barely changes: exactly 18 in all five Accidents subsets and between 2\,100 and 2\,270 on
+Retail. The new items are all rare and drop out in the first counting pass. The second
+factor is the very low absolute threshold on Retail 10\%, where $\sigma_{\min} = 9$. In a
+small sample, the supports of itemsets that sit just below the threshold fluctuate more,
+and since there are very many such itemsets, more of them rise above the threshold than
+fall below it. The 10\% subset therefore has the most frequent items of the five subsets
+(2\,270) and 8\,895 frequent itemsets, 17\% more than the 7\,589 of the full database.
+This extra work is small compared with the growth in $N$: the point farthest from the
+fitted line is off by only 4 ms for the optimized variant on Retail and by 0.12 s for the
+baseline, which is 1\% of its time on the full database.
 
-Eclat của SPMF là chương trình duy nhất có dấu hiệu phi tuyến: ở Accidents, thời gian tăng
-12{,}3 lần khi $N$ tăng 10 lần, số hạng bậc hai của phép khớp dương và $R^2$ bằng 0{,}9951, thấp nhất
-trong bốn dòng của Accidents. Vì đường cong cong lên, đường thẳng khớp cắt trục tung ở giá
-trị âm, nên $a$ ở dòng này không phải chi phí cố định. Nhóm không đo cấu trúc bên trong của SPMF, nên chỉ ghi nhận xu hướng này mà không
-quy cho một nguyên nhân cụ thể.
-\subsection{Ảnh hưởng của độ dài giao dịch}
+SPMF's Eclat is the only program that shows signs of nonlinearity. On Accidents its time
+grows 12.3-fold when $N$ grows tenfold, the quadratic term of the fit is positive, and its
+$R^2$ of 0.9951 is the lowest of the four Accidents rows. Because the curve bends upward,
+the fitted line crosses the vertical axis below zero, so the value of $a$ in that row is
+not a fixed cost.
+
+\subsection{Effect of transaction length}
 \label{sec:width}
-Để tách độ dài giao dịch khỏi mật độ và khối lượng đầu ra vốn lẫn trong các
-benchmark thật, nhóm sinh tám cơ sở dữ liệu tổng hợp với cùng $N = 10\,000$ giao
-dịch và $|I| = 100$ item, chỉ khác độ dài giao dịch $w \in \{5, 10, \dots, 40\}$.
-Mô hình lấy mẫu: mỗi giao dịch là một tập con ngẫu nhiên đồng đều đúng $w$ item,
-độc lập với các giao dịch khác, nên các item hoán đổi được cho nhau và không cặp
-item nào đi cùng nhau nhiều hơn mức ngẫu nhiên. Do đó một $k$-itemset bất kỳ có
-support kỳ vọng $N \prod_{j=0}^{k-1} (w - j)/(|I| - j)$, ví dụ một cặp có
-$N\,w(w-1)/(|I|(|I|-1))$ giao dịch. Bộ sinh dùng SplitMix64 với seed
-$(42 \ll 32) \,|\, w$ thay cho \texttt{Xoshiro} của Julia, vì Julia không đảm bảo
-một dòng số ngẫu nhiên qua các phiên bản; nhờ vậy mã SHA-256 trong manifest đúng
-trên mọi nền tảng.
+In real benchmarks, transaction length is mixed up with density and output volume. To
+isolate it, we generated eight synthetic databases that all have $N = 10\,000$
+transactions over $|I| = 100$ items and differ only in the transaction length
+$w \in \{5, 10, \dots, 40\}$. Each transaction is a uniformly random subset of exactly $w$
+items, drawn independently of the others, so all items are interchangeable and no pair
+occurs together more often than chance. A $k$-itemset therefore has expected support
+$N \prod_{j=0}^{k-1} (w - j)/(|I| - j)$; a pair, for example, appears in
+$N\,w(w-1)/(|I|(|I|-1))$ transactions. The generator uses SplitMix64 with seed
+$(42 \ll 32) \,|\, w$ rather than Julia's \texttt{Xoshiro}, because Julia does not promise
+the same random stream across versions; this way the SHA-256 hashes in the manifest hold on
+every platform.
 
-Hai yếu tố gây nhiễu cần tách. Thứ nhất là khối lượng đầu ra: giao dịch dài hơn
-làm nhiều cặp và bộ ba đạt ngưỡng hơn nên số tập phổ biến tăng theo bậc thang,
-và thời gian tăng theo số tập phổ biến chứ chưa chắc theo $w$. Thứ hai là sự đồng
-xuất hiện (co-occurrence): mô hình đã loại nó bằng cách giữ các item độc lập,
-nên kết quả không thay thế được hành vi của Chess hay Mushroom. Vì vậy nhóm đo
-theo hai giao thức. Giao thức cố định dùng $\mathrm{minsup} = 0{,}05$ ở mọi $w$.
-Giao thức khớp đầu ra dùng, với mỗi $w$, ngưỡng $\sigma$ lớn nhất còn cho ít nhất
-5\,000 tập phổ biến, nên đầu ra gần như không đổi và $w$ là thay đổi duy nhất.
+Two confounding factors still have to be separated. The first is output volume: longer
+transactions push more pairs and triples over the threshold, so the number of frequent
+itemsets grows in steps, and runtime may follow that count rather than $w$ itself. The
+second is co-occurrence, which the model removes by keeping items independent; as a
+consequence, the results cannot stand in for the behavior of Chess or Mushroom. We
+therefore measure under two protocols. The fixed protocol uses $\mathrm{minsup} = 0.05$ at
+every $w$. The matched-output protocol uses, for each $w$, the largest threshold
+$\sigma_{\min}$ that still gives at least 5\,000 frequent itemsets, which keeps the output
+nearly constant so that $w$ is the only thing that changes.
 
-Ở giao thức cố định, số tập phổ biến là 53, 100, 100, 100, 5\,050, 5\,050,
-5\,050 và 166\,749 khi $w$ tăng từ 5 đến 40. Các cặp bắt đầu đạt $\sigma = 500$
-từ $w = 25$ (support kỳ vọng 606, trong khi ở $w = 20$ chỉ là 384), và các bộ ba
-từ $w = 40$ (kỳ vọng 611). Thời gian của Eclat cơ bản đi theo các bậc này
-(1{,}0\,s ở $w = 20$, 2{,}9\,s ở $w = 25$, 49{,}4\,s ở $w = 40$ theo phạm vi
-\emph{process}, Hình~\ref{fig:width}), nên đồ thị theo $w$ ở một minsup chủ yếu
-phản ánh đầu ra chứ không phải độ dài giao dịch.
+Under the fixed protocol, the number of frequent itemsets is 53, 100, 100, 100, 5\,050,
+5\,050, 5\,050, and 166\,749 as $w$ grows from 5 to 40. Pairs first reach
+$\sigma_{\min} = 500$ at $w = 25$ (expected support 606, compared with 384 at $w = 20$),
+and triples at $w = 40$ (expected 611). The baseline's runtime follows these steps
+(0.42\,s at $w = 20$, 2.27\,s at $w = 25$, and 46.9\,s at $w = 40$ in the \emph{process}
+scope, Fig.~\ref{fig:width}), so a plot against $w$ at a single minsup mostly reflects the
+output, not the transaction length. As in Section~\ref{sec:minsup}, the \emph{process}
+times come from the \texttt{demo.jl} command line at the revision timed there, and all 144
+cold attempts of the two protocols match SPMF exactly.
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/width-curves.png}
-\caption{Thời gian chạy và khối lượng đầu ra theo độ dài giao dịch $w$ trên các
-cơ sở dữ liệu tổng hợp ($N = 10\,000$, $|I| = 100$). Từ trái sang phải: thời gian
-\emph{process} ở minsup cố định 0,05; thời gian \emph{process} khi khớp đầu ra
-khoảng 5\,000 tập; số tập phổ biến của hai giao thức; thời gian \emph{mine} (sau
-khởi động) khi khớp đầu ra. Trung vị của ba lần lặp, thanh là khoảng tứ phân vị;
-dưới mỗi nhãn trục là số tập phổ biến.}
+\caption{Runtime and output volume against transaction length $w$ on the synthetic
+databases ($N = 10\,000$, $|I| = 100$). From left to right: \emph{process} time at fixed
+minsup 0.05; \emph{process} time with output matched to about 5\,000 itemsets; number of
+frequent itemsets under both protocols; \emph{mine} time (after warm-up) with matched
+output. Medians of three repeats with interquartile-range bars; below each axis label is
+the number of frequent itemsets.}
 \label{fig:width}
 \end{figure*}
 
-Ở giao thức khớp đầu ra, số tập phổ biến giữ quanh 5\,000 và số phép giao tidset
-(join) gần như không đổi (khoảng 164\,000, trong đó khoảng 4\,900 phép thành
-công), nhưng thời gian khai thác của Eclat cơ bản tăng 42 lần khi $w$ đi từ 5 đến
-40 (Bảng~\ref{tab:width}). Lý do là Eclat cơ bản giao hai tidset đã sắp xếp bằng
-phép trộn, nên mỗi phép giao tốn công tỉ lệ với tổng độ dài hai tidset. Mỗi item
-có mặt trong $w/|I|$ số giao dịch, nên tidset của nó dài tỉ lệ với $w$, còn tidset
-của một cặp dài tỉ lệ với $w(w-1)$. Tổng số phần tử được trộn tăng 47 lần dù $w$
-chỉ tăng 8 lần, và thời gian của Eclat cơ bản bám theo với 9{,}0 đến 10{,}0\,ns mỗi
-phần tử. Bản tối ưu giao bitset có $\lceil N/64 \rceil = 157$ từ máy bất kể tidset
-dài bao nhiêu, nên thời gian khai thác của nó chỉ tăng 1{,}8 lần, từ 10{,}2 lên
-18{,}3\,ms. Theo phạm vi \emph{process}, bản tối ưu gần như phẳng ở 0{,}79 đến 0{,}80\,s
-vì chi phí khởi động và biên dịch của Julia lấn át. Nguồn gốc phần tăng 1{,}8 lần
-đó chưa được xác định. Ở cả hai giao thức, mọi đầu ra đều khớp hoàn toàn với SPMF.
+Under the matched-output protocol, the number of frequent itemsets stays around 5\,000 and
+the number of tidset intersections (joins) is nearly constant, at about 164\,000 with
+about 4\,900 successes. Even so, the baseline's mining time grows 42-fold as $w$ goes from
+5 to 40 (Table~\ref{tab:width}), because each merge costs time proportional to the
+combined length of the two tidsets (Section~\ref{sec:minsup}). Each item appears in a fraction $w/|I|$ of the transactions, so its tidset length
+is proportional to $w$, and the tidset of a pair to $w(w-1)$. The total number of merged
+elements thus grows 47-fold while $w$ grows only 8-fold, and the baseline's time tracks it
+at 9.0 to 10.0\,ns per element. The optimized variant intersects bitsets of
+$\lceil N/64 \rceil = 157$ machine words whatever the tidset length, and its mining time
+grows only 1.8-fold, from 10.2 to 18.3\,ms; we have not identified where that remaining
+growth comes from. In the \emph{process} scope, the optimized variant stays at 0.22 to
+0.23\,s, essentially Julia start-up and reading, while the baseline grows 14.4-fold (0.35
+to 4.98\,s) and SPMF Eclat 24.3-fold (0.64 to 15.53\,s).
 
 \begin{table}[t]
 \centering
-\caption{Eclat ở giao thức khớp đầu ra. $\sigma$ là ngưỡng theo số giao dịch,
-``Phần tử'' là tổng độ dài hai tidset trên mọi phép giao của bản cơ bản, thời
-gian là trung vị \emph{mine} của ba lần lặp.}
+\caption{Eclat under the matched-output protocol. $\sigma_{\min}$ is the threshold in
+transactions, ``Elements'' is the combined length of the two tidsets over all of the
+baseline's intersections, and times are \emph{mine} medians of three repeats.}
 \label{tab:width}
 \begin{tabular}{rrrrrr}
 \hline
-$w$ & $\sigma$ & Tập & Phần tử (triệu) & Cơ bản (s) & Tối ưu (ms) \\
+$w$ & $\sigma_{\min}$ & Sets & Elements (M) & Baseline (s) & Optimized (ms) \\
 \hline
-5 & 10 & 5\,028 & 11{,}4 & 0{,}114 & 10{,}2 \\
-10 & 69 & 5\,016 & 38{,}9 & 0{,}361 & 11{,}3 \\
-15 & 179 & 5\,007 & 82{,}4 & 0{,}747 & 12{,}5 \\
-20 & 340 & 5\,007 & 142{,}0 & 1{,}366 & 13{,}9 \\
-25 & 550 & 5\,007 & 217{,}2 & 2{,}046 & 15{,}1 \\
-30 & 815 & 5\,002 & 308{,}8 & 2{,}833 & 16{,}2 \\
-35 & 1\,127 & 5\,002 & 416{,}4 & 3{,}765 & 17{,}2 \\
-40 & 1\,488 & 5\,001 & 538{,}8 & 4{,}841 & 18{,}3 \\
+5 & 10 & 5\,028 & 11.4 & 0.114 & 10.2 \\
+10 & 69 & 5\,016 & 38.9 & 0.361 & 11.3 \\
+15 & 179 & 5\,007 & 82.4 & 0.747 & 12.5 \\
+20 & 340 & 5\,007 & 142.0 & 1.366 & 13.9 \\
+25 & 550 & 5\,007 & 217.2 & 2.046 & 15.1 \\
+30 & 815 & 5\,002 & 308.8 & 2.833 & 16.2 \\
+35 & 1\,127 & 5\,002 & 416.4 & 3.765 & 17.2 \\
+40 & 1\,488 & 5\,001 & 538.8 & 4.841 & 18.3 \\
 \hline
 \end{tabular}
 \end{table}
 
-Về cây tìm kiếm, khi cố định minsup, cây vừa sâu thêm một mức ở $w = 25$ (cặp) và
-$w = 40$ (bộ ba), vừa rộng ra: số phép giao tăng từ 4\,950 lên 166\,650 rồi
-4\,087\,798. Khi khớp đầu ra, cây có cùng kích thước ở mọi $w$ nên chỉ chi phí trên
-mỗi phép giao thay đổi. Phạm vi kết luận có giới hạn: một $N$ và một số item, tám
-giá trị $w$, item độc lập, ba lần lặp trên một máy, và mục tiêu 5\,000 tập
-là một lựa chọn.
-\subsection{Phân tích và hướng phát triển}
-\label{sec:future}
-Đề bài gợi ý hai hướng tối ưu: biểu diễn tidset thích nghi giữa danh sách và
-\emph{bitset} (mảng bit), và dừng sớm khi giao tidset. Cả hai đã có trong bản tối
-ưu: \texttt{prefer\_lists} chuyển một lớp tương đương sang danh sách khi
-rẻ hơn, \texttt{intersect\_lists!} dừng khi số tid đã tìm được cộng phần còn lại của
-danh sách ngắn hơn không thể đạt minsup, và \texttt{BlockCounts} loại một phép giao
-mà không cần trộn. Diffset đã được thử và bị loại vì không nhanh hơn bitset quá mức
-nhiễu. Vì vậy nhóm đo xem bản tối ưu còn tốn thời gian ở đâu rồi mới đề xuất.
+The two protocols also shape the search tree differently. With minsup fixed, the tree
+gains a level at $w = 25$ (pairs) and again at $w = 40$ (triples), and it widens as well:
+the number of intersections grows from 4\,950 to 166\,650 and then to 4\,087\,798. With the
+output matched, the tree has the same size at every $w$, and only the cost of each
+intersection changes. These conclusions cover a limited setting: a single $N$ and item
+count, eight values of $w$, independent items, and three repeats on one machine. The
+target of 5\,000 itemsets is also a choice rather than a derived value.
 
-\texttt{scripts/stage\_profile.jl} đo ba giai đoạn đọc, khai thác và ghi của đường
-CLI trong một tiến trình đã khởi động (trung vị của năm lượt sau một lượt khởi
-động), đồng thời lấy mẫu bằng \emph{profiler} (công cụ lấy mẫu hàm đang chạy) và
-gán mỗi mẫu cho hàm của gói mà nó đang chạy. Trong Bảng~\ref{tab:stage-profile},
-``Bố cục'' gồm đọc tệp, đếm item, dựng bitset gốc và kiểm tra dạng chuẩn; ``Phép
-giao'' gồm phép giao bitset và danh sách, chuyển bitset sang danh sách, đếm khối và
-phần điều phối tìm kiếm; ``Đầu ra'' gồm mở rộng nút, sắp xếp và định dạng.
+\subsection{Analysis and future directions}
+\label{sec:future}
+Two common directions for optimizing Eclat are an adaptive tidset
+representation that switches between lists and \emph{bitsets}, and early termination of
+tidset intersections. The optimized variant already does both: per-class tid lists, the
+early stop in the list merge, and block bounds (Section~\ref{sec:optimized}). Before
+proposing anything new, we therefore measured where the optimized variant still
+spends its time.
+
+The script \texttt{scripts/stage\_profile.jl} times the three stages of the CLI path,
+reading, mining, and writing, in a warm process, taking the median of five runs after one
+warm-up run. It also samples the same runs with a \emph{profiler}, a tool that
+periodically records which function is running, and assigns each sample to the package
+function it falls in. In Table~\ref{tab:stage-profile}, ``Layout'' covers reading the
+file, counting items, building the root bitsets, and checking the canonical form;
+``Intersect'' covers bitset and list intersections, converting bitsets to lists, block
+counting, and search bookkeeping; and ``Output'' covers node expansion, sorting, and
+formatting.
 
 \begin{table}[t]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{1.5pt}
-\caption{Phần trăm số mẫu của \emph{profiler} theo nhóm, cho đường CLI của bản tối
-ưu. ``Lượt'' là thời gian một lượt đọc, khai thác và ghi (giây). Chess 0{,}9 và
-Mushroom 0{,}5 chỉ mất 5 đến 7\,ms nên không lấy mẫu được.}
+\caption{Share of \emph{profiler} samples by group, in percent, for the optimized
+variant's CLI path. ``Run'' is the time of one read, mine, and write pass (seconds).
+Chess 0.9 and Mushroom 0.5 take only 5 to 7\,ms, too short to sample.}
 \label{tab:stage-profile}
 \begin{tabular}{lrrrrrr}
 \hline
-Điểm & Itemset & Lượt & Bố cục & Đếm cặp & Phép giao & Đầu ra \\
+Point & Itemsets & Run & Layout & Pairs & Intersect & Output \\
 \hline
-Chess 0{,}6 & 254\,944 & 0{,}099 & 5 & 0 & 12 & 83 \\
-Mushroom 0{,}1 & 574\,431 & 0{,}180 & 4 & 0 & 1 & 95 \\
-Mushroom 0{,}05 & 3\,755\,511 & 1{,}237 & 1 & 0 & 1 & 98 \\
-Retail 0{,}01 & 159 & 0{,}069 & 98 & 0 & 1 & 0 \\
-Retail 0{,}001 & 7\,589 & 0{,}144 & 57 & 39 & 4 & 1 \\
-T10I4D100K 0{,}01 & 385 & 0{,}105 & 66 & 34 & 0 & 0 \\
-T10I4D100K 0{,}00025 & 96\,959 & 0{,}710 & 10 & 7 & 79 & 5 \\
-Accidents 0{,}95 & 15 & 0{,}567 & 98 & 0 & 0 & 2 \\
-Accidents 0{,}65 & 1\,093 & 0{,}619 & 99 & 0 & 0 & 0 \\
+Chess 0.6 & 254\,944 & 0.099 & 5 & 0 & 12 & 83 \\
+Mushroom 0.1 & 574\,431 & 0.180 & 4 & 0 & 1 & 95 \\
+Mushroom 0.05 & 3\,755\,511 & 1.237 & 1 & 0 & 1 & 98 \\
+Retail 0.01 & 159 & 0.069 & 98 & 0 & 1 & 0 \\
+Retail 0.001 & 7\,589 & 0.144 & 57 & 39 & 4 & 1 \\
+T10I4D100K 0.01 & 385 & 0.105 & 66 & 34 & 0 & 0 \\
+T10I4D100K 0.00025 & 96\,959 & 0.710 & 10 & 7 & 79 & 5 \\
+Accidents 0.95 & 15 & 0.567 & 98 & 0 & 0 & 2 \\
+Accidents 0.65 & 1\,093 & 0.619 & 99 & 0 & 0 & 0 \\
 \hline
 \end{tabular}
 \end{table}
 
-Phép giao tidset, thao tác cốt lõi của Eclat, chỉ chiếm phần lớn ở một điểm, T10I4D100K
-0{,}00025. Ở ba điểm dày (Chess 0{,}6, Mushroom 0{,}1 và 0{,}05), đầu ra chiếm 83\% đến
-98\%. Ở năm điểm còn lại, dựng bố cục dọc và đếm cặp chiếm phần lớn, và ở Accidents bước
-tìm kiếm chiếm dưới 1\% lượt chạy. Các mục trước khớp với điều này. Trên Accidents, thời gian CLI của
-bản tối ưu tăng tuyến tính theo số giao dịch dù đầu ra gần như không đổi (khoảng 1\,100
-itemset), và hệ số góc của nó nhỏ nhất trong bốn chương trình
-(Bảng~\ref{tab:scalability-fit}). Peak RSS của bản tối ưu (Bảng~\ref{tab:peak-rss}) từ
-261{,}5 đến 299{,}2\,MiB ở bốn bộ dữ liệu nhỏ và 398{,}3\,MiB ở Accidents, phần chênh cùng bậc với cơ sở dữ liệu đầu vào (105\,MiB theo
-\texttt{Base.summarysize}). Ở minsup thấp nhất, độ dài trung bình của itemset là 8{,}02 ở
-Mushroom, 7{,}37 ở Chess và 4{,}00 ở Accidents, so với 2{,}07 ở Retail và 3{,}10 ở
-T10I4D100K, và số itemset ở các CSDL dày tăng nhanh hơn 3 đến 9 lần trên thang log-log
-(tỉ số các hệ số góc, từ $5{,}23/1{,}68$ đến $14{,}33/1{,}55$, mục~\ref{sec:output-size}).
-Mọi lần chạy phía sau các số này đều khớp SPMF Eclat hoàn toàn.
+Tidset intersection, the core operation of Eclat, takes most of the time at only one
+point, T10I4D100K 0.00025. At the three dense points (Chess 0.6 and Mushroom
+0.1 and 0.05), output takes 83\% to 98\% of the samples. At the other five points,
+building the vertical layout and counting pairs dominate, and on Accidents the search
+takes under 1\% of the run. This agrees with the earlier subsections. On Accidents, the
+optimized variant's time grows linearly with $N$ while the output stays near 1\,100
+itemsets (Section~\ref{sec:scalability}), and its peak RSS exceeds that of the other
+databases by roughly the size of the input database itself (105\,MiB by
+\texttt{Base.summarysize}). At the dense points, the long itemsets of
+Section~\ref{sec:output-size} make the output, not the search, the largest cost. Every
+run behind these numbers matches SPMF Eclat exactly.
 
-So với SPMF, các điểm mạnh và yếu dưới đây dựa trên hành vi đã đo. Nhóm xem SPMF như hộp
-đen nên không gán nguyên nhân bên trong SPMF. Về điểm mạnh, chi phí theo giao
-dịch của bản tối ưu thấp hơn SPMF Eclat 41 lần và PrePost+ 2{,}8 lần trên Accidents. Hằng
-số khởi động 0{,}19 đến 0{,}22\,s thấp hơn 0{,}48 đến 0{,}52\,s của PrePost+. Thời gian
-khai thác chỉ tăng 1{,}8 lần khi độ dài giao dịch tăng từ 5 lên 40, vì phép giao bitset có
-chi phí 157 từ ở mọi độ dài (mục~\ref{sec:width}), còn thời gian lạnh của SPMF Eclat tăng
-25 lần. Bản tối ưu cần ít bộ nhớ hơn SPMF Eclat từ 1{,}7 đến 10{,}7 lần
-(Bảng~\ref{tab:peak-rss}). Về điểm yếu, tại Mushroom 0{,}05, điểm duy nhất bản tối ưu chậm
-hơn PrePost+ (1{,}445 so với 1{,}378\,s), 98\% lượt chạy là đầu ra và riêng bước sắp xếp
-chiếm 43\% số mẫu, trong khi SPMF ghi theo thứ tự khai thác nên không phải sắp xếp. Ở
-Accidents, PrePost+ cần ít bộ nhớ hơn bản tối ưu 17\% (340{,}9 so với 398{,}3\,MiB).
+The strengths and weaknesses relative to SPMF listed below rest on measured behavior
+only. On the strong side, the optimized variant's cost per transaction on Accidents is 41 times lower
+than SPMF Eclat's and 2.8 times lower than PrePost+'s, and its start-up constant of 0.19
+to 0.22\,s is below the 0.48 to 0.52\,s of PrePost+. As transactions grow from 5 to 40
+items, its mining time grows only 1.8-fold, because a bitset intersection costs 157 words
+at every length (Section~\ref{sec:width}), while SPMF Eclat's \emph{process} time grows
+24.3-fold. It also needs 1.7 to 10.7 times less memory than SPMF Eclat
+(Table~\ref{tab:peak-rss}). On the weak side, Mushroom 0.05 is the only point where the
+optimized variant is slower than PrePost+ (1.445 against 1.378\,s). There, output takes
+98\% of the run and sorting alone 43\% of the samples, whereas SPMF writes in mining order
+and does not sort. On Accidents, PrePost+ also needs 14\% less memory than the optimized
+variant (340.9 against 398.3\,MiB).
 
-\paragraph{Đề xuất 1: kho số nguyên phẳng và dựng bố cục dọc bằng mảng.}
-\emph{Nút thắt.} Bố cục chiếm 98\% đến 99\% số mẫu ở Accidents và Retail 0{,}01, và quyết định
-cả hệ số góc theo giao dịch lẫn peak RSS nêu trên. \texttt{count\_items} băm từng lần xuất hiện
-của item vào một \texttt{Dict}, \texttt{bitset\_tidsets} tra từng lần xuất hiện trong một
-\texttt{Dict} thứ hai, và bộ đọc cấp phát một \texttt{Vector} 8 byte mỗi item cho từng
-giao dịch. \emph{Thay đổi.} Đường CLI đọc CSDL vào một vectơ phẳng \texttt{Int32} kèm
-vectơ vị trí, đếm item và ánh xạ item sang hạng bằng mảng đánh chỉ số theo mã item, rồi
-đặt bit từ mảng đó; mã item vượt một ngưỡng vẫn dùng \texttt{Dict}. Phần tìm kiếm không
-đổi. \emph{Lợi ích kỳ vọng.} Một bản thử nhỏ thay hai lượt \texttt{Dict} bằng tra mảng
-trên cùng CSDL: trên Accidents 0{,}65 hai bước giảm từ 0{,}310 xuống 0{,}092\,s (nhanh
-hơn 3{,}4 lần, trung vị của ba lần chạy), tiết kiệm 35\% lượt chạy, còn trên Retail
-0{,}001 là 22\% và trên T10I4D100K 0{,}00025 là 3\%. Dự đoán kiểm chứng được là hệ số góc
-theo giao dịch trên Accidents giảm khoảng một phần ba, và các điểm bị phép giao chi phối không đổi. CSDL Accidents chiếm
-105\,MiB dưới dạng \texttt{Vector\{Vector\{Int\}\}}, 46\,MiB dạng \texttt{Int32} phẳng và
-23\,MiB dạng \texttt{UInt16} (mã lớn nhất là 468), tức giảm 59 đến 82\,MiB trên 398{,}3\,MiB
-peak RSS. \emph{Đánh đổi.} CLI có thêm một đường đọc và một bộ dựng bố cục song song với
-bản tổng quát, hai bản phải luôn tương đương, và ngưỡng mã item cần một đường dự phòng vì
-tệp SPMF cho phép mã lớn và thưa. Mã item của cả năm benchmark đủ nhỏ để dùng mảng. \emph{Kiểm thử.} Bố cục mới bằng \texttt{bitset\_class}
-trên CSDL ngẫu nhiên có hạt giống (kể cả $N = 63, 64, 65$, mã 0 và mã trên ngưỡng); đầu
-ra CLI trùng từng byte với hiện tại ở cả 33 điểm và khớp bản đồ đầy đủ với SPMF; đo lại
-tỉ lệ bố cục, hệ số góc và peak RSS, và chỉ giữ thay đổi nếu nhanh hơn ít nhất 10\% ở
-điểm nhắm tới và không làm điểm nào khác chậm quá 10\%.
+\paragraph{Proposal 1: a flat integer store and an array-built vertical layout.}
+\emph{Bottleneck.} Layout takes 98\% to 99\% of the samples on Accidents and Retail 0.01,
+and it drives both the per-transaction slope and the peak RSS discussed above.
+\texttt{count\_items} hashes every item occurrence into a \texttt{Dict},
+\texttt{bitset\_tidsets} looks up every occurrence in a second \texttt{Dict}, and the
+reader allocates a \texttt{Vector} with 8 bytes per item for each transaction.
+\emph{Change.} The CLI path would read the database into a single flat \texttt{Int32}
+vector plus an offset vector, count items and map them to ranks with an array indexed by
+item code, and set the bits from that array. Item codes above a cutoff would still go
+through a \texttt{Dict}, and the search itself would not change. \emph{Expected benefit.}
+A small prototype that replaced the two \texttt{Dict} passes with array lookups on the
+same database cut these two steps on Accidents 0.65 from 0.310 to 0.092\,s (3.4 times
+faster, medians of three runs). That saves 35\% of the run on Accidents 0.65, 22\% on
+Retail 0.001, and 3\% on T10I4D100K 0.00025. The testable prediction is that the
+per-transaction slope on Accidents drops by about a third, while points dominated by
+intersection stay the same. Memory should fall as well: the Accidents database takes
+105\,MiB as \texttt{Vector\{Vector\{Int\}\}}, 46\,MiB as flat \texttt{Int32}, and
+23\,MiB as \texttt{UInt16} (its largest code is 468), a saving of 59 to 82\,MiB out of a
+398.3\,MiB peak RSS. \emph{Tradeoff.} The CLI would gain a second reader and a second
+layout builder alongside the general ones, and the two would have to stay equivalent. The
+item-code cutoff also needs a fallback path because SPMF files allow large, sparse codes,
+although the codes of all five benchmarks are small enough for an array. \emph{Tests.} The
+new layout must equal \texttt{bitset\_class} on seeded random databases, including
+$N = 63, 64, 65$, code 0, and codes above the cutoff. The CLI output must stay
+byte-identical to the current output at all 33 points and match SPMF's full map. The
+layout share, slope, and peak RSS would then be measured again, and the change kept only
+if it gains at least 10\% at the targeted points without slowing any other point by more
+than 10\%.
 
-\paragraph{Đề xuất 2: thứ tự đầu ra theo thứ tự tìm kiếm.}
-\emph{Nút thắt.} Ở Chess 0{,}6, Mushroom 0{,}1 và 0{,}05, đầu ra chiếm 83\% đến 98\% số
-mẫu và sắp xếp từ điển chiếm 35\% đến 43\%. Trên máy chấm điểm, bước sắp xếp ở Mushroom 0{,}05 tốn
-0{,}30\,s trong 1{,}445\,s, và in theo thứ tự lưu trữ rẻ hơn 0{,}18\,s so với in theo thứ
-tự đã sắp. \emph{Thay đổi.} Thêm tùy chọn \texttt{order=:search} cho \texttt{write\_itemsets}
-và \texttt{--order search} cho \texttt{demo.jl}: ghi các itemset theo thứ tự lưu trữ và bỏ
-sắp xếp. Mặc định vẫn là thứ tự từ điển, phần tìm kiếm và \texttt{SupportMap} không đổi.
-\emph{Lợi ích kỳ vọng.} Ở Mushroom 0{,}05 thời gian CLI giảm từ 1{,}445\,s xuống khoảng
-1{,}15\,s (chỉ bỏ sắp xếp) đến 0{,}97\,s (bỏ cả chi phí đọc không tuần tự), nên tỉ số $R$
-so với PrePost+ giảm từ 1{,}05 xuống 0{,}83 đến 0{,}70. Ở Chess 0{,}6 và Mushroom 0{,}1 dự
-đoán giảm 35\% đến 41\% lượt chạy, còn các điểm thưa không đổi. \emph{Đánh đổi.} Tệp theo
-thứ tự tìm kiếm không còn so sánh từng byte giữa các biến thể và các lần chạy khác mã,
-điều giao diện của gói bảo đảm bằng thứ tự cố định. Bộ so sánh đọc cả hai tệp thành bản
-đồ nên không bị ảnh hưởng. Một đợt đo phải ghi thứ tự đã dùng, vì thời gian CLI khi đó
-không gồm bước sắp xếp, giống các chương trình SPMF. Mức cải thiện đo được tập trung ở các
-điểm dày, rõ nhất ở Mushroom 0{,}05, nên bản nộp giữ thứ tự cố định. \emph{Kiểm thử.} Tệp theo thứ tự tìm kiếm, sau
-khi sắp xếp ngoài, trùng từng byte với đầu ra mặc định; bản đồ đầy đủ khớp SPMF ở mọi
-điểm bắt buộc và điểm chịu tải; hai lần chạy cùng mã cho cùng byte; và một đợt đo năm lần
-lặp cả hai thứ tự ở Chess 0{,}5, Mushroom 0{,}1 và 0{,}05, trong đó dự đoán sai nếu $R$ ở
-Mushroom 0{,}05 vẫn từ 1{,}0 trở lên.
+\paragraph{Proposal 2: output in search order.}
+\emph{Bottleneck.} On Chess 0.6, Mushroom 0.1, and Mushroom 0.05, output takes 83\% to
+98\% of the samples, and the lexicographic sort alone takes 35\% to 43\%. Timed directly
+in a warm process on the benchmark machine at the same revision (median of seven calls),
+computing the sorted order takes 0.025, 0.059, and 0.475\,s at these three points.
+Printing in storage order instead of sorted order saves another 0.005, 0.021, and
+0.222\,s, because the sorted order reads the result arrays out of sequence.
+\emph{Change.} Add an \texttt{order=:search} option to \texttt{write\_itemsets} and an
+\texttt{--order search} flag to \texttt{demo.jl} that write itemsets in storage order and
+skip the sort. Lexicographic order would remain the default, and neither the search nor
+\texttt{SupportMap} would change. \emph{Expected benefit.} Subtracting those warm times
+from the \emph{process} medians of Table~\ref{tab:runtime-low} and the stress point, CLI
+time on Mushroom 0.05 would drop from 1.445\,s to about 0.97\,s by skipping the sort, or
+to 0.75\,s if the result is also read in sequence. The ratio $R$ against PrePost+ would
+then fall from 1.05 to between 0.70 and 0.54. We predict an 8\% to 10\% shorter run on
+Chess 0.6, 14\% to 20\% on Mushroom 0.1, and no change at the sparse points.
+\emph{Tradeoff.} Files written in search order could no longer be compared byte for byte
+across variants or across code revisions, which the package interface currently
+guarantees through its fixed order. The comparator reads both files into maps, so it
+would not be affected, but a benchmark would have to record which order it used, because
+CLI time would then exclude the sort, as it already does for the SPMF programs. Since the
+measured gain is concentrated at the dense points, and above all at Mushroom 0.05, the
+package keeps the fixed order. \emph{Tests.} A search-order file, once sorted
+externally, must be byte-identical to the default output, and the full map must match
+SPMF at every grid and stress point. Two runs of the same code must produce the same
+bytes. A five-repeat campaign of both orders on Chess 0.6, Mushroom 0.1, and Mushroom 0.05
+would test the prediction, which fails if $R$ on Mushroom 0.05 stays at 1.0 or above.
 
-Nhóm không đề xuất ba hướng khác. Biểu diễn thích nghi và dừng sớm đã có, và bảng trên
-cho thấy phép giao chỉ chi phối ở T10I4D100K 0{,}00025, nơi chuyển bitset sang danh sách
-chiếm 16\% số mẫu so với 50\% của hai loại phép giao. Diffset thua hoặc hòa ở mọi điểm
-thử. Tìm kiếm song song theo lớp tương đương chưa có số đo về cách công việc phân bố giữa
-các lớp gốc, nên bằng chứng ở đây không ủng hộ cũng không bác bỏ. Giới hạn: hồ sơ
-chạy trong một tiến trình đã khởi động, chỉ cho đường CLI của bản tối ưu, và
-các lợi ích kỳ vọng là dự đoán chưa cài đặt.
+Other directions look less promising on this evidence. More work on adaptive
+representations or early termination would pay off only where intersection dominates the
+run, and Table~\ref{tab:stage-profile} shows that happening at a single point,
+T10I4D100K 0.00025, where the two kinds of intersection take 50\% of the samples and
+converting bitsets to lists another 16\%. Diffsets lost to or tied with bitsets at every
+point we tested (Section~\ref{sec:measure}). Parallel search over equivalence classes
+might help, but we have not measured how evenly the work divides among the root classes,
+so we leave it open. Finally, both proposals rest on a profile taken in a warm process
+and only on the optimized variant's CLI path, so their benefits remain predictions until
+the changes are built and measured.

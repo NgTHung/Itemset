@@ -1,0 +1,278 @@
+\appendices
+
+\section{Correctness of the baseline}
+\label{app:baseline}
+The proofs in these appendices fix a strict total order $\prec$ on the items, in which
+every class lists its members and joins a member only with the members after it. The
+baseline orders items by identifier. The optimized variant orders them by increasing
+support and breaks ties by identifier (Section~\ref{sec:optimized}). No proof uses
+anything about $\prec$ beyond it being a strict total order, so every result holds for
+both variants. We write $x \preceq y$ when $x \prec y$ or $x = y$. For a nonempty itemset
+$X$, $\ell(X)$ is its last item under $\prec$, and every item comes after
+$\ell(\emptyset)$.
+
+A class with prefix $P$ is a list of members $(b, T_b)$, where $b$ is an item and $T_b$ a
+tid-list. The search \texttt{bottom\_up!} visits the members of a class in order. For each
+member $a$ it records $P \cup \{a\}$ with support $|T_a|$, intersects $T_a$ with $T_b$ for
+every member $b$ after $a$, keeps each result of size at least $\sigma_{\min}$ as a
+member of the child class with prefix $P \cup \{a\}$, and searches that child class before
+it moves on. The root class has prefix $\emptyset$ and holds every frequent item with its
+tidset.
+
+\begin{lemma}[Invariants]
+\label{lem:invariants}
+Every class with prefix $P$ that the search receives satisfies: (i) each tid-list is
+increasing and has no duplicates; (ii) the members are in increasing order under $\prec$,
+and every member item comes after $\ell(P)$; (iii) every member satisfies
+$|T_b| \ge \sigma_{\min}$; (iv) every member satisfies $T_b = t(P \cup \{b\})$.
+\end{lemma}
+\begin{IEEEproof}
+By induction on the depth of the class. The root class satisfies (i) because
+\texttt{to\_class} appends tids in the order it reads the transactions, (ii) because the
+root is sorted and $P = \emptyset$, (iii) because it keeps only frequent items, and (iv)
+by the definition of $t(\{b\})$. Let a class with prefix $P$ satisfy (i) to (iv), and let
+its member $a$ produce the child class with prefix $P' = P \cup \{a\}$. The merge of two
+increasing lists without duplicates is increasing without duplicates, which gives (i).
+The child keeps only members $b$ after $a$, in their original order, and $\ell(P') = a$,
+which gives (ii). The size check before a member is kept gives (iii). For (iv),
+identity~\eqref{eq:intersect} gives
+$T_a \cap T_b = t(P \cup \{a\}) \cap t(P \cup \{b\}) = t(P' \cup \{b\})$.
+\end{IEEEproof}
+
+\begin{lemma}[Exact support]
+\label{lem:exact}
+Every recorded itemset is frequent and is recorded with its support.
+\end{lemma}
+\begin{IEEEproof}
+The search records $P \cup \{a\}$ with $|T_a|$. By
+Lemma~\ref{lem:invariants}(iv) and~\eqref{eq:support}, $|T_a| = |t(P \cup \{a\})| =
+\sigma(P \cup \{a\})$, and by (iii) this is at least $\sigma_{\min}$.
+\end{IEEEproof}
+
+\begin{lemma}[No duplicates]
+\label{lem:unique}
+No itemset is recorded twice.
+\end{lemma}
+\begin{IEEEproof}
+First, each prefix $P$ gives at most one class. The root is built once. A class with a
+nonempty prefix $P$ is built only while the class with prefix $P \setminus \{\ell(P)\}$
+visits its member $\ell(P)$. By induction on $|P|$ that parent class is built at most
+once, and it visits each member once, because its members are distinct by
+Lemma~\ref{lem:invariants}(ii). Second, when the class with prefix $P$ records
+$X = P \cup \{a\}$, Lemma~\ref{lem:invariants}(ii) gives $a = \ell(X)$ and therefore
+$P = X \setminus \{\ell(X)\}$. Both the class and the member that record $X$ are thus
+determined by $X$, and each records once.
+\end{IEEEproof}
+
+\begin{lemma}[Anti-monotone support]
+\label{lem:antimonotone}
+If $X \subseteq Y$, then $t(Y) \subseteq t(X)$ and $\sigma(Y) \le \sigma(X)$. Every subset
+of a frequent itemset is therefore frequent.
+\end{lemma}
+\begin{IEEEproof}
+A transaction $T_i$ with $Y \subseteq T_i$ also satisfies $X \subseteq T_i$, so by
+\eqref{eq:support} every tid in $t(Y)$ is in $t(X)$. Taking sizes gives the inequality.
+\end{IEEEproof}
+
+\begin{lemma}[Completeness]
+\label{lem:complete}
+Every frequent itemset is recorded.
+\end{lemma}
+\begin{IEEEproof}
+Let $X = \{x_1 \prec \dots \prec x_k\}$ be frequent and let $P_j = \{x_1, \dots, x_j\}$. We
+show by induction on $j = 1, \dots, k$ that the search builds the class with prefix
+$P_{j-1}$, and that this class contains every item $y$ after $\ell(P_{j-1})$ for which
+$P_{j-1} \cup \{y\}$ is frequent. For $j = 1$, the prefix is empty and the root holds
+every frequent item. Assume the claim for $j < k$. The itemset $P_j \subseteq X$ is
+frequent by Lemma~\ref{lem:antimonotone}, and $x_j$ comes after $\ell(P_{j-1}) =
+x_{j-1}$, so $x_j$ is a member of the class with prefix $P_{j-1}$. Visiting $x_j$ builds
+the class with prefix $P_j$. Now take $y$ after $x_j$ with $P_j \cup \{y\}$ frequent.
+Lemma~\ref{lem:antimonotone} makes $P_{j-1} \cup \{y\}$ frequent, so $y$ is a member of
+the parent class after $x_j$. The search intersects their tid-lists, the result is
+$t(P_j \cup \{y\})$ by Lemma~\ref{lem:invariants}(iv), its size is at least
+$\sigma_{\min}$, and the child keeps $y$. This proves the claim for $j + 1$. For
+$j = k$, the class with prefix $P_{k-1}$ contains $x_k$, and visiting $x_k$ records $X$.
+\end{IEEEproof}
+
+\begin{theorem}
+\label{thm:baseline}
+The baseline records exactly the frequent itemsets, each once, with its support.
+\end{theorem}
+\begin{IEEEproof}
+Lemmas~\ref{lem:exact}, \ref{lem:unique}, and~\ref{lem:complete}.
+\end{IEEEproof}
+
+\section{Correctness of perfect-extension pruning}
+\label{app:perfect}
+With perfect-extension pruning, the search no longer records one itemset per member.
+Each search node stands for a family of itemsets. A node is a triple $(C, E, M)$ of
+pairwise disjoint item sets: the core $C$, the items joined so far; the perfect set $E$;
+and the class $M$, the members still to join, in order under $\prec$, each with the
+tidset $t(C \cup \{b\})$. The root is $(\emptyset, \emptyset, F)$, where $F$ is the set of
+frequent items. For a member $a \in M$, the node $(C, E, M)$ has a child $(C', E', M')$
+with
+\begin{align}
+  C' &= C \cup \{a\}, \nonumber\\
+  E' &= E \cup \{\, b \in M : a \prec b,\ \sigma(C' \cup \{b\}) = \sigma(C') \,\},
+    \label{eq:perfect-set}\\
+  M' &= \{\, b \in M : a \prec b,\ \sigma_{\min} \le \sigma(C' \cup \{b\}) < \sigma(C') \,\}.
+    \nonumber
+\end{align}
+Every node except the root emits the itemset $C \cup S$ with support $\sigma(C)$ for
+every $S \subseteq E$, which gives $2^{|E|}$ itemsets. The search computes each
+$\sigma(C' \cup \{b\})$ by one intersection, as in Appendix~\ref{app:baseline}, so
+Lemma~\ref{lem:invariants}(iv) carries over and every tidset that a member carries is
+exact. The three sets stay disjoint: $a \in M$ is not in $E$, the new items of $E'$ and
+all of $M'$ come after $a = \ell(C')$ and so lie outside $C'$, and $M'$ excludes the
+items that enter $E'$. Every core item is also a former member of $M$, so
+$\ell(C) \prec \ell(C')$ and the core items arrive in increasing order along a path.
+
+\begin{lemma}[Exact support]
+\label{lem:perfect-exact}
+For every node $(C, E, M)$ other than the root and every $S \subseteq E$,
+$t(C \cup S) = t(C)$ and $\sigma(C) \ge \sigma_{\min}$. Every emitted itemset is
+therefore frequent and is emitted with its support.
+\end{lemma}
+\begin{IEEEproof}
+By induction on depth. The identity $t(C \cup S) = t(C)$ also holds at the root,
+where $E = \emptyset$. Let it hold at $(C, E, M)$, and let $(C', E', M')$ be the child of member
+$a$. Split $S \subseteq E'$ into $S_0 = S \cap E$ and $S_1 = S \setminus E$. Then
+\begin{equation*}
+  t(C' \cup S_0) = t(C \cup S_0) \cap t(\{a\}) = t(C) \cap t(\{a\}) = t(C').
+\end{equation*}
+Each $b \in S_1$ satisfies $\sigma(C' \cup \{b\}) = \sigma(C')$ by~\eqref{eq:perfect-set},
+and $t(C' \cup \{b\}) \subseteq t(C')$ by Lemma~\ref{lem:antimonotone}. A subset with the
+same size is the whole set, so $t(C' \cup \{b\}) = t(C')$ and $t(C') \subseteq t(\{b\})$.
+Intersecting $t(C' \cup S_0) = t(C')$ with $t(\{b\})$ for every $b \in S_1$ therefore
+leaves $t(C')$, which proves $t(C' \cup S) = t(C')$. Finally $a \in M$, and every member
+$b$ of a class satisfies $\sigma(C \cup \{b\}) \ge \sigma_{\min}$: the root holds frequent
+items, and $M'$ keeps only such members. Hence $\sigma(C') \ge \sigma_{\min}$.
+\end{IEEEproof}
+
+\begin{lemma}[Class membership]
+\label{lem:perfect-members}
+For every node $(C, E, M)$,
+$M = \{\, b : \ell(C) \prec b,\ b \notin E,\ \sigma(C \cup \{b\}) \ge \sigma_{\min} \,\}$.
+\end{lemma}
+\begin{IEEEproof}
+At the root both sides are $F$. Let the claim hold at $(C, E, M)$ and let
+$(C', E', M')$ be the child of $a$, so $\ell(C') = a$. If $b \in M'$, then $a \prec b$,
+$C' \cup \{b\}$ is frequent, $b \notin E$ because $b \in M$, and $b$ is not a new item of
+$E'$ because its support is below $\sigma(C')$, so $b$ is in the right-hand side.
+Conversely, take $b$ with $a \prec b$, $b \notin E'$, and $C' \cup \{b\}$ frequent. Then
+$C \cup \{b\}$ is frequent by Lemma~\ref{lem:antimonotone}, $\ell(C) \prec a \prec b$,
+and $b \notin E \subseteq E'$, so $b \in M$ by the induction hypothesis. Since $b$ did
+not enter $E'$, $\sigma(C' \cup \{b\}) < \sigma(C')$, and $b \in M'$.
+\end{IEEEproof}
+
+For a frequent itemset $Z \neq \emptyset$, the \emph{walk} of $Z$ starts at the root and,
+at each node $(C, E, M)$ with $C \subseteq Z$, looks at the remainder
+$R = Z \setminus (C \cup E)$. It stops if $R = \emptyset$, and otherwise moves to the
+child of the first item of $R$ under $\prec$. The walk is deterministic: $Z$ alone decides
+each step.
+
+\begin{lemma}[Coverage]
+\label{lem:perfect-cover}
+The walk of every nonempty frequent itemset $Z$ ends at a node other than the root, and
+that node emits $Z$.
+\end{lemma}
+\begin{IEEEproof}
+We show that the walk can always take its step and keeps two properties: $C \subseteq Z$,
+and every item of $R$ comes after $\ell(C)$. Both hold at the root. At a node where
+$R \neq \emptyset$, let $a$ be the first item of $R$. It comes after $\ell(C)$, it is not
+in $E$, and $C \cup \{a\} \subseteq Z$ is frequent by Lemma~\ref{lem:antimonotone}, so
+$a \in M$ by Lemma~\ref{lem:perfect-members} and the child of $a$ exists. At the child,
+$C' = C \cup \{a\} \subseteq Z$, and its remainder is a subset of $R \setminus \{a\}$,
+whose items all come after $a = \ell(C')$. The remainder loses at least $a$ at every
+step, so the walk stops. It does not stop at the root, where $R = Z \neq \emptyset$. At
+the final node, $R = \emptyset$ gives $Z = C \cup (Z \cap E)$ with $Z \cap E \subseteq E$,
+so the node emits $Z$.
+\end{IEEEproof}
+
+\begin{lemma}[Uniqueness]
+\label{lem:perfect-unique}
+No itemset is emitted twice.
+\end{lemma}
+\begin{IEEEproof}
+Within one node, two different subsets $S \neq S'$ of $E$ give $C \cup S \neq C \cup S'$,
+because $E$ is disjoint from $C$. It remains to show that only one node emits a given $Z$.
+Let a node $N_k$ emit $Z = C_k \cup S$ with $S \subseteq E_k$, and let
+$N_0, N_1, \dots, N_k$ be the path from the root, where $N_{j+1}$ is the child of member
+$a_{j+1}$ of $N_j = (C_j, E_j, M_j)$. We show that this path is the walk of $Z$. Since
+each node has a single path from the root and the walk is deterministic, $N_k$ is then
+the only node that emits $Z$.
+
+Fix $j < k$ and let $R_j = Z \setminus (C_j \cup E_j)$. The item $a_{j+1}$ is in $Z$
+because $a_{j+1} \in C_k$, it is not in $C_j$ because it comes after $\ell(C_j)$, and it
+is not in $E_j$ because $a_{j+1} \in M_j$. So $a_{j+1} \in R_j$, and the walk does not
+stop at $N_j$. Suppose some $r \in R_j$ comes before $a_{j+1}$. If $r \in C_k$, then
+$r = a_i$ for some $i > j$, but core items arrive in increasing order, so
+$a_{j+1} \preceq a_i = r$, a contradiction. Otherwise $r \in S \subseteq E_k$ and
+$r \notin E_j$, so $r$ entered the perfect set at some step $i > j$. By
+\eqref{eq:perfect-set}, the items that enter at step $i$ come after $a_i$, and
+$a_{j+1} \preceq a_i$, again a contradiction. Hence $a_{j+1}$ is the first item of
+$R_j$, which is the step the walk takes. At $N_k$ the remainder is
+$Z \setminus (C_k \cup E_k) = \emptyset$, so the walk stops there.
+\end{IEEEproof}
+
+\begin{theorem}
+\label{thm:perfect}
+The search with perfect-extension pruning emits exactly the frequent itemsets, each once,
+with its support.
+\end{theorem}
+\begin{IEEEproof}
+Lemmas~\ref{lem:perfect-exact}, \ref{lem:perfect-cover}, and~\ref{lem:perfect-unique}.
+\end{IEEEproof}
+
+\section{Exactness of the skipped and stopped intersections}
+\label{app:skips}
+The optimized variant changes how a tidset is stored and skips or stops some
+intersections. None of these changes alters a node.
+
+\emph{Representations.} A bitset sets bit $i$ exactly when tid $i$ is in the tidset and
+leaves the unused high bits of its last word at zero, so the word-by-word AND of two
+bitsets sets exactly the bits of the common tids, and its population count is the size of
+the intersection. Converting a bitset to a tid list lists exactly its set bits, so a
+member keeps the same tidset in a new form.
+
+\begin{lemma}
+\label{lem:skip}
+Skipping the intersection of $a$ with a later member $b$ whose result is known to satisfy
+$\sigma(C' \cup \{b\}) < \sigma_{\min}$ leaves the child $(C', E', M')$ unchanged.
+\end{lemma}
+\begin{IEEEproof}
+By~\eqref{eq:perfect-set}, $b$ enters $E'$ only if $\sigma(C' \cup \{b\}) = \sigma(C')$,
+which is at least $\sigma_{\min}$ by Lemma~\ref{lem:perfect-exact}, and it enters $M'$
+only if $\sigma(C' \cup \{b\}) \ge \sigma_{\min}$. An infrequent result therefore places
+$b$ in neither set, whether the intersection runs or not.
+\end{IEEEproof}
+
+Each of the three rules below skips or stops an intersection only when an upper bound on
+its support is below $\sigma_{\min}$, so Lemma~\ref{lem:skip} applies to all of them.
+
+\emph{Pair counts at the root.} At the root $C = \emptyset$ and $C' = \{a\}$, and the
+count of the pair $(a, b)$ is the number of transactions that contain both items, which
+is $\sigma(\{a, b\})$ by~\eqref{eq:support}. The count is exact, so a pair below
+$\sigma_{\min}$ is infrequent.
+
+\emph{Early stop in a tid-list merge.} Suppose a merge has found $f$ common tids and has
+$r_a$ and $r_b$ tids left in the two lists. Every further common tid is among the
+remaining tids of both lists, so the final size is at most $f + \min(r_a, r_b)$. The
+merge stops only when this bound is below $\sigma_{\min}$. It never stops on reaching
+$\sigma_{\min}$, so a frequent result carries its whole tidset and its exact support,
+which both the perfect-extension test and the child class need.
+
+\emph{Block bounds.} Split the tids into disjoint blocks. Each common tid of $X$ and $Y$
+lies in exactly one block $j$, and the number of common tids in block $j$ is at most
+$\min(c_{X,j}, c_{Y,j})$, the smaller of the two members' counts there. Summing over the
+blocks gives~\eqref{eq:bound}, so a sum below $\sigma_{\min}$ proves the intersection
+infrequent.
+
+\begin{theorem}
+The optimized variant emits exactly the frequent itemsets, each once, with its support.
+\end{theorem}
+\begin{IEEEproof}
+By Lemma~\ref{lem:skip} and the three bounds above, the optimized search builds the same
+nodes as the search of Appendix~\ref{app:perfect} under its item order. That search is
+correct by Theorem~\ref{thm:perfect}.
+\end{IEEEproof}

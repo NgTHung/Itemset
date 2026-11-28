@@ -1,390 +1,421 @@
-\section{Cài đặt}
+\section{Implementation}
 \label{sec:implementation}
-Nhóm cài đặt lại Eclat từ bài báo gốc của Zaki~\cite{zaki2000} bằng Julia, chỉ dùng thư
-viện chuẩn và không dùng thư viện khai thác tập phổ biến (frequent itemset mining, FIM)
-nào. Gói có hai biến thể cho cùng một kết quả: bản cơ bản (baseline) bám sát bài báo, và
-biến thể tối ưu (optimized). Chương này trình bày thuật toán và lý do nó cho kết quả đúng,
-giao diện của gói, các kỹ thuật tối ưu, cách kiểm thử cả hai biến thể và mức cải thiện
-đo được so với bản cơ bản.
+The package offers two variants of Eclat that return the same result: a baseline that
+stays close to the paper~\cite{zaki2000}, and an optimized variant. Neither uses an
+existing FIM library. This section first explains how the algorithm works and why its
+output is correct, then describes the interface, the optimizations we added, how we test
+both variants, and how much each optimization gains over the baseline.
 
-\subsection{Biểu diễn dọc và tidset}
-Cơ sở dữ liệu (CSDL) gồm $N$ giao dịch (transaction). Mỗi giao dịch được gán một mã
-giao dịch (transaction identifier, tid) là chỉ số $1, 2, \dots, N$ theo thứ tự đọc.
-Apriori lưu CSDL theo chiều ngang (horizontal layout): mỗi giao dịch kèm danh sách item.
-Eclat dùng biểu diễn dọc (vertical layout): mỗi item $x$ kèm tidset $t(x)$, tức tập mã
-các giao dịch chứa $x$. Với itemset $X$, ta có
+\subsection{Vertical layout and tidsets}
+\label{sec:vertical}
+Consider a database of $N$ transactions, numbered $1, 2, \dots, N$ in the order they are
+read. This number is the transaction identifier (tid). Unlike Apriori's horizontal
+layout, Eclat uses the vertical layout, in which each item $x$ is paired with its tidset
+$t(x)$, the set of tids of the transactions that contain $x$. For an itemset $X$,
 \begin{equation}
   t(X) = \{\, i \in \{1,\dots,N\} : X \subseteq T_i \,\}, \qquad
   \sigma(X) = |t(X)|,
   \label{eq:support}
 \end{equation}
-trong đó $T_i$ là giao dịch thứ $i$ và $\sigma(X)$ là độ hỗ trợ (support) của $X$, tức
-số giao dịch chứa $X$. Itemset $X$ là phổ biến (frequent) khi
-$\sigma(X) \ge \mathit{minsup}$, với $\mathit{minsup}$ là ngưỡng hỗ trợ tối thiểu tính
-bằng số giao dịch. Giao dịch rỗng vẫn có tid và vẫn được tính vào $N$, nhưng không xuất
-hiện trong tidset nào.
+where $T_i$ is the $i$-th transaction and $\sigma(X)$ is the support of $X$, the number
+of transactions that contain $X$. An itemset $X$ is frequent when
+$\sigma(X) \ge \sigma_{\min}$, with $\sigma_{\min}$ the minimum support threshold
+counted in transactions. When the same threshold is written as a fraction of $N$, we call
+it $\mathit{minsup}$. An empty transaction still receives a tid and counts toward $N$,
+even though it appears in no tidset.
 
-Bản cơ bản lưu mỗi tidset dưới dạng \texttt{Vector\{Int\}} tăng dần, gọi là tid-list.
-Hàm \texttt{to\_class} đọc CSDL một lần và thêm tid theo thứ tự tăng dần, nên mọi
-tid-list đều đã sắp xếp mà không cần sắp lại.
+The baseline stores each tidset as a sorted \texttt{Vector\{Int\}}, which we call a
+tid-list. The function \texttt{to\_class} builds these lists in one pass over the
+database, appending each tid as it reads the transaction, so every tid-list comes out
+sorted and never has to be sorted again.
 
-Ưu điểm chính của biểu diễn dọc là phép giao. Một giao dịch chứa $P \cup \{a, b\}$ khi
-và chỉ khi nó chứa cả $P \cup \{a\}$ lẫn $P \cup \{b\}$, nên
+What makes the vertical layout attractive is that support follows from an intersection.
+A transaction contains
+$P \cup \{a, b\}$ if and only if it contains both $P \cup \{a\}$ and $P \cup \{b\}$, so
 \begin{equation}
   t(P \cup \{a, b\}) = t(P \cup \{a\}) \cap t(P \cup \{b\}),
   \label{eq:intersect}
 \end{equation}
-trong đó $P$ là một itemset và $a, b$ là hai item không thuộc $P$. Độ hỗ trợ của itemset
-mới vì vậy được tính từ hai tidset sẵn có, không cần quét lại CSDL.
+where $P$ is an itemset and $a, b$ are two items not in $P$. The support of the new
+itemset can therefore be computed from two tidsets that already exist, without scanning
+the database again.
 
-\subsection{Lớp tương đương theo tiền tố và tìm kiếm Bottom-Up}
-Zaki chia không gian tìm kiếm thành các lớp tương đương theo tiền tố (prefix-based
-equivalence class)~\cite{zaki2000}. Lớp có tiền tố (prefix) $P$ gồm các phần tử
-$(b, t(P \cup \{b\}))$, với mỗi $b$ lớn hơn mọi item của $P$. Hai itemset trong cùng
-một lớp chỉ khác nhau ở item cuối, nên phép giao~\eqref{eq:intersect} chỉ hợp lệ giữa
-các phần tử cùng lớp.
+\subsection{Prefix-based equivalence classes and Bottom-Up search}
+Zaki partitions the search space into prefix-based equivalence
+classes~\cite{zaki2000}. The class with prefix $P$ holds the members
+$(b, t(P \cup \{b\}))$, one for each item $b$ greater than every item of $P$ such that
+$P \cup \{b\}$ is frequent. Itemsets in the same class share everything except their
+last item, which is why identity~\eqref{eq:intersect} applies only to two members of the
+same class.
 
-Hàm \texttt{bottom\_up!} cài đặt thủ tục Bottom-Up của bài báo. Với mỗi phần tử $a$ của
-lớp tiền tố $P$, hàm ghi $P \cup \{a\}$ cùng độ hỗ trợ, giao $t(P \cup \{a\})$ với tidset
-của mọi phần tử $b$ đứng sau $a$, giữ lại các kết quả phổ biến làm lớp con có tiền tố
-$P \cup \{a\}$, rồi duyệt lớp con đó trước khi xét phần tử kế tiếp. Lớp gốc có tiền tố
-rỗng và gồm các item phổ biến. Bài báo cho phép duyệt dàn các lớp theo chiều sâu
-(depth-first search, DFS) hoặc chiều rộng và báo cáo kết quả theo chiều rộng; nhóm chọn
-chiều sâu để bộ nhớ chỉ giữ một lớp cho mỗi mức trên đường đi hiện tại. Bài báo cũng đếm
-trước các 2-itemset phổ biến bằng một mảng tam giác trên CSDL ngang; bản cơ bản bắt đầu
-phép giao từ các item đơn để một thủ tục xử lý mọi mức, còn biến thể tối ưu dùng lại
-bước đếm này ở Mục~\ref{sec:optimized}. Bảng~\ref{tab:mapping} đối chiếu các thành phần
-của bài báo với mã nguồn.
+The function \texttt{bottom\_up!} implements the paper's Bottom-Up procedure. For each
+member $a$ of the class with prefix $P$, it records $P \cup \{a\}$ and its support,
+intersects $t(P \cup \{a\})$ with the tidset of every member $b$ after $a$, keeps the
+frequent results as the child class with prefix $P \cup \{a\}$, and searches that child
+class before moving to the next member. The search starts from the root class, whose
+prefix is empty and whose members are the frequent items. The paper allows either a
+depth-first search (DFS) or a breadth-first search over the lattice of classes and
+presents its results breadth-first. We chose DFS because it keeps only one class per level
+of the current path in memory. The paper also finds the frequent 2-itemsets up front by
+counting them in a triangular array over the horizontal database. The baseline skips that
+step and starts intersecting from single items, so a single procedure handles every
+level; the optimized variant brings the counting step back
+(Section~\ref{sec:optimized}). Table~\ref{tab:mapping} shows where each part of the paper
+lives in the source code.
 
 \begin{table}[t]
 \centering
 \small
-\caption{Đối chiếu bài báo~\cite{zaki2000} với mã nguồn trong \texttt{src/algorithm/}}
+\caption{Mapping from the paper~\cite{zaki2000} to the source code in \texttt{src/algorithm/}}
 \label{tab:mapping}
 \begin{tabular}{>{\raggedright\arraybackslash}p{0.37\columnwidth}>{\raggedright\arraybackslash}p{0.53\columnwidth}}
 \hline
-Bài báo & Bản cơ bản; biến thể tối ưu \\
+Paper & Baseline; optimized variant \\
 \hline
-Tid-list của item (Mục 4.1) & \texttt{to\_class}; \texttt{bitset\_tidsets} \\
-Lớp theo tiền tố (Mục 4.2) & vector các cặp (item, tid-list); vector các
+Item tid-lists (Section 4.1) & \texttt{to\_class}; \texttt{bitset\_tidsets} \\
+Prefix classes (Section 4.2) & vector of (item, tid-list) pairs; vector of
 \texttt{ClassMember\{T\}} \\
-Bottom-Up (Mục 4.3.1 và 5.2, Hình 12) & \texttt{bottom\_up!}; \texttt{eclat\_search!} \\
-Giao hai tid-list & \texttt{intersect\_tidlists}; \texttt{intersect\_bitsets!} và
+Bottom-Up (Sections 4.3.1 and 5.2, Fig.~12) & \texttt{bottom\_up!}; \texttt{eclat\_search!} \\
+Intersecting two tid-lists & \texttt{intersect\_tidlists}; \texttt{intersect\_bitsets!} and
 \texttt{intersect\_lists!} \\
-Đếm 2-itemset bằng mảng tam giác (Mục 5.1) & không dùng; \texttt{count\_pairs} \\
+Counting 2-itemsets with a triangular array (Section 5.1) & not used; \texttt{count\_pairs} \\
 \hline
 \end{tabular}
 \end{table}
 
-Bảng~\ref{tab:trace} truy vết thuật toán trên CSDL \texttt{baskets.txt} gồm bốn giao
-dịch $T_1 = \{1,2,3\}$, $T_2 = \{1,2\}$, $T_3 = \{1,3\}$, $T_4 = \{2,3\}$ với
-$\mathit{minsup} = 2$. Các tidset ban đầu là $t(1) = \{1,2,3\}$, $t(2) = \{1,2,4\}$ và
-$t(3) = \{1,3,4\}$. Thuật toán ghi đúng sáu itemset phổ biến, và tập $\{1,2,3\}$ bị tỉa
-vì chỉ xuất hiện trong $T_1$.
+Table~\ref{tab:trace} traces the algorithm on \texttt{baskets.txt}, a small database with
+the four transactions $T_1 = \{1,2,3\}$, $T_2 = \{1,2\}$, $T_3 = \{1,3\}$, and
+$T_4 = \{2,3\}$, at $\sigma_{\min} = 2$. The search starts from the tidsets
+$t(1) = \{1,2,3\}$, $t(2) = \{1,2,4\}$, and $t(3) = \{1,3,4\}$. It records exactly six
+frequent itemsets and prunes $\{1,2,3\}$, which only $T_1$ contains.
 
 \begin{table}[t]
 \centering
-\caption{Truy vết Bottom-Up trên \texttt{baskets.txt} với $\mathit{minsup} = 2$}
+\caption{Bottom-Up trace on \texttt{baskets.txt} with $\sigma_{\min} = 2$}
 \label{tab:trace}
 \begin{tabular}{llll}
 \hline
-Tiền tố & Phép giao & Tidset & Kết quả \\
+Prefix & Intersection & Tidset & Result \\
 \hline
-$\emptyset$ & -- & $t(1) = \{1,2,3\}$ & ghi $\{1\}$, $\sigma = 3$ \\
-$\{1\}$ & $t(1) \cap t(2)$ & $\{1,2\}$ & giữ $2$ \\
-$\{1\}$ & $t(1) \cap t(3)$ & $\{1,3\}$ & giữ $3$ \\
-$\{1\}$ & -- & $t(12) = \{1,2\}$ & ghi $\{1,2\}$, $\sigma = 2$ \\
-$\{1,2\}$ & $t(12) \cap t(13)$ & $\{1\}$ & tỉa, $1 < 2$ \\
-$\{1\}$ & -- & $t(13) = \{1,3\}$ & ghi $\{1,3\}$, $\sigma = 2$ \\
-$\emptyset$ & -- & $t(2) = \{1,2,4\}$ & ghi $\{2\}$, $\sigma = 3$ \\
-$\{2\}$ & $t(2) \cap t(3)$ & $\{1,4\}$ & giữ $3$ \\
-$\{2\}$ & -- & $t(23) = \{1,4\}$ & ghi $\{2,3\}$, $\sigma = 2$ \\
-$\emptyset$ & -- & $t(3) = \{1,3,4\}$ & ghi $\{3\}$, $\sigma = 3$ \\
+$\emptyset$ & -- & $t(1) = \{1,2,3\}$ & record $\{1\}$, $\sigma = 3$ \\
+$\{1\}$ & $t(1) \cap t(2)$ & $\{1,2\}$ & keep $2$ \\
+$\{1\}$ & $t(1) \cap t(3)$ & $\{1,3\}$ & keep $3$ \\
+$\{1\}$ & -- & $t(12) = \{1,2\}$ & record $\{1,2\}$, $\sigma = 2$ \\
+$\{1,2\}$ & $t(12) \cap t(13)$ & $\{1\}$ & prune, $1 < 2$ \\
+$\{1\}$ & -- & $t(13) = \{1,3\}$ & record $\{1,3\}$, $\sigma = 2$ \\
+$\emptyset$ & -- & $t(2) = \{1,2,4\}$ & record $\{2\}$, $\sigma = 3$ \\
+$\{2\}$ & $t(2) \cap t(3)$ & $\{1,4\}$ & keep $3$ \\
+$\{2\}$ & -- & $t(23) = \{1,4\}$ & record $\{2,3\}$, $\sigma = 2$ \\
+$\emptyset$ & -- & $t(3) = \{1,3,4\}$ & record $\{3\}$, $\sigma = 3$ \\
 \hline
 \end{tabular}
 \end{table}
 
-\subsection{Tính đúng đắn}
+\subsection{Correctness}
 \label{sec:correctness}
-Mọi lớp mà \texttt{bottom\_up!} nhận đều thỏa bốn bất biến (invariant): (i) mỗi tid-list
-tăng dần và không lặp; (ii) các phần tử xếp tăng dần theo item và lớn hơn mọi item của
-tiền tố; (iii) mỗi phần tử là phổ biến; (iv) tid-list của phần tử $b$ đúng bằng
-$t(P \cup \{b\})$. Lớp gốc thỏa cả bốn khi được tạo. Lớp con lấy các phần tử đứng sau
-$a$ nên giữ (i) và (ii); phép kiểm tra kích thước trước khi thêm cho (iii); đẳng
-thức~\eqref{eq:intersect} cho (iv).
+Every class that \texttt{bottom\_up!} receives satisfies four invariants: (i) each
+tid-list is increasing and has no duplicates; (ii) the members are sorted by item and
+every member item is greater than every item of the prefix; (iii) every member is
+frequent; (iv) the tid-list of member $b$ equals $t(P \cup \{b\})$. Identity~\eqref{eq:intersect}
+keeps (iv) true in every child class.
 
-Từ đó suy ra ba tính chất. Thứ nhất, độ hỗ trợ được ghi là chính xác theo (iv)
-và~\eqref{eq:support}. Thứ hai, không itemset nào bị ghi hai lần: theo (ii) mọi khóa
-$(x_1, \dots, x_k)$ tăng ngặt, và nó chỉ được ghi khi lớp tiền tố
-$(x_1, \dots, x_{k-1})$ duyệt tới $x_k$; mỗi lớp chỉ được tạo một lần. Thứ ba, kết quả
-đầy đủ nhờ tính đơn điệu giảm (anti-monotone) của độ hỗ trợ: nếu $X \subseteq Y$ thì
-$\sigma(X) \ge \sigma(Y)$, nên việc tỉa một itemset không phổ biến không làm mất tập cha
-phổ biến nào. Quy nạp theo độ dài cho thấy lớp tiền tố $(x_1, \dots, x_{j-1})$ chứa
-mọi item $y > x_{j-1}$ sao cho $(x_1, \dots, x_{j-1}, y)$ phổ biến, nên mọi itemset phổ
-biến đều được ghi. Tài liệu \texttt{docs/eclat.md} trong repository trình bày chứng minh
-đầy đủ.
+From these invariants, every recorded support is exact, and no itemset is recorded twice,
+because each itemset has one prefix class and one last member. The result is also
+complete, because support is anti-monotone~\cite{agrawal1994}: if $X \subseteq Y$, every
+transaction that contains $Y$ also contains $X$, so by~\eqref{eq:support}
+$t(Y) \subseteq t(X)$ and $\sigma(X) \ge \sigma(Y)$. Pruning an infrequent itemset
+therefore never loses a frequent superset. Appendix~\ref{app:baseline} proves all three
+properties.
 
-\subsection{Độ phức tạp}
-Gọi $L$ là tổng số item trên mọi giao dịch, $m$ là số item phân biệt và $C$ là số phép
-giao. Dựng biểu diễn dọc tốn $O(L)$ thời gian kỳ vọng cho từ điển, $O(m \log m)$ để sắp
-xếp và $O(L)$ bộ nhớ. Một phép giao tốn $O(|t(P \cup \{a\})| + |t(P \cup \{b\})|)$, tối
-đa $O(N)$. Một lớp có $k$ phần tử thực hiện $k(k-1)/2$ phép giao, nên tổng thời gian là
+\subsection{Complexity}
+Let $L$ be the total number of items over all transactions, $m$ the number of distinct
+items, and $C$ the number of intersections. Building the vertical layout takes $O(L)$
+expected time to fill the dictionary, $O(m \log m)$ to sort the items, and $O(L)$ memory.
+Intersecting two tid-lists costs $O(|t(P \cup \{a\})| + |t(P \cup \{b\})|)$, which is
+never more than $O(N)$, and a class with $k$ members performs $k(k-1)/2$ intersections.
+The total time is therefore
 \begin{equation}
   O(L + m \log m + C \cdot N),
   \label{eq:cost}
 \end{equation}
-với $C$ là tổng số phép giao trên mọi lớp được duyệt. Vì tìm kiếm theo chiều sâu, bộ nhớ
-chỉ giữ các lớp trên đường đi hiện tại, mỗi mức một lớp gồm tối đa $m$ phần tử, mỗi
-phần tử tối đa $N$ tid. Số kết quả có thể tăng theo hàm mũ: một $k$-itemset phổ biến có
-$2^k - 1$ tập con khác rỗng, và mọi tập con đó đều phổ biến.
+where $C$ is the total number of intersections over all classes visited. Because the
+search is depth-first, memory only has to hold the classes on the current path: one class
+per level, each with at most $m$ members of at most $N$ tids. The output, on the other
+hand, can grow exponentially, since a frequent $k$-itemset has $2^k - 1$ non-empty
+subsets and all of them are frequent.
 
-\subsection{Giao diện, định dạng SPMF và dòng lệnh}
-Hai ứng dụng và phần thực nghiệm chỉ gọi bốn hàm công khai: \texttt{read\_transactions}
-đọc file SPMF (mỗi dòng một giao dịch, các item cách nhau bởi dấu cách),
-\texttt{support\_threshold} đổi $\mathit{minsup}$ thành số giao dịch, \texttt{mine} trả
-về từ điển \texttt{SupportMap} từ itemset sang độ hỗ trợ, và \texttt{write\_itemsets}
-ghi mỗi itemset một dòng theo dạng \texttt{1 2 \#SUP: 2}. Một $\mathit{minsup}$ thực
-trong $(0, 1]$ là tỉ lệ và được làm tròn lên thành $\lceil \mathit{minsup} \cdot N \rceil$
-giao dịch; một $\mathit{minsup}$ nguyên là số giao dịch tuyệt đối. Tham số
-\texttt{variant} chọn \texttt{:baseline} hoặc \texttt{:optimized}, nên hai biến thể được
-chọn riêng và so sánh trên cùng đầu vào.
+\subsection{Interface, SPMF format, and command line}
+The two applications and the experiments use only four public functions:
+\texttt{read\_transactions} reads an SPMF file, which has one transaction per line with
+items separated by spaces; \texttt{support\_threshold} converts a threshold to a
+transaction count; \texttt{mine} returns a \texttt{SupportMap} dictionary from itemset to
+support; and \texttt{write\_itemsets} writes one itemset per line in the form
+\texttt{1 2 \#SUP: 2}. A real threshold in $(0, 1]$ is read as the fraction
+$\mathit{minsup}$ and rounded up to $\sigma_{\min} = \lceil \mathit{minsup} \cdot N \rceil$
+transactions, while an integer threshold is taken as $\sigma_{\min}$ directly. The
+\texttt{variant} argument selects \texttt{:baseline} or \texttt{:optimized}, so either
+variant can be run on its own and the two can be compared on the same input.
 
-Chương trình dòng lệnh \texttt{demo.jl} nhận đường dẫn đầu vào, \texttt{--output}
-tùy chọn (in ra stdout khi bỏ qua), đúng một trong hai ngưỡng \texttt{--minsup} (tỉ lệ) hoặc \texttt{--min-count} (số giao
-dịch) và \texttt{--variant}, ví dụ
+The command-line program \texttt{demo.jl} takes an input path, an optional
+\texttt{--output} (stdout when omitted), exactly one of the two thresholds \texttt{--minsup} (a fraction) or
+\texttt{--min-count} (a transaction count), and \texttt{--variant}, for example
 \texttt{julia --project=. demo.jl --minsup 0.5 --output out.txt data/toy/baskets.txt}.
-Đầu vào sai làm chương trình dừng với mã thoát 1 và thông báo nêu số dòng lỗi. Hàm ghi
-kiểm tra toàn bộ kết quả trước khi mở tệp, nên một lần chạy lỗi không làm thay đổi tệp
-đầu ra đã có. Các itemset được ghi theo thứ tự từ điển (lexicographic order) của mã item,
-nên tệp đầu ra của hai biến thể giống nhau từng byte.
+On invalid input the program exits with code 1 and a message that names the offending
+line. Because the writer validates the whole result before it opens the file, a failed
+run leaves any existing output file untouched. Itemsets are written in lexicographic order
+of their item codes, which makes the output files of the two variants identical byte for
+byte.
 
-\subsection{Biến thể tối ưu}
+\subsection{Optimized variant}
 \label{sec:optimized}
-Biến thể tối ưu giữ nguyên thủ tục Bottom-Up và thay đổi ba thứ: cách lưu tidset, những
-phép giao được bỏ qua, và cách ghi kết quả. Mỗi thay đổi đều giữ đầu ra chính xác; các
-chứng minh nằm trong \texttt{docs/eclat-optimized.md}. Phần khởi động, đọc và ghi tệp nằm
-trong mã dùng chung, nên cả hai biến thể cùng hưởng các thay đổi ở đó.
+The optimized variant keeps the Bottom-Up procedure and changes three things: how
+tidsets are stored, which intersections are skipped, and how the result is written. None
+of these changes alters the output, as Appendices~\ref{app:perfect} and~\ref{app:skips}
+prove. Start-up, reading, and writing live in code that both variants share, so the
+baseline benefits from the changes made there as well.
 
-\subsubsection{Tidset dạng bitset và thứ tự duyệt}
-Ở ngưỡng thấp nhất của mỗi CSDL, lời gọi khai thác của bản cơ bản cấp phát 3{,}3 đến
-5{,}7 GiB, chủ yếu cho tid-list mới của mỗi phép giao. Biến thể tối ưu lưu mỗi tidset
-thành bitset (chuỗi bit, bit thứ $i$ ứng với giao dịch $i$) gồm $W = \lceil N/64 \rceil$
-từ 64 bit. Phép giao là phép AND từng từ, và độ hỗ trợ là số bit 1 đếm bằng
-\texttt{count\_ones} trong cùng vòng lặp. Kết quả được ghi vào một bitset lấy từ kho dùng
-lại (pool); bitset của phép giao không phổ biến quay về kho, nên phép giao thất bại không
-cấp phát bộ nhớ. Một phép giao đọc $2W$ từ bất kể độ hỗ trợ: $W = 50$ ở Chess và
-$5\,316$ ở Accidents.
+\subsubsection{Bitset tidsets and search order}
+At the lowest threshold of each database, the baseline's mining call allocates 3.3 to
+5.7 GiB, mostly for the new tid-list that each intersection creates. The optimized variant
+stores each tidset as a bitset instead: a string of $W = \lceil N/64 \rceil$ 64-bit words
+in which bit $i$ stands for transaction $i$. Intersecting two bitsets is a word-by-word
+AND, and the same loop counts the set bits with \texttt{count\_ones} to get the support.
+The result is written into a bitset taken from a reusable pool, and if the intersection
+turns out infrequent, the bitset goes straight back to the pool, so a failed intersection
+allocates no memory. Every intersection reads $2W$ words regardless of the support, with
+$W = 50$ on Chess and $5\,316$ on Accidents.
 
-Các item được duyệt theo độ hỗ trợ tăng dần. Item hiếm đứng đầu được giao với nhiều item
-nhất, nhưng hầu hết các phép giao đó thất bại, còn item phổ biến đứng cuối chỉ còn ít
-phần tử theo sau, nên các lớp con nhỏ hơn. Chứng minh ở Mục~\ref{sec:correctness} chỉ
-dùng một thứ tự toàn phần trên các item, nên nó vẫn đúng với thứ tự này.
+The optimized variant also visits items in increasing order of support. The rare item
+that comes first is intersected with the most items, but most of those intersections
+fail; the frequent item that comes last has few members after it, so its child classes
+stay small. The proofs in Appendix~\ref{app:baseline} only need some total order on the
+items, so they hold for this order as well.
 
-\subsubsection{Tỉa phần mở rộng hoàn hảo và cấp phát kết quả một lần}
-Một item $b$ là phần mở rộng hoàn hảo (perfect extension)~\cite{borgelt2012} của itemset
-$X$ khi $t(X \cup \{b\}) = t(X)$, tức mọi giao dịch chứa $X$ đều chứa $b$. Vì
-$t(X \cup \{b\}) \subseteq t(X)$, điều kiện này tương đương với hai độ hỗ trợ bằng nhau,
-nên chỉ cần so sánh một số đếm. Khi đó mọi itemset $X \cup Y$ trong cây con của $X$ có
-cùng độ hỗ trợ với $X \cup Y \cup S$, với $S$ là tập con bất kỳ của tập phần mở rộng
-hoàn hảo $E$. Biến thể tối ưu vì vậy bỏ $b$ khỏi lớp con và không giao tidset của $b$
-thêm lần nào. Mỗi nút (node) của cây tìm kiếm đại diện cho $2^{|E|}$ itemset có chung độ
-hỗ trợ. Ở Mushroom 0{,}05, cây tìm kiếm chỉ có 33\,819 nút cho 3\,755\,511 itemset.
+\subsubsection{Perfect-extension pruning and single allocation of the result}
+An item $b$ is a perfect extension~\cite{borgelt2012} of an itemset $X$ when
+$t(X \cup \{b\}) = t(X)$, that is, when every transaction that contains $X$ also contains
+$b$. Since $t(X \cup \{b\}) \subseteq t(X)$, the condition is equivalent to the two
+supports being equal, so comparing two counts is enough to decide it. If $E$ is the set of
+perfect extensions of $X$, every itemset $X \cup Y$ in the subtree of $X$ has the same
+support as $X \cup Y \cup S$ for any subset $S$ of $E$. The optimized variant therefore
+drops $b$ from the child class and never intersects $b$'s tidset again, and each node of
+the search tree stands for $2^{|E|}$ itemsets with the same support. On Mushroom 0.05,
+this shrinks the search tree to 33\,819 nodes for 3\,755\,511 itemsets.
 
-Phép tìm kiếm chỉ ghi lại các nút theo thứ tự duyệt trước (preorder), mỗi nút gồm độ
-sâu, item nó thêm vào, các phần mở rộng hoàn hảo nó tìm thấy và độ hỗ trợ. Hàm
-\texttt{expand\_nodes} tính kích thước cuối cùng của kết quả từ các nút, có kiểm tra tràn
-số, cấp phát ba mảng kết quả đúng một lần, rồi ghi các tập con $S$ theo thứ tự mã Gray
-(Gray code) để hai itemset liên tiếp chỉ khác nhau một item. Nếu để mảng kết quả lớn dần
-theo từng itemset, mỗi lần gấp đôi dung lượng phải sao chép toàn bộ mảng: ở Mushroom
-0{,}05, lời gọi khai thác trong một tiến trình đã khởi động (warm) cấp phát 1\,068 MiB để
-tạo một kết quả 306 MiB và mất 0{,}40 s; khi cấp phát một lần, nó cấp phát 310 MiB và mất
-0{,}17 s.
+During the search, the program records only the nodes, in preorder, with the depth of
+each node, the item it adds, the perfect extensions it found, and its support. Afterwards,
+\texttt{expand\_nodes} computes the final size of the result from the nodes (with an
+overflow check), allocates the three result arrays exactly once, and writes out the
+subsets $S$ in Gray-code order, so that two consecutive itemsets differ by one item.
+Growing the arrays one itemset at a time would instead copy the whole array at every
+doubling of capacity. On Mushroom 0.05, in an already warm process, that approach
+allocated 1\,068 MiB to build a 306 MiB result and took 0.40 s; with a single allocation
+the same call allocates 310 MiB and takes 0.17 s.
 
-\subsubsection{Dữ liệu thưa: đếm cặp, danh sách tid và cận theo khối}
-Trên dữ liệu thưa, phép giao bitset vẫn đọc đủ $W$ từ dù tidset ngắn ($W = 1\,378$ ở
-Retail và $1\,563$ ở T10I4D100K), và hầu hết phép giao thất bại. Ở Retail 0{,}001,
-99{,}9\% trong 2\,239\,786 phép giao ở lớp gốc không đạt ngưỡng. Ở T10I4D100K 0{,}00025,
-phần lớn phép giao nằm ở độ sâu 2 (2\,256\,822 phép, 99{,}1\% thất bại) trên các tidset
-chỉ khoảng 100 tid. Ba kỹ thuật sau xử lý hai dạng này.
+\subsubsection{Sparse data: pair counting, tid lists, and block bounds}
+On sparse data, a bitset intersection still reads all $W$ words even when the tidsets are
+short ($W = 1\,378$ on Retail and $1\,563$ on T10I4D100K), and most intersections fail
+anyway. On Retail 0.001, 99.9\% of the 2\,239\,786 intersections in the root class miss
+the threshold. On T10I4D100K 0.00025, most intersections happen at depth 2, where
+2\,256\,822 of them (99.1\% failing) work on tidsets of only about 100 tids. The following
+three techniques target these two patterns.
 
-\emph{Đếm cặp ở lớp gốc.} Hàm \texttt{count\_pairs} đếm độ hỗ trợ của mọi cặp item phổ
-biến bằng một mảng tam giác gồm $m_f(m_f-1)/2$ ô qua một lượt duyệt CSDL ngang, như Mục
-5.1 của bài báo~\cite{zaki2000}, với $m_f$ là số item phổ biến. Lớp gốc chỉ giao những cặp
-đạt ngưỡng. Tại gốc tiền tố rỗng, nên số đếm của cặp $(a, b)$ đúng bằng $|t(\{a, b\})|$
-và không phép giao phổ biến nào bị bỏ. Việc đếm chỉ chạy khi chi phí ước lượng của nó nhỏ
-hơn một phần mười chi phí các phép giao ở gốc, tức khi
-$10 \sum_i |T_i|(|T_i| - 1)/2 < W m_f(m_f-1)/2$. Retail và T10I4D100K thỏa điều kiện này;
-Chess, Mushroom và Accidents, với giao dịch dài và ít item phổ biến, vẫn giao như trước.
+\emph{Pair counting at the root.} The function \texttt{count\_pairs} counts the support
+of every pair of frequent items in a triangular array of $m_f(m_f-1)/2$ cells during one
+pass over the horizontal database, as in Section 5.1 of the paper~\cite{zaki2000}, where
+$m_f$ is the number of frequent items. The root class then intersects only the pairs that
+reach the threshold. Since the prefix at the root is empty, the count of a pair $(a, b)$
+is exactly $|t(\{a, b\})|$, so no frequent intersection is skipped. The counting runs only
+when its estimated cost is below one tenth of the cost of the root intersections, that
+is, when
+$10 \sum_i |T_i|(|T_i| - 1)/2 < W m_f(m_f-1)/2$. Retail and T10I4D100K meet this
+condition when many items are frequent, but not at Retail 0.01, where few items are
+frequent and the root intersects as before (Table~\ref{tab:stage-profile}). Chess,
+Mushroom, and Accidents, with their long transactions and few frequent items, never meet
+it.
 
-\emph{Danh sách tid theo lớp.} Một lớp con gồm $k$ phần tử chuyển từ bitset sang danh
-sách tid tăng dần khi
+\emph{Per-class tid lists.} A child class with $k$ members switches from bitsets to
+increasing tid lists when
 \begin{equation}
   kW + c\,(k - 1) \sum_{i=1}^{k} \sigma_i < W\,\frac{k(k-1)}{2},
   \label{eq:lists}
 \end{equation}
-trong đó vế phải là số từ mà các phép giao bitset của lớp phải đọc, $kW$ là chi phí
-chuyển đổi, $\sigma_i$ là độ hỗ trợ của phần tử thứ $i$, và $c = 8$ là chi phí một bước
-trộn tính theo số từ, chọn từ phép quét $c$ từ 2 đến 16 trên máy đo.
-Quy tắc~\eqref{eq:lists} dựa trên độ dài tidset và $N$, không dựa trên tên CSDL. Phép trộn hai danh sách không có nhánh rẽ phụ
-thuộc dữ liệu và dừng sớm khi số tid chung đã tìm cộng phần còn lại của danh sách ngắn hơn
-không thể đạt $\mathit{minsup}$.
+where the right-hand side is the number of words the class's bitset intersections would
+read, $kW$ is the cost of the conversion, $\sigma_i$ is the support of the $i$-th
+member, and $c = 8$ is the cost of one merge step in words, chosen from a sweep of $c$
+from 2 to 16 on the benchmark machine. Rule~\eqref{eq:lists} looks only at tidset lengths
+and $N$, never at which database is being mined. Each step of the merge advances through the two
+lists without a branch on the compared tids, and a bound check before each step stops the
+merge once the common tids found so far plus the rest of the shorter list cannot reach
+$\sigma_{\min}$.
 
-\emph{Cận theo khối.} Ở T10I4D100K 0{,}00025, 98{,}7\% trong 2\,076\,972 phép trộn vẫn
-thất bại, trên hai danh sách có tổng cộng trung bình 126 tid. Trước khi duyệt một lớp danh
-sách tid, chương
-trình chia khoảng tid thành tối đa $K = 256$ khối có độ rộng là lũy thừa của 2 và đếm số
-tid của mỗi phần tử trong từng khối. Với hai phần tử $X$ và $Y$ của lớp,
+\emph{Block bounds.} Even with tid lists, 98.7\% of the 2\,076\,972 merges on
+T10I4D100K 0.00025 still fail, on pairs of lists that hold 126 tids between them on
+average. Before searching a class of tid lists, the program therefore splits the tid range
+into at most $K = 256$ blocks, each a power of two wide, and counts how many tids of each
+member fall in each block. For two members $X$ and $Y$ of the class,
 \begin{equation}
   \sigma(X \cup Y) \le \sum_{j=1}^{K} \min(c_{X,j}, c_{Y,j}),
   \label{eq:bound}
 \end{equation}
-trong đó $c_{X,j}$ và $c_{Y,j}$ là số tid của $X$ và $Y$ trong khối $j$, vì một tid chung
-nằm trong đúng một khối và được đếm một lần cho mỗi phần tử. Phép trộn nào có cận nhỏ hơn
-$\mathit{minsup}$ bị bỏ qua mà không đọc tid nào. Cận~\eqref{eq:bound} không bao giờ loại
-một phép giao phổ biến, nên đầu ra không đổi. Giá trị $K = 256$ được chọn từ phép quét 64
-đến 512 khối.
+where $c_{X,j}$ and $c_{Y,j}$ are the numbers of tids of $X$ and $Y$ in block $j$,
+because a common tid lies in exactly one block and is counted once for each member. When
+this bound is below $\sigma_{\min}$, the program skips the merge without reading a single
+tid. Bound~\eqref{eq:bound} never rejects a frequent intersection, so the output stays the
+same. We chose $K = 256$ after sweeping 64 to 512 blocks.
 
-\subsubsection{Khởi động, đọc và ghi}
-Các thay đổi trong mục này nằm trong mã dùng chung của hai biến thể. Ở ngưỡng cao, thời
-gian chạy không nằm trong thuật toán. Một tiến trình \texttt{demo.jl}
-của bản cơ bản trên Chess 0{,}9 mất 2{,}36 s, trong khi khởi động Julia chỉ mất 0{,}17 s;
-phần còn lại là biên dịch JIT (just-in-time, biên dịch khi chạy). Nhóm chạy các hàm công
-khai và phần xử lý dòng lệnh trên một CSDL nhỏ trong lúc Julia dựng package image, để mã
-máy của chúng được lưu kèm gói. Phần xử lý dòng lệnh nằm trong gói (\texttt{src/cli.jl})
-thay vì trong tệp script, vì mã của script không được lưu trong package image và phải
-biên dịch lại 108{,}6 ms ở mỗi lần chạy. Một phép kiểm thử chạy \texttt{demo.jl} trong
-tiến trình mới với \texttt{--trace-compile} và yêu cầu không phương thức nào phải biên
-dịch.
+\subsubsection{Start-up, reading, and writing}
+At high thresholds, little of the runtime is spent in the algorithm itself. One \texttt{demo.jl}
+process of the baseline on Chess 0.9 takes 2.36 s, of which Julia start-up accounts for
+only 0.17 s; the rest is just-in-time (JIT) compilation. To avoid it, we run the public
+functions and the command-line handling on a small database while Julia builds the
+package image, so their machine code is stored with the package. The command-line
+handling lives in the package (\texttt{src/cli.jl}) rather than in the script, because
+script code is not stored in the package image and would be recompiled, at a cost of
+108.6 ms, on every run. A test runs \texttt{demo.jl} in a fresh process with
+\texttt{--trace-compile} and fails if any method needs compiling.
 
-Ở ngưỡng thấp trên dữ liệu dày, phần lớn thời gian nằm ở việc ghi kết quả. Bộ lấy mẫu
-\texttt{Profile} trên Mushroom 0{,}05 cho thấy phép sắp xếp đầu ra bằng so sánh chiếm
-64\% thời gian, định dạng và ghi tệp 25\%, còn khai thác chỉ 11\%. Biến thể tối ưu duyệt
-item theo độ hỗ trợ nên phải sắp lại kết quả theo thứ tự từ điển; nhóm thay phép sắp xếp
-này bằng radix sort (sắp xếp theo cơ số) trên khóa 128 bit chứa các item đầu của itemset
-và chỉ số của nó. Hàm ghi lấy chữ số của mỗi số nhỏ hơn $2^{20}$ từ một bảng tra và ghi
-bằng một lệnh 8 byte. Hàm đọc phân tích mỗi dòng vào một vector dùng lại và sao chép một
-lần với độ dài cuối cùng, nên lời gọi đọc Accidents (34 MB) trong một tiến trình đã khởi
-động giảm từ 0{,}57 s còn 0{,}29 s và cấp phát 151 MiB thay vì 354 MiB.
+At low thresholds on dense data, writing the result takes most of the time. Sampling
+Mushroom 0.05 with \texttt{Profile} showed the comparison sort of the output at 64\% of
+the time, formatting and writing the file at 25\%, and mining at only 11\%. The sort is
+needed because the optimized variant visits items by support and must put the result
+back into lexicographic order, so we replaced it with a radix sort on a 128-bit key that
+holds the first items of the itemset and its index. The writer now looks up the digits of
+every number below $2^{20}$ in a table and writes them with a single 8-byte store. The
+reader parses each line into a reused vector and copies it once at its final length; as
+a result, reading Accidents (34 MB) in a warm process takes 0.29 s instead of 0.57 s and
+allocates 151 MiB instead of 354 MiB.
 
-\subsubsection{Đặc trưng của Julia}
-Kiểu \texttt{ClassMember\{T\}} có tham số \texttt{T} là \texttt{UInt64} cho bitset hoặc
-\texttt{Int} cho danh sách tid. Hàm tìm kiếm \texttt{eclat\_search!} được viết một lần,
-và multiple dispatch (chọn phương thức theo kiểu của mọi đối số) chọn phép giao, quy tắc
-chuyển đổi và bộ lọc phép giao theo \texttt{T}. Julia biên dịch một bản chuyên biệt cho
-mỗi dạng tidset, nên vòng lặp trong không có phép kiểm tra kiểu khi chạy. Nhóm dùng
-\texttt{Vector\{UInt64\}} thay cho \texttt{BitVector} vì vòng lặp giao ghi kết quả vào
-vùng nhớ dùng lại và đếm bit trong cùng một lượt.
+\subsubsection{Julia features}
+The type \texttt{ClassMember\{T\}} takes a parameter \texttt{T}, which is \texttt{UInt64}
+for bitsets and \texttt{Int} for tid lists. The search function \texttt{eclat\_search!}
+is written only once; multiple dispatch, which chooses a method from the types of all
+arguments, picks the right intersection, conversion rule, and intersection filter for
+each \texttt{T}. Julia compiles a specialized copy of the search for each tidset form, so
+the inner loop runs without type checks. We use \texttt{Vector\{UInt64\}} rather than
+\texttt{BitVector} because the intersection loop writes into reused memory and counts
+bits in the same pass.
 
-Kiểu khóa \texttt{Tuple\{Vararg\{Int\}\}} của \texttt{SupportMap} không cố định độ dài,
-nên việc tạo hàng triệu khóa tốn hơn chính bước khai thác: trong một phép thử ban đầu trên
-Mushroom 0{,}05, chèn 3{,}76 triệu itemset vào từ điển mất 12{,}4 s trong khi đếm độ hỗ trợ
-của chúng mất 0{,}63 s. Cả hai biến thể vì vậy ghi kết
-quả vào ba mảng \texttt{Vector\{Int\}} phẳng (item, vị trí bắt đầu của mỗi itemset, độ hỗ
-trợ); hàm ghi tệp đọc thẳng ba mảng này, và \texttt{mine} chỉ dựng \texttt{SupportMap} ở
-biên giao diện cho ứng dụng. Mọi hằng số điều chỉnh là \texttt{const}, mọi container trên
-đường nóng có kiểu phần tử cụ thể. \texttt{@inbounds} chỉ có mặt ở phép trộn danh sách
-tid và hàm ghi số, kèm chú thích chứng minh chỉ số hợp lệ. Trên vòng lặp giao bitset,
-\texttt{@inbounds @simd} làm thời gian khai thác thay đổi từ $-8\%$ đến $+11\%$ trên năm
-điểm đo, nằm trong nhiễu, nên nhóm không dùng.
+The key type of \texttt{SupportMap}, \texttt{Tuple\{Vararg\{Int\}\}}, has no fixed length,
+and building millions of such keys costs more than the mining itself. In an early test on
+Mushroom 0.05, inserting 3.76 million itemsets into the dictionary took 12.4 s, while
+counting their supports took only 0.63 s. Both variants therefore write their result into
+three flat \texttt{Vector\{Int\}} arrays holding the items, the start position of each
+itemset, and the supports. The file writer reads these arrays directly, and \texttt{mine}
+builds a \texttt{SupportMap} only at the interface boundary, for the applications. Every
+tuning constant is \texttt{const}, and every container on a hot path has a concrete
+element type. \texttt{@inbounds} appears only in the tid-list merge and the number writer,
+each time with a comment that proves the indices valid. On the bitset intersection loop,
+\texttt{@inbounds @simd} changed mining time by $-8\%$ to $+11\%$ over five measurement
+points, which is within noise, so we left it out.
 
-\subsection{Kiểm thử tự động}
+\subsection{Automated tests}
 \label{sec:tests}
-Lệnh \texttt{julia --project=. test/runtests.jl} chạy 1\,458 phép kiểm tra, và tất cả
-đều đạt trên Julia 1.13.2. Mỗi kiểm thử khai thác so sánh toàn bộ \texttt{SupportMap} lẫn
-số itemset được ghi, vì một itemset bị ghi hai lần sẽ bị từ điển che mất. Cả hai biến thể
-chạy cùng các nhóm kiểm thử sau.
+The command \texttt{julia --project=. test/runtests.jl} runs 1\,500 checks, and all of
+them pass on Julia 1.13.2. Each mining test compares the whole \texttt{SupportMap} and
+also checks the number of itemsets recorded, since a dictionary would silently hide an
+itemset recorded twice. Both variants go through the following groups of tests.
 
 \begin{itemize}
-\item Kết quả tính tay: tám CSDL nhỏ, gồm CSDL rỗng, CSDL không có tập phổ biến, giao
-dịch lặp và ngưỡng nằm ngay trên và dưới độ hỗ trợ của một itemset, và một CSDL ảnh có
-giao dịch rỗng.
-\item Đối chiếu với Eclat của SPMF~\cite{spmf2016}: tám lần chạy trên bảy CSDL nhỏ và
-một lần chạy trên T25I10D10K (9\,976 giao dịch, 929 item), nơi SPMF cho 14\,782 itemset
-dài từ 1 đến 13 item ở $\mathit{minsup} = 0{,}008$. Cả hai biến thể khớp 100\% trên cả
-chín lần chạy, không có itemset thiếu, thừa hoặc sai độ hỗ trợ.
-\item Đối chiếu với bộ đếm vét cạn (brute force) liệt kê mọi tập con: 10 CSDL ngẫu
-nhiên sinh với hạt giống 42 cho mỗi biến thể. Biến thể tối ưu chạy thêm tám CSDL có 0, 1,
-63, 64, 65, 127, 128 và 129 giao dịch, tức quanh biên của một từ 64 bit trong bitset; một
-nửa trong số đó chứa các nhóm item luôn đi cùng nhau để sinh phần mở rộng hoàn hảo. Mỗi
-CSDL chạy với 18 tổ hợp cấu hình bật và tắt từng kỹ thuật ở Mục~\ref{sec:optimized}.
-\item Tính ổn định kiểu (type stability): \texttt{Test.@inferred} trên \texttt{mine},
-\texttt{mine\_packed} và các hàm tìm kiếm của hai biến thể.
-\item Đọc, ghi và dòng lệnh: hàm đọc theo byte được đối chiếu với bộ phân tích theo dòng
-trên các đầu vào biên (số tràn \texttt{Int}, ký tự lạ, dòng trống, xuống dòng kiểu Windows)
-và mọi CSDL nhỏ, hàm ghi được so từng byte với một bộ định dạng tham chiếu, và các lỗi tham
-số cùng mã thoát của tiến trình được kiểm tra.
+\item Hand-derived results: eight small databases, including an empty database, a
+database with no frequent itemset, duplicate transactions, thresholds just above and
+just below an itemset's support, and an image database with empty transactions.
+\item Comparison with SPMF's Eclat~\cite{spmf2016}: eight runs on seven small databases
+and one run on T25I10D10K (9\,976 transactions, 929 items), where SPMF reports 14\,782
+itemsets of 1 to 13 items at $\mathit{minsup} = 0.008$. Both variants match 100\% on all
+nine runs, with no missing, extra, or wrong-support itemset.
+\item Comparison with a brute-force counter that enumerates every subset, on 10 random
+databases generated with seed 42 for each variant. The optimized variant is also tested
+on eight databases with 0, 1, 63, 64, 65, 127, 128, and 129 transactions, sizes that
+straddle the boundary of a 64-bit bitset word. Half of them contain groups of items that
+always occur together, so that perfect extensions appear. Each database is mined under 18
+configurations that turn the techniques of Section~\ref{sec:optimized} on and off.
+\item Type stability: \texttt{Test.@inferred} on \texttt{mine}, \texttt{mine\_packed},
+and the search functions of both variants.
+\item Reading, writing, and the command line: the byte-level reader is checked against a
+line-based parser on edge-case inputs (\texttt{Int} overflow, unexpected characters,
+blank lines, Windows line endings) and on every small database. The writer's output is
+compared byte for byte with a reference formatter, and the tests also cover argument
+errors and process exit codes.
 \end{itemize}
 
-Bộ đếm vét cạn chỉ là công cụ kiểm thử. Ngoài bộ kiểm thử, mỗi đợt đo so sánh mọi tệp
-đầu ra với một lần chạy Eclat của SPMF độc lập sau khi đo xong. Trong đợt đo thời gian ở
-mục~\ref{sec:minsup}, cả 660 tệp đầu ra trên năm CSDL chuẩn, 165 tệp của mỗi chương trình
-trong bốn chương trình, đều khớp 100\%.
+The brute-force counter is too slow for anything but tests. For the benchmarks, every
+measurement campaign instead compares each output file with an independent run of SPMF's
+Eclat once timing has finished (Section~\ref{sec:exact}).
 
-\subsection{Đo lường mức cải thiện}
+\subsection{Measuring the improvement}
 \label{sec:measure}
-Mọi số đo trong mục này là trung vị thời gian của năm tiến trình \texttt{demo.jl} nguội
-(cold), tức mỗi lần chạy là một tiến trình mới gồm khởi động Julia, đọc, khai thác và ghi
-tệp. Các đợt đo chạy trên máy chấm điểm mô tả ở mục~\ref{sec:protocol}. Lưới đo gồm 33 ngưỡng trên năm CSDL Chess,
-Mushroom, Retail, T10I4D100K và Accidents, cùng một số ngưỡng stress thấp hơn lưới, chỉ
-dùng để kiểm tra giới hạn. Ngoài Eclat của SPMF, nhóm so sánh với PrePost+~\cite{deng2015}
-của \href{https://github.com/NgTHung/Itemset/blob/main/tools/spmf/release.toml}{bản SPMF đã ghim},
-vì đây là thuật toán nhanh hơn Eclat
-của SPMF trên dữ liệu dày. Tỉ số $R = T_\text{tối ưu} / T_\text{PrePost+}$ chia trung vị
-thời gian của biến thể tối ưu cho trung vị của PrePost+ ở cùng ngưỡng.
+Every number in this subsection is the median time of five cold \texttt{demo.jl}
+processes, where each run is a fresh process that covers Julia start-up, reading, mining,
+and writing the file. The campaigns ran on the benchmark machine described in
+Section~\ref{sec:protocol}, over a grid of 33 thresholds on the five databases Chess,
+Mushroom, Retail, T10I4D100K, and Accidents, plus a few stress thresholds below the grid
+that only probe the limits. Besides SPMF's Eclat, we compare with
+PrePost+~\cite{deng2015} from the
+\href{https://github.com/NgTHung/Itemset/blob/main/tools/spmf/release.toml}{pinned SPMF release},
+because it is faster than SPMF's Eclat on dense data. The ratio
+$R = T_\text{opt} / T_\text{PrePost+}$ is the median time of the optimized variant
+divided by the median time of PrePost+ at the same threshold.
 
-Mỗi kỹ thuật được đo trong một phiên riêng, trong đó phiên bản trước và sau thay đổi chạy
-xen kẽ ở mỗi lần lặp, nên độ trôi của máy chia đều cho cả hai. Riêng bước tiền biên dịch
-được đo bằng hai đợt liên tiếp. Bảng~\ref{tab:steps} cho tỉ số thời gian sau trên trước
-của từng bước trên 33 ngưỡng, và tỉ số bộ nhớ đỉnh tương ứng. Bộ nhớ đỉnh là peak RSS
-(resident set size, lượng bộ nhớ vật lý lớn nhất mà tiến trình chiếm) do hệ điều hành đo.
+Each technique was measured in its own session, with the versions before and after the
+change alternating on every repeat so that machine drift affects both equally. The one
+exception is Step~\ref{step:precompile-package}, the package precompilation, which was
+measured as two consecutive campaigns. Table~\ref{tab:steps} gives, for each step, the
+range of after-over-before time ratios over the 33 thresholds and the matching
+peak-memory ratios. Peak memory here is the peak resident set size (RSS), the largest
+amount of physical memory the process holds, as reported by the operating system.
 
 \begin{table*}[t]
 \centering
 \small
-\caption{Tác động của từng bước tối ưu trên 33 ngưỡng: tỉ số thời gian và bộ nhớ đỉnh sau
-trên trước (nhỏ hơn 1 là tốt hơn), và ngưỡng cải thiện nhiều nhất}
+\caption{Effect of each optimization step over 33 thresholds: after-over-before ratios of
+time and peak memory (below 1 is better), and the threshold that improved most}
 \label{tab:steps}
 \begin{tabular}{rllll}
 \hline
-Bước & Kỹ thuật & Tỉ số thời gian & Ví dụ, thời gian trước $\to$ sau (s) & Tỉ số bộ nhớ \\
+Step & Technique & Time ratio & Example, time before $\to$ after (s) & Memory ratio \\
 \hline
-\optstep{step:precompile-package} & Tiền biên dịch các hàm của gói & 0{,}14 đến 0{,}83 & Chess 0{,}9: 2{,}36 $\to$ 0{,}33 & 0{,}82 đến 0{,}97 \\
-\optstep{step:bitset} & Bitset và thứ tự độ hỗ trợ tăng dần & 0{,}10 đến 0{,}97 & Mushroom 0{,}1: 6{,}28 $\to$ 0{,}88 & 0{,}68 đến 0{,}99 \\
-\optstep{step:perfect-extension} & Tỉa phần mở rộng hoàn hảo & 0{,}93 đến 1{,}04 & Mushroom 0{,}1: 0{,}89 $\to$ 0{,}83 & 0{,}95 đến 1{,}00 \\
-\optstep{step:radix-sort} & Radix sort cho thứ tự ghi & 0{,}77 đến 1{,}02 & Mushroom 0{,}1: 0{,}83 $\to$ 0{,}64 & 1{,}00 đến 1{,}02 \\
-\optstep{step:precompile-cli} & Tiền biên dịch dòng lệnh & 0{,}66 đến 0{,}94 & Chess 0{,}9: 0{,}33 $\to$ 0{,}22 & 0{,}91 đến 1{,}03 \\
-\optstep{step:pair-count} & Đếm cặp ở lớp gốc & 0{,}24 đến 1{,}01 & Retail 0{,}001: 1{,}72 $\to$ 0{,}42 & 1{,}00 đến 1{,}03 \\
-\optstep{step:tid-lists} & Danh sách tid theo lớp & 0{,}83 đến 1{,}02 & T10I4D100K 0{,}00025: 1{,}46 $\to$ 1{,}21 & 1{,}00 đến 1{,}01 \\
-\optstep{step:byte-io} & Đọc và ghi theo byte, bảng chữ số & 0{,}76 đến 0{,}99 & Accidents 0{,}65: 1{,}10 $\to$ 0{,}85 & 0{,}74 đến 1{,}00 \\
-\optstep{step:single-allocation} & Cấp phát kết quả một lần, cận theo khối & 0{,}82 đến 1{,}03 & T10I4D100K 0{,}00025: 1{,}18 $\to$ 0{,}97 & 0{,}83 đến 1{,}02 \\
+\optstep{step:precompile-package} & Precompile the package functions & 0.14 to 0.83 & Chess 0.9: 2.36 $\to$ 0.33 & 0.82 to 0.97 \\
+\optstep{step:bitset} & Bitsets and increasing-support order & 0.10 to 0.97 & Mushroom 0.1: 6.28 $\to$ 0.88 & 0.68 to 0.99 \\
+\optstep{step:perfect-extension} & Perfect-extension pruning & 0.93 to 1.04 & Mushroom 0.1: 0.89 $\to$ 0.83 & 0.95 to 1.00 \\
+\optstep{step:radix-sort} & Radix sort for output order & 0.77 to 1.02 & Mushroom 0.1: 0.83 $\to$ 0.64 & 1.00 to 1.02 \\
+\optstep{step:precompile-cli} & Precompile the command line & 0.66 to 0.94 & Chess 0.9: 0.33 $\to$ 0.22 & 0.91 to 1.03 \\
+\optstep{step:pair-count} & Pair counting at the root & 0.24 to 1.01 & Retail 0.001: 1.72 $\to$ 0.42 & 1.00 to 1.03 \\
+\optstep{step:tid-lists} & Per-class tid lists & 0.83 to 1.02 & T10I4D100K 0.00025: 1.46 $\to$ 1.21 & 1.00 to 1.01 \\
+\optstep{step:byte-io} & Byte-level reading and writing, digit table & 0.76 to 0.99 & Accidents 0.65: 1.10 $\to$ 0.85 & 0.74 to 1.00 \\
+\optstep{step:single-allocation} & Single result allocation, block bounds & 0.82 to 1.03 & T10I4D100K 0.00025: 1.18 $\to$ 0.97 & 0.83 to 1.02 \\
 \hline
 \end{tabular}
 \end{table*}
 
-Bước~\ref{step:bitset} có tác động lớn nhất: thời gian còn 10\% đến 97\% của bản cơ bản (trung vị 37\%)
-và bộ nhớ đỉnh giảm ở mọi ngưỡng. Bước~\ref{step:pair-count} chỉ tác động lên dữ liệu thưa, nơi nó giảm thời
-gian của Retail 0{,}001 đi 76\%. Bước~\ref{step:perfect-extension} một mình chỉ rút ngắn tối đa 6{,}9\% thời gian
-tiến trình, vì ở ngưỡng đó việc sắp xếp và ghi hàng trăm nghìn itemset chiếm phần lớn thời
-gian; nhóm vẫn giữ bước này vì nó không làm tăng bộ nhớ và là nền của bước~\ref{step:single-allocation}. Không bước
-nào làm một ngưỡng chậm đi quá 4{,}4\%.
+Step~\ref{step:bitset} has by far the largest effect: it brings the time down to between
+10\% and 97\% of the baseline (median 37\%) and lowers peak memory at every threshold.
+Step~\ref{step:pair-count} matters only on sparse data, where it cuts the time of
+Retail 0.001 by 76\%. On its own, Step~\ref{step:perfect-extension} shortens process time
+by at most 6.9\%, because at that point sorting and writing hundreds of thousands of
+itemsets still takes most of the time. We kept it anyway, since it does not raise memory
+and Step~\ref{step:single-allocation} builds on it. No step slows any threshold by more
+than 4.4\%.
 
-Bảng~\ref{tab:steps} ghi lại cách biến thể tối ưu được xây dựng qua từng bước, không phải
-phép so sánh hai biến thể đã nộp. Các bước~\ref{step:precompile-package},
-\ref{step:precompile-cli} và~\ref{step:byte-io} nằm trong mã dùng chung, nên bản cơ bản đã
-nộp cũng hưởng các bước này. Mục~\ref{sec:minsup} so sánh hai biến thể đã nộp ở cùng một
-revision trong cùng một phiên, và các số đo ở đó là mức tăng tốc bài báo này báo cáo.
+Table~\ref{tab:steps} documents how the optimized variant was built one step at a time; it
+does not compare the two final variants. Steps~\ref{step:precompile-package},
+\ref{step:precompile-cli}, and~\ref{step:byte-io} changed shared code, so the final
+baseline benefits from them too. The speedups this paper reports come from
+Section~\ref{sec:minsup}, which compares the two final variants at one revision in a
+single session.
 
-Ba kỹ thuật đã được thử, đo và không giữ lại. Diffset~\cite{zaki2003} lưu các tid mà
-một phần tử thiếu so với tiền tố; trong phép quét tỉ số chuyển đổi, không giá trị nào
-nhanh hơn bitset, Accidents 0{,}2 chậm đi tới 10\% và T10I4D100K 0{,}00025 chậm đi tới
-71\%. Lý do là phép tỉa phần mở rộng hoàn hảo đã loại mọi phần tử có diffset rỗng, đúng
-những chỗ diffset có lợi nhất: ngay cả khi chọn tối ưu cho từng lớp, số từ cần đọc chỉ
-giảm tối đa 0{,}3\%. In itemset trực tiếp từ khóa sắp xếp chậm hơn 5\% đến 7\%. Chỉ thị
-\texttt{@inbounds @simd} trên phép giao bitset không cho mức cải thiện vượt nhiễu.
+We also tried two techniques that did not survive measurement, besides the
+\texttt{@inbounds @simd} annotation above. Diffsets~\cite{zaki2003}
+store the tids a member lacks relative to its prefix. In a sweep of the switching ratio,
+no setting beat bitsets: Accidents 0.2 slowed by up to 10\% and T10I4D100K 0.00025 by up
+to 71\%. The reason is that perfect-extension pruning already removes every member with
+an empty diffset, which is exactly where diffsets help most; even choosing the best
+representation for each class would have cut the words read by at most 0.3\%. Printing
+itemsets directly from the sort key was 5\% to 7\% slower.
 
-Biến thể tối ưu còn ba giới hạn đo được. Thứ nhất, ở ngưỡng stress Mushroom 0{,}05 chương
-trình phải ghi 3\,755\,511 dòng và vẫn chậm hơn PrePost+ (1{,}45 s so với 1{,}38 s). Thứ
-hai, mỗi tiến trình mất khoảng 0{,}19 s để khởi động Julia và nạp gói, phần này chỉ có thể
-bỏ đi nếu biên dịch trước toàn bộ chương trình thành tệp thực thi. Thứ ba, đếm cặp làm bộ
-nhớ đỉnh tăng 20\% ở ngưỡng stress Retail 0{,}00025, vì mảng tam giác cho 5\,918 item phổ
-biến chiếm 67 MiB.
+The optimized variant still has three measured limits. At the stress threshold
+Mushroom 0.05 it has to write 3\,755\,511 lines and remains slower than PrePost+
+(Section~\ref{sec:future}). Every process spends about 0.19 s on Julia start-up and package loading,
+which only ahead-of-time compilation into an executable could remove. Finally, pair
+counting raises peak memory by 20\% at the stress threshold Retail 0.00025, where the
+triangular array for 5\,918 frequent items takes 67 MiB.

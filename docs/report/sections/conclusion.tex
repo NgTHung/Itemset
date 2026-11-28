@@ -1,32 +1,35 @@
-\section{Kết luận}
-Nhóm cài đặt Eclat từ bài báo gốc~\cite{zaki2000} thành hai biến thể cho cùng một kết
-quả. Cả hai khớp hoàn toàn với Eclat của SPMF ở mọi cặp cơ sở dữ liệu và ngưỡng, với 330
-đầu ra trên 33 cặp và không có tập mục thiếu, thừa, lặp hay sai support
-(Mục~\ref{sec:exact}). Trong đợt đo thời gian cùng một phiên trên máy chấm điểm,
-bản tối ưu nhanh nhất ở cả 33 điểm. Ở minsup thấp nhất của mỗi cơ sở dữ liệu nó nhanh hơn
-bản cơ bản từ 7{,}9 lần (Accidents) đến 33{,}3 lần (Retail) (Mục~\ref{sec:minsup}), và
-Mục~\ref{sec:optimized} tách mức tăng theo từng bước tối ưu. Thời gian của
-bản cơ bản bám theo tổng độ dài các tidset được trộn, từ 2{,}0 đến 6{,}9\,ns mỗi phần tử.
-Bộ nhớ đỉnh của bản tối ưu thấp hơn bản cơ bản từ 3{,}0\% đến 34{,}5\% ở minsup thấp nhất
-của mỗi cơ sở dữ liệu (Mục~\ref{sec:memory}). Khi độ dài giao dịch tăng từ 5 lên 40 ở đầu
-ra không đổi, thời gian khai thác của bản cơ bản tăng 42 lần còn bản tối ưu chỉ tăng
-1{,}8 lần (Mục~\ref{sec:width}).
+\section{Conclusion}
+We implemented Eclat from the original paper~\cite{zaki2000} as two variants that return
+the same result. Both match SPMF's Eclat exactly at every database and threshold we
+tested: across 330 outputs on 33 pairs, no itemset is missing, extra, duplicated, or
+given the wrong support (Section~\ref{sec:exact}). In a single timing session on the
+benchmark machine, the optimized variant is the fastest program at all 33 points. At the
+lowest minsup of each database it runs 7.9 times (Accidents) to 33.3 times (Retail)
+faster than the baseline (Section~\ref{sec:minsup}), and Section~\ref{sec:optimized}
+breaks this gain down by optimization step. The baseline's time tracks the total length of
+the tidsets it merges, at 2.0 to 6.9\,ns per element. At the lowest minsup of each
+database, the optimized variant also uses 3.0\% to 34.5\% less peak memory than the
+baseline (Section~\ref{sec:memory}). When the transaction length grows from 5 to 40 with
+the output held fixed, the baseline's mining time grows 42-fold, while the optimized
+variant's grows only 1.8-fold (Section~\ref{sec:width}).
 
-Hai ứng dụng dùng cùng bộ khai thác. Trên 39\,516 hóa đơn của Online Retail II, minsup
-0{,}01 cho 1\,355 tập phổ biến, từ đó nhóm sinh luật kết hợp và xếp theo lift
-(Mục~\ref{sec:basket}). Trên 1\,593 ảnh Semeion, từ điển 24 từ thị giác biến mỗi ảnh
-thành một giao dịch, và các tập phổ biến mô tả tổ hợp nét lặp lại giữa các ảnh
-(Mục~\ref{sec:visual-patterns}).
+Both applications use the same miner. On the 39\,516 invoices of Online Retail II, minsup
+0.01 yields 1\,355 frequent itemsets, from which we generate association rules and rank
+them by lift (Section~\ref{sec:basket}). On the 1\,593 Semeion images, a 24-word visual
+codebook turns each image into a transaction, and the frequent itemsets describe stroke
+combinations that recur across images (Section~\ref{sec:visual-patterns}).
 
-Các kết luận có giới hạn. Mọi phép đo chạy trên một máy, máy chấm điểm, và các chương
-trình chỉ được so sánh trong cùng một phiên. Phạm vi \emph{process} gồm cả khởi động Julia hoặc JVM, nên ở ngưỡng cao,
-nơi hai bản Julia gần bằng nhau, phần lớn thời gian là khởi động. Nhóm xem SPMF như hộp
-đen nên không giải thích nguyên nhân bên trong SPMF của các khác biệt đo được. Dữ liệu giỏ
-hàng đến từ một cửa hàng trong hai năm, và các mẫu hình ảnh mô tả tần suất trong chính tập
-dùng để học từ điển, nên chưa cho biết hiệu quả phân loại.
+These conclusions have limits. Every measurement ran on a single machine, the benchmark
+machine, and programs are compared only within the same session. The \emph{process}
+scope includes Julia or JVM start-up, which accounts for most of the time at high
+thresholds, where the two Julia variants are close. Because we treat SPMF as a black box,
+we do not explain the measured differences in terms of SPMF's internals. The basket data
+comes from a single shop over two years, and the image patterns describe frequencies in
+the same set that the codebook was learned on, so they say nothing yet about
+classification accuracy.
 
-Hai hướng tiếp theo xuất phát từ hồ sơ thời gian của bản tối ưu (Mục~\ref{sec:future}):
-một kho số nguyên phẳng với bố cục dọc dựng bằng mảng, nhằm giảm thời gian đọc và dựng bố
-cục chiếm gần hết lượt chạy ở Accidents, và một thứ tự đầu ra theo thứ tự tìm kiếm, nhằm
-bỏ bước sắp xếp chiếm từ 35\% đến 43\% số mẫu \emph{profiler} ở các điểm dày. Cả hai chỉ là dự đoán kèm
-cách kiểm chứng, chưa được cài đặt.
+The optimized variant's time profile points to two next steps (Section~\ref{sec:future}).
+A flat integer store with an array-built vertical layout would cut the reading and layout
+time that takes almost the whole run on Accidents, and writing the output in search order
+would remove the sort that takes 35\% to 43\% of the profiler samples at the dense points.
+Both are predictions with a plan for testing them, and neither has been implemented yet.

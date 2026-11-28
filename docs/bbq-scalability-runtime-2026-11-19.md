@@ -48,7 +48,7 @@ julia --startup-file=no --project=. scripts/runtime_curves.jl --out $OUT \
   "Baseline Eclat=$RUN:baseline@final#cli" "Optimized Eclat=$RUN:optimized@final#cli" \
   "SPMF Eclat=$RUN:spmf" "SPMF PrePost+=$RUN:prepost"
 uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_scalability.py \
-  $OUT/curves.csv --subsets data/benchmark/subsets.toml --language vi --out $OUT/vi
+  $OUT/curves.csv --subsets data/benchmark/subsets.toml --out $OUT
 ```
 
-`scripts/plot_scalability.py` also writes `scalability.csv` with every point. `docs/report/figures/scalability.pdf` is the Vietnamese copy of the figure.
+`scripts/plot_scalability.py` also writes `scalability.csv` with every point. `docs/report/figures/scalability.pdf` is a copy of the figure.

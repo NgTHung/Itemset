@@ -1,6 +1,6 @@
 # Frequent-itemset counts against minsup, 2026-11-19
 
-The brief asks how the number of frequent itemsets grows as minsup falls, and how dense and sparse databases differ. This record reads the counts from the scored timing run instead of mining again, checks them, and measures each dataset's growth rate. The report discusses the results in Chapter 2, section "Số lượng tập phổ biến theo minsup".
+The brief asks how the number of frequent itemsets grows as minsup falls, and how dense and sparse databases differ. This record reads the counts from the scored timing run instead of mining again, checks them, and measures each dataset's growth rate. The report discusses the results in the section "Number of frequent itemsets against minsup".
 
 ## Method
 
@@ -9,7 +9,7 @@ The brief asks how the number of frequent itemsets grows as minsup falls, and ho
   - all four programs report the same count at each threshold;
   - no count falls when minsup falls, as anti-monotonicity requires;
   - at each pair of adjacent thresholds, the itemsets of the lower output with support at least the higher count are exactly the higher output, with equal supports.
-- [scripts/plot_output_size.py](../scripts/plot_output_size.py) fits log F = c - s log(minsup) by least squares over each dataset's thresholds.
+- [scripts/plot_output_size.py](../scripts/plot_output_size.py) fits log F = c - s log(minsup) by least squares over each dataset's thresholds. `output-growth.csv` also holds the fit's R², the slope between each pair of adjacent thresholds, and the slope of log F per 0.01 of minsup, which the report uses to show why the fit takes the log of minsup.
 
 ## Results
 
@@ -34,7 +34,7 @@ RUN=results/raw/bbq-all-variants-cli-5repeat-20261117T041922Z
 OUT=results/figures/bbq-output-size-20261117
 julia --startup-file=no --project=. scripts/output_size.jl $RUN --out $OUT
 uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_output_size.py \
-  $OUT/output-size.csv --language vi --out $OUT/vi
+  $OUT/output-size.csv --out $OUT
 ```
 
-`output-size.csv` holds every threshold's count and length profile, and `output-growth.csv` holds the slopes. `docs/report/figures/output-size.pdf` is the Vietnamese copy of the figure.
+`output-size.csv` holds every threshold's count and length profile, and `output-growth.csv` holds the slopes. `docs/report/figures/output-size.pdf` is a copy of the figure.

@@ -57,6 +57,6 @@ images 44 and 41 from the run with a vocabulary of 24 words.
 - Frequent visual-word sets with representative patches and supporting images.
 - Sensitivity of the patterns to the support threshold and vocabulary size.
 - Interpretation and limitations.
-- A runnable notebook module and the Vietnamese report section.
+- A runnable notebook module and the report section.
 
 Develop the encoding and visualization against `IMAGE_CASE` in `tests/fixtures.jl`, described in [data/toy](../../data/toy/README.md). Find an itemset's supporting images by scanning the application's own transactions, never from miner internals. Fixtures support development. Final patterns come only from the team's validated miner. A downstream classifier is optional.
