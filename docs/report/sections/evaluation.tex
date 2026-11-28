@@ -289,9 +289,12 @@ the two cannot be told apart.
 
 These conclusions rest on one machine, five repeats per point, and a \emph{process} scope
 that includes start-up, which the Java programs pay as well. The baseline measured here is
-the version at revision \texttt{ca60f43}; it already benefits from the faster reading and
-writing added in later stages, so it differs from the baseline measured on 2026-10-31.
-The intersection counts come from a separate run, outside the timed runs.
+the submitted one at revision \texttt{ca60f43}, so it includes the shared start-up,
+reading, and writing changes of Steps~\ref{step:precompile-package},
+\ref{step:precompile-cli}, and~\ref{step:byte-io} in Table~\ref{tab:steps}. Its times are
+therefore lower than those of the baseline before any optimization step, and the speedups
+above compare the two mining algorithms, not the shared code. The intersection counts come
+from a separate run, outside the timed runs.
 
 \subsection{Number of frequent itemsets against minsup}
 \label{sec:output-size}
