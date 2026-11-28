@@ -4,7 +4,6 @@ The demo shows the Eclat engine. The market basket and image pattern notebooks e
 """
 
 import json
-import re
 import unittest
 from pathlib import Path
 
@@ -32,14 +31,6 @@ class NotebookSplitTest(unittest.TestCase):
         for word in ("semeion", "online retail", "market basket", "visual word"):
             with self.subTest(word=word):
                 self.assertNotIn(word, text)
-
-    def test_the_runner_collects_exactly_the_artifacts_the_demo_registers(self):
-        registered = set(re.findall(r'notebook_artifacts\["([^"]+)"\]\s*=', "\n".join(
-            source(cell) for cell in load("demo_local.ipynb") if cell["cell_type"] == "code")))
-        runner = (ROOT / "scripts" / "run_colab_notebook.py").read_text(encoding="utf-8")
-        required = re.search(r"required = \{([^}]*)\}", runner)
-        self.assertIsNotNone(required)
-        self.assertEqual(set(re.findall(r'"([^"]+)"', required[1])), registered)
 
     def test_the_entry_notebook_shows_no_application_output(self):
         text = "\n".join(source(cell) for cell in load("demo_colab.ipynb")).lower()

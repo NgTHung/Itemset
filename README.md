@@ -64,7 +64,7 @@ julia --project=. tools/spmf/compare.jl data/toy/spmf/baskets-0.5.txt results/pa
 
 Three notebooks run on a Python CPU runtime, one purpose each. Select `Run all` in each. Every notebook checks out an exact commit and verifies Julia 1.13.2, then writes an evidence ZIP.
 
-- [demo_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo_colab.ipynb): the Eclat demo. It also verifies Java 25 and the SPMF JAR, runs the Julia cells of `demo_local.ipynb`, and compares both variants with SPMF on Chess.
+- [demo_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo_colab.ipynb): the Eclat demo. Each step prints its own output: the package tests, a toy file checked against its hand-derived map, Mushroom mined with both variants, and a comparison with SPMF at five thresholds shown as a table and a chart. It also verifies Java 25 and the SPMF JAR.
 - [market_basket_colab.ipynb](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/market_basket_colab.ipynb): the market basket application on Online Retail II.
 - Application 2 mines visual patterns from [Semeion v1 on Kaggle](https://www.kaggle.com/datasets/phattruongpo344/semeion-handwritten-digit-itemset/versions/1). [Run the image pattern notebook on Colab](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb).
 
@@ -82,8 +82,8 @@ The [notebook guide](notebooks/README.md) explains how to pin a revision, inspec
 - `experiments/`: the benchmark measurement protocol and result fields.
 - `tools/spmf/`: the procedure for independent SPMF reference runs.
 - `results/`: raw runs and figures, kept out of Git.
-- `notebooks/`: the demo and each application have two notebooks, and the file name says where it runs. `*_local.ipynb` runs on a Julia kernel in your IDE from a checkout. `*_colab.ipynb` runs on Colab's Python kernel and clones the repository and installs Julia first. The cells and the results are the same. `demo_colab.ipynb` runs the cells of `demo_local.ipynb` through `scripts/run_colab_notebook.py`.
-- `docs/report/`: the English IEEE-format report, exported as `docs/Report.pdf`.
+- `notebooks/`: the demo and each application have two notebooks, and the file name says where it runs. `*_local.ipynb` runs on a Julia kernel in your IDE from a checkout. `*_colab.ipynb` runs on Colab's Python kernel and clones the repository and installs Julia first. Both run the same steps under the same cell IDs.
+- `docs/report/`: the Vietnamese IEEE-format report, exported as `docs/Report.pdf`.
 
 ## Reproducibility
 
