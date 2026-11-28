@@ -19,6 +19,8 @@
 % Rows of the optimization-step table get labels so prose cites them with \ref.
 \newcounter{optstep}
 \newcommand{\optstep}[1]{\refstepcounter{optstep}\theoptstep\label{#1}}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}[lemma]{Theorem}
 \title{Frequent Itemset Mining with Eclat and Two Applications}
 \author{\IEEEauthorblockN{Hung \and Thien \and Phat}
 \IEEEauthorblockA{University of Science, VNU-HCM}}
@@ -43,6 +45,7 @@ image-pattern mining on Semeion.
 \input{sections/evaluation}
 \input{sections/applications}
 \input{sections/conclusion}
+\input{sections/appendix}
 \bibliographystyle{IEEEtran}
 \bibliography{references}
 \end{document}

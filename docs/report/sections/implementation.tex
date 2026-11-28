@@ -133,7 +133,7 @@ $\sigma(X) \ge \sigma(Y)$. Pruning an infrequent itemset therefore never loses a
 superset. An induction on length shows that the class with prefix
 $(x_1, \dots, x_{j-1})$ contains every item $y > x_{j-1}$ for which
 $(x_1, \dots, x_{j-1}, y)$ is frequent, and therefore every frequent itemset is recorded.
-The full proof is in \texttt{docs/eclat.md} in the repository.
+Appendix~\ref{app:baseline} gives the full proofs.
 
 \subsection{Complexity}
 Let $L$ be the total number of items over all transactions, $m$ the number of distinct
@@ -178,8 +178,8 @@ byte.
 \label{sec:optimized}
 The optimized variant keeps the Bottom-Up procedure and changes three things: how
 tidsets are stored, which intersections are skipped, and how the result is written. None
-of these changes alters the output, as the proofs in \texttt{docs/eclat-optimized.md}
-show. Start-up, reading, and writing live in code that both variants share, so the
+of these changes alters the output, as Appendices~\ref{app:perfect} and~\ref{app:skips}
+prove. Start-up, reading, and writing live in code that both variants share, so the
 baseline benefits from the changes made there as well.
 
 \subsubsection{Bitset tidsets and search order}
