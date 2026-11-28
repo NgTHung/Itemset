@@ -93,15 +93,5 @@ class PlotMineTest(unittest.TestCase):
         plt.close(fig)
 
 
-class LanguageTest(unittest.TestCase):
-    def test_vietnamese_mine_panel_uses_vietnamese_text(self):
-        summary = {"baseline": [(5, 2.0, 0.5, 4.0)], "optimized": [(5, 0.01, 0.001, 0.001)]}
-        fig, ax = plt.subplots()
-        plot.plot_mine(ax, summary, {"baseline": ("#2468a2", "o"), "optimized": ("#8c4fa1", "D")}, "vi")
-        self.assertEqual(ax.get_xlabel(), "độ dài giao dịch")
-        self.assertEqual([t.get_text() for t in ax.get_legend().get_texts()], ["Cơ bản", "Tối ưu"])
-        plt.close(fig)
-
-
 if __name__ == "__main__":
     unittest.main()

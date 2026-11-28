@@ -48,8 +48,5 @@ R=results/raw/bbq-width-cli-20261127T223751Z
 W=results/raw/bbq-width-profile-20261127T044121Z/width-matched-warm/summary.csv
 uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_width_curves.py \
   $R/width-fixed-cli/curves/curves.csv $R/width-matched-cli/curves/curves.csv --warm-summary $W \
-  --language vi --out docs/report/figures
-uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_width_curves.py \
-  $R/width-fixed-cli/curves/curves.csv $R/width-matched-cli/curves/curves.csv --warm-summary $W \
-  --out docs/report/figures/en
+  --out docs/report/figures
 ```

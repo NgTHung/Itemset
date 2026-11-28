@@ -20,13 +20,6 @@ import matplotlib.pyplot as plt
 from plot_runtime_curves import assign_styles, compact, display_name, lost, read_points
 
 SUBSET = re.compile(r"^(?P<base>.+)-p(?P<percent>[0-9.]+)$")
-# The report is in Vietnamese, so its copy of the figure needs its own axis text.
-LABELS = {
-    "en": dict(x="Transactions, with frequent itemsets below", y="Median seconds, IQR bars", series={}),
-    "vi": dict(x="Số giao dịch, số tập phổ biến bên dưới", y="Trung vị thời gian (s), thanh IQR",
-               series={"Baseline Eclat": "Eclat cơ bản", "Optimized Eclat": "Eclat tối ưu",
-                       "SPMF Eclat": "Eclat của SPMF", "SPMF PrePost+": "PrePost+ của SPMF"}),
-}
 
 
 def main():
@@ -34,7 +27,6 @@ def main():
     parser.add_argument("curves", type=Path)
     parser.add_argument("--subsets", type=Path, default=Path("data/benchmark/subsets.toml"))
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--language", choices=sorted(LABELS), default="en")
     args = parser.parse_args()
     rows = read_points(args.curves)
     manifest = tomllib.loads(args.subsets.read_text(encoding="utf-8"))
@@ -63,7 +55,7 @@ def main():
             color, marker = style[name]
             ax.errorbar(xs, ys, yerr=[lower, upper], fmt=f"-{marker}", color=color, markersize=4.5,
                         capsize=2.5, linewidth=1.3, elinewidth=1.0,
-                        label=LABELS[args.language]["series"].get(name, name))
+                        label=name)
             for r in points:
                 table.append((base, name, r["transactions"], r["minsup_count"], r["output_count"],
                               r["median_seconds"], r["q1_seconds"], r["q3_seconds"], int(lost(r))))
@@ -73,8 +65,8 @@ def main():
                               for n in sizes], fontsize=6.5)
         minsup = next(iter(by_series.values()))[0]["minsup_relative"]
         ax.set_title(f"{display_name(base)}, minsup {minsup}", fontsize=10)
-        ax.set_xlabel(LABELS[args.language]["x"], fontsize=7.5)
-        ax.set_ylabel(LABELS[args.language]["y"], fontsize=8)
+        ax.set_xlabel("Transactions, with frequent itemsets below", fontsize=7.5)
+        ax.set_ylabel("Median seconds, IQR bars", fontsize=8)
         ax.grid(axis="y", alpha=0.18)
         ax.spines[["top", "right"]].set_visible(False)
     axes.flat[0].legend(frameon=False, fontsize=7.5)

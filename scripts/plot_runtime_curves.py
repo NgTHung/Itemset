@@ -25,27 +25,8 @@ DISPLAY_NAMES = {"chess": "Chess", "mushroom": "Mushroom", "retail": "Retail", "
                  "prepost": "PrePost+", "PrePost": "PrePost+"}
 
 
-# The Vietnamese report writes decimals with a comma and names the two Julia variants in Vietnamese,
-# so its copy of each figure needs its own text.
-LABELS = {
-    "en": dict(decimal=".", names={}, minsup_axis="minsup, with frequent itemsets below",
-               seconds="Median seconds (log)", iqr="IQR bars", one_sample="one sample per point",
-               some_iqr="IQR bars where 2 or more samples", lost="Timeout or lost samples (curves.csv)"),
-    "vi": dict(decimal=",", names={"Baseline": "Cơ bản", "Optimized": "Tối ưu"},
-               minsup_axis="minsup, số tập phổ biến ở dưới", seconds="Trung vị giây (log)",
-               iqr="thanh IQR", one_sample="một mẫu mỗi điểm", some_iqr="thanh IQR khi có từ 2 mẫu",
-               lost="Quá thời gian hoặc mất mẫu (curves.csv)"),
-}
-
-
-def display_name(name, language="en"):
-    english = DISPLAY_NAMES.get(name, name)
-    return LABELS[language]["names"].get(english, english)
-
-
-def number(text, language="en"):
-    """Write the decimal point of a formatted number as the report's language does."""
-    return text.replace(".", LABELS[language]["decimal"])
+def display_name(name):
+    return DISPLAY_NAMES.get(name, name)
 
 
 def assign_styles(series):
@@ -98,15 +79,14 @@ def use_log_x(minsups):
     return max(minsups) / min(minsups) > 5
 
 
-def ylabel(rows, language="en"):
+def ylabel(rows):
     """Name the bars only where a point has two or more samples, because one sample has no quartiles."""
-    text = LABELS[language]
     counts = [int(r["exact_samples"]) for r in rows if r["median_seconds"]]
     if all(n >= 2 for n in counts):
-        return f"{text['seconds']}, {text['iqr']}"
+        return "Median seconds (log), IQR bars"
     if all(n < 2 for n in counts):
-        return f"{text['seconds']}, {text['one_sample']}"
-    return f"{text['seconds']}, {text['some_iqr']}"
+        return "Median seconds (log), one sample per point"
+    return "Median seconds (log), IQR bars where 2 or more samples"
 
 
 def main():
@@ -114,9 +94,7 @@ def main():
     parser.add_argument("curves", type=Path)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--columns", type=int, default=3)
-    parser.add_argument("--language", choices=sorted(LABELS), default="en")
     args = parser.parse_args()
-    language = args.language
     rows = read_points(args.curves)
     series = list(dict.fromkeys(r["series"] for r in rows))
     if len(series) > len(KNOWN) + len(SPARE):
@@ -161,25 +139,25 @@ def main():
                     ax.plot([float(r["minsup_relative"])], [1], marker="X", color=color, markersize=9,
                             markeredgecolor="#a02020", markeredgewidth=1.2, linestyle="none", clip_on=False,
                             transform=ax.get_xaxis_transform())
-        ax.set_xticks(minsups, [number(f"{m:g}\n{compact(counts[m])}" if m in counts else f"{m:g}", language)
-                                for m in minsups], fontsize=6.5)
+        ax.set_xticks(minsups, [f"{m:g}\n{compact(counts[m])}" if m in counts else f"{m:g}" for m in minsups],
+                      fontsize=6.5)
         ax.minorticks_off()
         ax.set_title(display_name(dataset), fontsize=10)
-        ax.set_xlabel(LABELS[language]["minsup_axis"], fontsize=7.5)
+        ax.set_xlabel("minsup, with frequent itemsets below", fontsize=7.5)
         ax.grid(axis="y", which="both", alpha=0.18)
         ax.spines[["top", "right"]].set_visible(False)
     for ax in flat[:len(datasets)]:
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: number(f"{v:g}", language)))
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
     for ax in flat[0::columns]:
-        ax.set_ylabel(ylabel(rows, language), fontsize=8)
+        ax.set_ylabel(ylabel(rows), fontsize=8)
 
     legend_ax = flat[len(datasets)]
     legend_ax.axis("off")
-    handles = [Line2D([], [], color=style[n][0], marker=style[n][1], linewidth=1.3,
-                      label=display_name(n, language)) for n in series]
+    handles = [Line2D([], [], color=style[n][0], marker=style[n][1], linewidth=1.3, label=display_name(n))
+               for n in series]
     if any_lost:
         handles.append(Line2D([], [], color="#777777", marker="X", markeredgecolor="#a02020", linestyle="none",
-                              markersize=9, label=LABELS[language]["lost"]))
+                              markersize=9, label="Timeout or lost samples (curves.csv)"))
     legend_ax.legend(handles=handles, loc="center", frameon=False, fontsize=9)
     for ax in flat[len(datasets) + 1:]:
         ax.axis("off")

@@ -34,7 +34,7 @@ RUN=results/raw/bbq-all-variants-cli-5repeat-20261117T041922Z
 OUT=results/figures/bbq-output-size-20261117
 julia --startup-file=no --project=. scripts/output_size.jl $RUN --out $OUT
 uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_output_size.py \
-  $OUT/output-size.csv --language vi --out $OUT/vi
+  $OUT/output-size.csv --out $OUT
 ```
 
-`output-size.csv` holds every threshold's count and length profile, and `output-growth.csv` holds the slopes. `docs/report/figures/output-size.pdf` is the Vietnamese copy of the figure.
+`output-size.csv` holds every threshold's count and length profile, and `output-growth.csv` holds the slopes. `docs/report/figures/output-size.pdf` is a copy of the figure.

@@ -22,13 +22,6 @@ DENSE = {"chess", "mushroom", "accidents"}
 COLORS = {"chess": "#2468a2", "mushroom": "#8c4fa1", "accidents": "#b0384b",
           "retail": "#d97716", "T10I4D100K": "#25814a"}
 MARKERS = {"chess": "o", "mushroom": "D", "accidents": "v", "retail": "s", "T10I4D100K": "^"}
-# The report is in Vietnamese, so its copy of the figure needs its own text.
-LABELS = {
-    "en": dict(x="minsup (log, decreasing)", count="Frequent itemsets (log)", length="Mean itemset length",
-               dense="dense", sparse="sparse"),
-    "vi": dict(x="minsup (log, giảm dần)", count="Số tập phổ biến (log)", length="Độ dài trung bình của tập",
-               dense="dày", sparse="thưa"),
-}
 
 
 def log_slope(xs, ys):
@@ -42,9 +35,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("table", type=Path)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--language", choices=sorted(LABELS), default="en")
     args = parser.parse_args()
-    text = LABELS[args.language]
     with args.table.open(newline="", encoding="utf-8") as stream:
         rows = list(csv.DictReader(stream))
     if not rows:
@@ -61,7 +52,7 @@ def main():
         xs = [float(r["minsup_relative"]) for r in points]
         counts = [int(r["output_count"]) for r in points]
         lengths = [float(r["mean_length"]) for r in points]
-        kind = text["dense"] if dataset in DENSE else text["sparse"]
+        kind = "dense" if dataset in DENSE else "sparse"
         style = dict(color=COLORS[dataset], marker=MARKERS[dataset], markersize=4.5, linewidth=1.3,
                      linestyle="-" if dataset in DENSE else "--", label=f"{display_name(dataset)} ({kind})")
         counts_ax.plot(xs, counts, **style)
@@ -70,14 +61,14 @@ def main():
     for ax in (counts_ax, length_ax):
         ax.set_xscale("log")
         ax.invert_xaxis()
-        ax.set_xlabel(text["x"], fontsize=8)
+        ax.set_xlabel("minsup (log, decreasing)", fontsize=8)
         ax.grid(which="major", alpha=0.18)
         ax.spines[["top", "right"]].set_visible(False)
         ax.tick_params(labelsize=7.5)
         ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
     counts_ax.set_yscale("log")
-    counts_ax.set_ylabel(text["count"], fontsize=8)
-    length_ax.set_ylabel(text["length"], fontsize=8)
+    counts_ax.set_ylabel("Frequent itemsets (log)", fontsize=8)
+    length_ax.set_ylabel("Mean itemset length", fontsize=8)
     length_ax.set_ylim(bottom=0)
     counts_ax.legend(frameon=False, fontsize=7)
     fig.tight_layout()
