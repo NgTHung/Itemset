@@ -319,15 +319,25 @@ lines are sparse data.}
 \end{figure*}
 
 As Fig.~\ref{fig:output-size} shows, the number of frequent itemsets grows much faster on
-dense data. To compare growth rates across databases whose minsup ranges differ, we fit
-the model
+dense data. The minsup ranges of the five databases differ widely, from a factor of 1.5 on
+Chess and Accidents to a factor of 40 on T10I4D100K, and $F$ spans from 15 to
+574\,431. To compare growth rates across them, we fit the model
 \begin{equation}
   \log F = c - s \log(\mathrm{minsup}),
   \label{eq:output-growth}
 \end{equation}
 where $F$ is the number of frequent itemsets at a threshold, $c$ is a per-database
 constant, and $s$ is the slope on a log-log scale: when minsup falls by a factor $q$, $F$
-grows by about $q^s$. In Table~\ref{tab:output-growth}, $s$ ranges from 5.2 to 14.3 on
+grows by about $q^s$. Taking logarithms on both sides makes $s$ depend only on ratios, so
+it does not change with the size of the database or the width of its minsup range. A slope
+of $\log F$ per unit of minsup would not have this property: per 0.01 of minsup, it
+gives 4.2 on Retail and 0.19 on Chess, because 0.01 is the whole top threshold of Retail
+but only about 1\% of the top threshold of Chess, and it ranks the sparse databases above
+the dense ones. The fit is close, with a coefficient of determination $R^2$ (the share of the variance of
+$\log F$ that the model explains) between 0.963 and 0.998, but $s$ is an
+average over each database's range rather than a constant: between adjacent thresholds,
+the slope of Chess falls from 25.5 to 10.4, and that of Mushroom jumps to 10.2 where its
+longest itemset grows from 11 to 15 items. In Table~\ref{tab:output-growth}, $s$ ranges from 5.2 to 14.3 on
 the three dense databases but is only 1.6 and 1.7 on the two sparse ones. The output of
 Chess grows 410-fold when minsup drops merely from 0.9 to 0.6, whereas Retail's grows
 48-fold over a tenfold drop.
