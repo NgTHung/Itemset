@@ -2,6 +2,16 @@
 
 `ItemsetMining` is a Julia package that finds every frequent itemset in a transaction database with Eclat (Zaki, 2000). It serves the HCMUS Data Mining course project, where two applications, market basket analysis and image-pattern mining, call one shared `mine` function. Both applications therefore mine with the same validated code, and the benchmark results describe the code they use.
 
+## Team
+
+| Student ID | Name |
+|---|---|
+| 24127008 | Trương Nhật Phát |
+| 24127122 | Cao Tiến Thiên |
+| 24127173 | Nguyễn Tuấn Hùng |
+
+The report, [docs/Report.pdf](docs/Report.pdf), is an IEEE conference paper in English. Its sources and build steps are in [docs/report/](docs/report/README.md).
+
 ## Install and verify
 
 Install [Julia](https://julialang.org/downloads/) 1.13.2, the version pinned in `.julia-version` and used to generate `Manifest.toml`, for example with `juliaup add 1.13.2`. The package accepts any Julia 1.x from 1.12 so that it runs on Colab's native Julia runtime. CI tests 1.12.6 and 1.13.2 on Ubuntu and Windows.
@@ -16,11 +26,11 @@ julia --startup-file=no --project=. test/runtests.jl
 
 `test/runtests.jl` includes `tests/runtests.jl`, so the brief's command `julia --project test/runtests.jl` and `Pkg.test()` run the same suite.
 
-Latest local test run, 2026-11-22, Windows x86_64, Julia 1.13.2.
+Latest local test run, 2026-11-28, Windows x86_64, Julia 1.13.2.
 
 ```text
 Test Summary: | Pass  Total     Time
-Itemset setup | 1251   1251  1m49.3s
+Itemset setup | 1519   1519  3m05.3s
 ```
 
 ## Use the API
@@ -77,13 +87,13 @@ The [notebook guide](notebooks/README.md) explains how to pin a revision, inspec
 - `tests/`: the test suite and fixture maps. `test/` holds only the entry-point shim.
 - `data/toy/`: hand-derived fixture databases.
 - `data/correctness/`: a mid-size database whose complete SPMF map the tests compare with every variant.
-- `data/benchmark/` and `data/raw/` hold downloads that stay out of Git.
+- `data/benchmark/` and `data/raw/` hold downloads that stay out of Git. [data/benchmark/README.md](data/benchmark/README.md) links the public FIMI and SPMF copies of the five benchmarks and the script that downloads and checks them.
 - `applications/`: the market basket and image-pattern workstreams.
 - `experiments/`: the benchmark measurement protocol and result fields.
 - `tools/spmf/`: the procedure for independent SPMF reference runs.
 - `results/`: raw runs and figures, kept out of Git.
 - `notebooks/`: the demo and each application have two notebooks, and the file name says where it runs. `*_local.ipynb` runs on a Julia kernel in your IDE from a checkout. `*_colab.ipynb` runs on Colab's Python kernel and clones the repository and installs Julia first. Both run the same steps under the same cell IDs.
-- `docs/report/`: the Vietnamese IEEE-format report, exported as `docs/Report.pdf`.
+- `docs/report/`: the English IEEE-format report, exported as `docs/Report.pdf`.
 
 ## Reproducibility
 
