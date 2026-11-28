@@ -1,7 +1,7 @@
 """Checks notebooks/demo_colab.ipynb without a Colab runtime.
 
-The demo runs on Colab's Python kernel and calls Julia through one helper, so each step is its own cell with its
-own output. These checks cover the pins, the order of the steps, and the repository paths the cells name.
+The demo runs on Colab's Python kernel. Each command step is a `%%shell` cell that holds the exact commands a user
+would type from the repository root, and Python cells only check and display what those commands wrote. These checks cover the pins, the order of the steps, and the repository paths the cells name.
 """
 
 import json
@@ -12,8 +12,10 @@ ROOT = Path(__file__).resolve().parent.parent
 NOTEBOOKS = ROOT / "notebooks"
 NOTEBOOK = NOTEBOOKS / "demo_colab.ipynb"
 STEPS = ["itemset-setup", "itemset-demo-java", "itemset-demo-instantiate", "itemset-demo-tests", "itemset-demo-toy",
-         "itemset-demo-prepare", "itemset-demo-mine", "itemset-demo-sweep", "itemset-demo-chart",
-         "itemset-demo-evidence"]
+         "itemset-demo-prepare", "itemset-demo-mine", "itemset-demo-longest", "itemset-demo-sweep",
+         "itemset-demo-sweep-table", "itemset-demo-chart", "itemset-demo-evidence"]
+COMMANDS = ["itemset-demo-instantiate", "itemset-demo-tests", "itemset-demo-toy", "itemset-demo-prepare",
+            "itemset-demo-mine", "itemset-demo-sweep"]
 COLAB = ("demo_colab.ipynb", "market_basket_colab.ipynb", "image_patterns_colab.ipynb")
 
 
@@ -63,12 +65,21 @@ class DemoColabNotebookTest(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, text)
 
-    def test_every_julia_call_goes_through_the_helper(self):
+    def test_command_cells_are_shell_cells_that_stop_at_the_first_failure(self):
+        # Colab's %%shell raises on a nonzero exit, and set -e makes any failing line, not only the last, count.
         by_id = code()
-        for cell_id in STEPS[2:8]:
+        for cell_id in COMMANDS:
             with self.subTest(cell=cell_id):
-                self.assertIn("julia(", by_id[cell_id])
-                self.assertNotIn("!julia", by_id[cell_id], "a shell escape would not stop the notebook on failure")
+                self.assertTrue(by_id[cell_id].startswith("%%shell\nset -euo pipefail\n"))
+                self.assertIn("julia --startup-file=no --project=. ", by_id[cell_id])
+                self.assertNotIn("--ignore-errors", by_id[cell_id])
+
+    def test_no_cell_calls_julia_through_python(self):
+        for cell_id, text in code().items():
+            if cell_id != "itemset-setup":
+                with self.subTest(cell=cell_id):
+                    self.assertNotIn("julia(", text)
+                    self.assertNotIn("!julia", text, "a shell escape would not stop the notebook on failure")
 
     def test_the_cells_name_repository_paths_that_exist(self):
         by_id = code()
@@ -86,27 +97,27 @@ class DemoColabNotebookTest(unittest.TestCase):
 
     def test_the_thresholds_match_the_config(self):
         by_id = code()
-        self.assertIn('"0.5"', by_id["itemset-demo-toy"])
-        self.assertIn('"0.3"', by_id["itemset-demo-mine"])
+        self.assertIn("--minsup 0.5", by_id["itemset-demo-toy"])
+        self.assertIn("--minsup 0.3", by_id["itemset-demo-mine"])
         for expected in ("--variant", "baseline", "optimized"):
             with self.subTest(expected=expected):
                 self.assertIn(expected, by_id["itemset-demo-mine"])
 
     def test_the_sweep_starts_from_a_fresh_folder(self):
         text = code()["itemset-demo-sweep"]
-        self.assertIn("results/raw/demo-mushroom", text)
-        self.assertIn("shutil.rmtree", text)
-        self.assertLess(text.index("shutil.rmtree"), text.index("julia("))
+        self.assertIn("rm -rf results/raw/demo-mushroom\n", text)
+        self.assertLess(text.index("rm -rf"), text.index("julia "))
+        self.assertIn('--java "$(command -v java)"', text)
 
     def test_the_table_keeps_process_rows_only(self):
-        for cell_id in ("itemset-demo-sweep", "itemset-demo-chart"):
+        for cell_id in ("itemset-demo-sweep-table", "itemset-demo-chart"):
             with self.subTest(cell=cell_id):
                 self.assertIn("timing_scope", code()[cell_id])
                 self.assertIn('"process"', code()[cell_id])
 
     def test_a_failed_or_inexact_sweep_row_stops_the_notebook(self):
         # run.jl records a failed attempt as a row and still exits 0, so the cell itself must raise.
-        text = code()["itemset-demo-sweep"]
+        text = code()["itemset-demo-sweep-table"]
         for expected in ('runs["status"] != "ok"', 'runs["correctness_status"] != "exact"', "raise RuntimeError",
                          '"status"', '"error"'):
             with self.subTest(expected=expected):
@@ -114,7 +125,7 @@ class DemoColabNotebookTest(unittest.TestCase):
         self.assertLess(text.index("raise RuntimeError"), text.index("display("))
 
     def test_variants_that_disagree_stop_the_notebook(self):
-        text = code()["itemset-demo-mine"]
+        text = code()["itemset-demo-longest"]
         self.assertIn("if not same:", text)
         self.assertIn("raise RuntimeError", text)
 

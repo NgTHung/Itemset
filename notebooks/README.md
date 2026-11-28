@@ -4,7 +4,7 @@ The Eclat demo and each application have their own notebook, so a failure in one
 
 ## Eclat demo
 
-Open [demo_colab.ipynb on Colab](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo_colab.ipynb) on a Python CPU runtime and run all cells. Each step is its own cell and prints its own output, so a viewer can follow the run from top to bottom:
+Open [demo_colab.ipynb on Colab](https://colab.research.google.com/github/NgTHung/Itemset/blob/main/notebooks/demo_colab.ipynb) on a Python CPU runtime and run all cells. Each step is its own cell and prints its own output, so a viewer can follow the run from top to bottom. After the two install cells, each command step is a `%%shell` cell with the same commands you would type in a terminal from the repository root. `set -euo pipefail` makes the first failing command stop the notebook. Python cells only read, check and display what the commands wrote:
 
 1. Install Julia 1.13.2 and check out the default branch at an exact commit, with the setup cell that the application notebooks share.
 2. Install Java 25 and the SPMF JAR, each checked against its pinned SHA-256. The JAR pin lives in `tools/spmf/release.toml`.
@@ -27,6 +27,6 @@ To replay a run, replace the empty `ITEMSET_REVISION = ""` in the first code cel
 
 ## Run locally
 
-`demo_local.ipynb`, `market_basket_local.ipynb` and `image_patterns_local.ipynb` run the same analyses on a Julia kernel in an IDE. The first cell finds an existing checkout from the repository root, from `notebooks/`, or from `ITEMSET_ROOT` when you set it. The second cell activates the project and installs its dependencies. `demo_local.ipynb` uses the cell IDs of `demo_colab.ipynb` and prints the same tables, without the chart.
+`demo_local.ipynb`, `market_basket_local.ipynb` and `image_patterns_local.ipynb` run the same analyses on a Julia kernel in an IDE. The first cell finds an existing checkout from the repository root, from `notebooks/`, or from `ITEMSET_ROOT` when you set it. The second cell activates the project and installs its dependencies. `demo_local.ipynb` uses the cell IDs of `demo_colab.ipynb` and prints the same tables, without the chart. Before each step's output it prints the terminal command that the step runs.
 
 Use Julia 1.13.2, the version of the pins and of every recorded result. The setup accepts any 1.x from 1.12. The SPMF comparison in `demo_local.ipynb` needs Java 25 and the JAR from the [reference protocol](../tools/spmf/README.md); without them the cell says so and skips the comparison.
