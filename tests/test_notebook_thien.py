@@ -66,7 +66,7 @@ class NotebookTest(unittest.TestCase):
 
     def test_the_runtime_cell_asks_for_the_ratios_of_the_record(self):
         text = {cell["id"]: source(cell) for cell in load()}["itemset-7d"]
-        record = (ROOT / "docs" / "runtime-curves-2026-11-17.md").read_text(encoding="utf-8")
+        record = (ROOT / "docs" / "report" / "figures" / "README.md").read_text(encoding="utf-8")
         for ratio in ("Baseline/Optimized", "SPMF/Optimized", "PrePost/Optimized", "Baseline/PrePost"):
             with self.subTest(ratio=ratio):
                 self.assertIn(f'"--ratio", "{ratio}"', text)

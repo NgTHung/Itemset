@@ -25,13 +25,6 @@ xelatex main.tex
 
 Hung writes implementation, scalability, and output size. Thien writes market basket, runtime, width, and future work. Phat writes image patterns, correctness, and memory. Thien assembles sections that have evidence behind them and does not write for the whole team. Phat assembles the notebooks, and Hung checks the final repository.
 
-## Regenerate the correctness grid and memory table
+## Regenerate the figures
 
-The correctness grid and the peak RSS table come from the timing run on the grading machine, `bbq-all-variants-cli-5repeat-20261117T041922Z`. The [run record](../runtime-curves-2026-11-17.md#reproduce) has the hash of the results folder and the commands that rerun it. Every run in it was checked in full against SPMF, and the plotting script refuses to draw a run that does not match. The peak RSS table is the median of the `peak_rss_bytes` column of `runs.csv` at the lowest minsup of each database.
-
-```sh
-RUN=results/raw/bbq-all-variants-cli-5repeat-20261117T041922Z
-uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py $RUN --out docs/report/figures
-```
-
-[figures/README.md](figures/README.md) lists the raw run behind every figure and the record that regenerates it.
+[figures/README.md](figures/README.md) names the raw run behind every figure and measured table, and the commands that redraw them.
