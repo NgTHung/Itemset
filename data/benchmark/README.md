@@ -30,4 +30,4 @@ All five datasets come from the [FIMI repository](https://fimi.uantwerpen.be/dat
 - Retail and T10I4D100K: FIMI uses item 0, which SPMF rejects because it requires positive item IDs. The SPMF copies add 1 to every ID, which leaves every support unchanged, so the experiments use them.
 - Mushroom: SPMF's `mushrooms.txt` is a different file, with 8,416 transactions and IDs up to 128. The experiments use FIMI's `mushroom.dat`, the 8,124-transaction version that the brief and most papers report.
 
-The brief asks for public Hugging Face or Kaggle copies, and a search on 2026-10-21 found none of these files there. A team mirror goes first in each entry's sources; the checksum rejects a mirror whose bytes differ.
+The brief asks for public Hugging Face or Kaggle copies, and a search on 2026-10-21 found none of these files there. The manifest therefore lists the SPMF and FIMI copies, and the SHA-256 check rejects any copy whose bytes differ.

@@ -79,38 +79,9 @@ each side with the same support, divided by the number of distinct keys in the u
 the two outputs; two empty maps count as a full match. Missing, extra, duplicate, and
 wrong-support keys are reported separately.
 
-Table~\ref{tab:toy-spmf} shows the results on seven small databases, with $N$ and
-$\sigma_{\min}$ as defined in Section~\ref{sec:protocol}. The ``Match'' column gives the
-number of itemsets whose support agrees with SPMF out of the total number of distinct
-itemsets. The baseline reaches 100\% in every comparison, with no missing, extra,
-duplicate, or wrong-support itemset. On \texttt{disjoint}, both programs return an empty
-map. The \texttt{boundary} database is mined at two thresholds to check itemsets that lie
-just above and just below the threshold, and each threshold is chosen so that SPMF and
-exact decimal arithmetic agree on $\sigma_{\min}$. The test suite checks every Eclat
-variant against the stored SPMF outputs each time it runs.
-
-\begin{table}[t]
-\centering
-\caption{Full itemset and support comparison of the baseline Eclat with SPMF on small
-databases}
-\label{tab:toy-spmf}
-\begin{tabular}{lrrr}
-\hline
-Data & $N$ & $\sigma_{\min}$ & Match \\
-\hline
-Baskets & 4 & 2 & 6/6 \\
-Duplicates & 3 & 2 & 3/3 \\
-Disjoint & 3 & 2 & 0/0 \\
-Dense & 2 & 2 & 7/7 \\
-Groceries & 5 & 2 & 5/5 \\
-Boundary & 4 & 2 & 2/2 \\
-Boundary & 4 & 1 & 4/4 \\
-Nested & 4 & 2 & 3/3 \\
-\hline
-\end{tabular}
-\end{table}
-
-On the five benchmarks, we checked every output of the runtime campaign of
+On the eight comparisons of the test suite on seven small databases, the baseline reaches
+100\% with no missing, extra, duplicate, or wrong-support itemset
+(Table~\ref{tab:toy-spmf} in Appendix~\ref{app:toy}). On the five benchmarks, we checked every output of the runtime campaign of
 Section~\ref{sec:minsup}, which ran both variants at revision \texttt{ca60f43} five times
 on each of 33 database and threshold pairs, against one independent SPMF Eclat result per
 pair. All 330 outputs of the two variants reach a 100\% match rate, with no missing,
@@ -154,19 +125,11 @@ on the five benchmarks of Table~\ref{tab:datasets}, each repeated five times, an
 one of the 660 runs matched an independent SPMF Eclat run itemset for itemset.
 
 Each point is the median of its five repeats. Relative to the median, the interquartile
-range is at most 2.9\% for the baseline and 1.9\% for the optimized variant. It is wider
-for the Java programs, reaching 11.3\% for SPMF and 13.9\% for PrePost+, although only one
-SPMF point and three PrePost+ points exceed 10\%. To estimate drift between sessions, we
-compared this session with three others on the same machine. PrePost+, which runs the same
-Java command every time, differs by $+3.0\%$, $+1.9\%$, and $-2.3\%$ in geometric mean,
-and by at most 14.4\% at a single point. The optimized variant, measured in another session
-at the same revision, differs by $-1.5\%$ on average and by at most 5.6\%. Because the four
-programs in the tables ran in the same session, a ratio between two of them carries only
-within-session noise. We treat a ratio as a real difference when it exceeds the sum of
-the two largest interquartile ranges, which comes to about 5\% between the two Julia
-variants and about 16\% when one side is a Java program. Drift between sessions only
-matters when comparing with another campaign, where it reaches 5.6\% for the optimized
-variant and 14.4\% for PrePost+.
+range is at most 2.9\% for the baseline, 1.9\% for the optimized variant, 11.3\% for SPMF,
+and 13.9\% for PrePost+. Because the four programs ran in the same session, we treat a
+ratio as a real difference when it exceeds about 5\% between the two Julia variants and
+about 16\% when one side is a Java program; Appendix~\ref{app:noise} derives these margins
+and the drift between sessions.
 
 \begin{figure*}[t]
 \centering
@@ -181,9 +144,9 @@ itemsets.}
 The optimized variant is the fastest program at all 33 points, taking between 0.21 and
 0.96\,s. At the lowest minsup of each benchmark (Table~\ref{tab:runtime-low}) it beats the
 baseline by a factor of about 7.9 on Accidents, 10.4 on Chess, 11.3 on T10I4D100K, 15.1
-on Mushroom, and 33.3 on Retail. Table~\ref{tab:runtime-ratio} gives the geometric mean of
-this ratio over all points of each benchmark, along with the same ratio for SPMF Eclat and
-PrePost+.
+on Mushroom, and 33.3 on Retail. Table~\ref{tab:runtime-ratio} in
+Appendix~\ref{app:ratios} gives the geometric mean of this ratio over all points of each
+benchmark, along with the same ratio for SPMF Eclat and PrePost+.
 
 \begin{table}[t]
 \centering
@@ -205,83 +168,23 @@ Accidents / 0.65 & 1\,093 & 6.76 & 0.86 & 26.70 & 2.36 \\
 \end{tabular}
 \end{table}
 
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{4pt}
-\caption{Geometric mean over every point of each benchmark of the \emph{process} time
-ratio: the time of the program named in the column header divided by the time of the
-optimized variant. ``SPMF'' is SPMF's Eclat. A value above 1 means slower than the
-optimized variant.}
-\label{tab:runtime-ratio}
-\begin{tabular}{lrrr}
-\hline
-Data & Baseline & SPMF & PrePost+ \\
-\hline
-Chess & 2.83 & 10.33 & 2.08 \\
-Mushroom & 2.73 & 6.01 & 2.22 \\
-Retail & 5.89 & 4.34 & 5.01 \\
-T10I4D100K & 13.14 & 4.53 & 4.76 \\
-Accidents & 2.62 & 10.76 & 2.39 \\
-\hline
-\end{tabular}
-\end{table}
-
 The shape of the baseline's curves follows from the amount of work it does. The baseline
 intersects two sorted tidsets by merging them, so each intersection costs time
-proportional to the combined length of the two tidsets. To measure this work, we reran the
-baseline's search on one thread and counted the intersections (joins), how many of them
-produced a frequent itemset, and the combined length of the two tidsets summed over all
-intersections, which we call merged elements (Table~\ref{tab:join-work}). Taking the time
-at the lowest minsup, subtracting the time at the highest minsup (mostly start-up and file
-reading), and dividing by the difference in merged elements gives 2.0 to 6.9\,ns per
-element across the five benchmarks. This is the same order of magnitude as the 9.0 to
-10.0\,ns measured in the transaction-length experiment of Section~\ref{sec:width}.
-
-\begin{table}[t]
-\centering
-\small
-\setlength{\tabcolsep}{3pt}
-\caption{Work done by the baseline at the lowest minsup of each benchmark. ``Success'' is
-the share of intersections that produce a frequent itemset, ``Elements'' is the combined
-length of the two tidsets over all intersections (billions), and ns/el is the time per
-merged element after subtracting the time at the highest minsup.}
-\label{tab:join-work}
-\begin{tabular}{lrrrr}
-\hline
-Data / minsup & Joins & Success & Elements & ns/el \\
-\hline
-Chess / 0.6 & 326\,545 & 78.1\% & 1.43 & 2.0 \\
-Mushroom / 0.1 & 722\,721 & 79.5\% & 1.66 & 3.6 \\
-Retail / 0.001 & 3\,932\,582 & 0.14\% & 2.17 & 5.7 \\
-T10I4D100K / 0.00025 & 4\,192\,075 & 2.3\% & 1.48 & 6.9 \\
-Accidents / 0.65 & 2\,333 & 46.1\% & 1.22 & 4.8 \\
-\hline
-\end{tabular}
-\end{table}
-
-How much work there is depends on the structure of the data. On Chess and Mushroom, the
-baseline performs only 1.26 to 1.28 intersections per frequent itemset and about 78\% to
-80\% of them succeed, so the work grows with the number of frequent itemsets. Retail is
-the opposite case: at minsup 0.001 it produces 3.93 million intersections, of which only
-5\,472 succeed. Each frequent itemset therefore costs about 286\,000 merged elements, and
+proportional to the combined length of the two tidsets; its time tracks that length at
+2.0 to 6.9\,ns per merged element (Appendix~\ref{app:join-work}). How much work there is
+depends on the structure of the data. On Chess and Mushroom, the baseline performs only
+1.26 to 1.28 intersections per frequent itemset and about 78\% to 80\% of them succeed, so
+the work grows with the number of frequent itemsets. Retail is the opposite case: at
+minsup 0.001 it produces 3.93 million intersections, of which only 5\,472 succeed, and
 the baseline needs 12.59\,s, 8.0 times as long as SPMF Eclat (1.57\,s) and 3.6 times as
-long as PrePost+ (3.52\,s) at the same point. On T10I4D100K, even minsup 0.01 takes 70\,127
-intersections and 297.7 million merged elements to find just 10 two-item sets, so the
-baseline is already 8.5 times slower than the optimized variant at the first point. The
-optimized variant's curve, in contrast, is nearly flat and rises clearly only at the
-points with the largest output (Mushroom 0.1 and T10I4D100K 0.00025).
-Section~\ref{sec:future} looks at where the optimized variant spends its time.
+long as PrePost+ (3.52\,s) at the same point. The optimized variant's curve, in contrast,
+is nearly flat and rises clearly only at the points with the largest output (Mushroom 0.1
+and T10I4D100K 0.00025). Section~\ref{sec:future} looks at where the optimized variant
+spends its time.
 
-At the highest minsup of Chess, Mushroom, Accidents, and Retail, the baseline is only 1.09,
-1.06, 1.27, and 1.46 times slower than the optimized variant. All four ratios exceed the
-roughly 5\% within-session noise between the two Julia variants, so the differences are
-real, but they are small. On Chess and Mushroom the gap is a few percent of a run that
-consists mostly of start-up and file reading. On Accidents and Retail the absolute gap is
-only 0.21\,s and 0.13\,s, about as long as start-up and file reading themselves (some
-0.21\,s on Chess at minsup 0.9, a point that does little else). These small ratios
-therefore do not mean that the two algorithms are equally fast. At the lowest minsup,
-SPMF Eclat is faster than the baseline on Retail (by a factor of 8.0) and T10I4D100K (1.3)
+At the highest minsup, the baseline is only 1.06 to 1.46 times slower than the optimized
+variant, because start-up and file reading dominate those runs
+(Appendix~\ref{app:noise}). At the lowest minsup, SPMF Eclat is faster than the baseline on Retail (by a factor of 8.0) and T10I4D100K (1.3)
 but slower on Chess (5.2) and Accidents (4.0). On Mushroom, SPMF Eclat takes 6.93\,s and
 the baseline 6.15\,s; this 13\% gap is within the noise of a Java program (about 16\%), so
 the two cannot be told apart.
@@ -292,8 +195,7 @@ the final one at revision \texttt{ca60f43}, so it includes the shared start-up,
 reading, and writing changes of Steps~\ref{step:precompile-package},
 \ref{step:precompile-cli}, and~\ref{step:byte-io} in Table~\ref{tab:steps}. Its times are
 therefore lower than those of the baseline before any optimization step, and the speedups
-above compare the two mining algorithms, not the shared code. The intersection counts come
-from a separate run, outside the timed runs.
+above compare the two mining algorithms, not the shared code.
 
 \subsection{Number of frequent itemsets against minsup}
 \label{sec:output-size}
@@ -328,25 +230,11 @@ Chess and Accidents to a factor of 40 on T10I4D100K, and $F$ spans from 15 to
 where $F$ is the number of frequent itemsets at a threshold, $c$ is a per-database
 constant, and $s$ is the slope on a log-log scale: when minsup falls by a factor $q$, $F$
 grows by about $q^s$. Because $s$ depends only on ratios, it can be compared across
-databases whose minsup ranges differ.
-
-Model~\eqref{eq:output-growth} is the logarithm of a power law,
-$F \approx e^{c}\,\mathrm{minsup}^{-s}$, and a simple model of the data explains why a power law
-fits. Suppose each of the $|I|$ items occurs in a transaction independently with
-probability $d$, the density of Table~\ref{tab:datasets}. A $k$-itemset then occurs in a
-fraction $d^k$ of the transactions, so it is frequent when $d^k \ge \mathrm{minsup}$, that is,
-when $k \le k^* = \log(1/\mathrm{minsup}) / \log(1/d)$. The number of itemsets of length up
-to $k^*$ grows like $|I|^{k^*}$, so
-\begin{equation}
-  \log F \approx k^* \log|I| = s \log(1/\mathrm{minsup}), \qquad
-  s \approx \frac{\log|I|}{\log(1/d)}.
-  \label{eq:output-slope}
-\end{equation}
-Estimate~\eqref{eq:output-slope} gives 1.5 for T10I4D100K and 1.3 for Retail, close to
-the measured 1.6 and 1.7. It also predicts that denser data grows faster, since a larger
-$d$ shrinks $\log(1/d)$. On the dense databases it gives only 2.3 to 6.1, because their
-items are correlated and their frequent items occur far more often than the average
-density $d$, the co-occurrence described below.
+databases whose minsup ranges differ. If items occurred independently with probability
+$d$, the model would hold with $s \approx \log|I| / \log(1/d)$, which gives 1.5 for
+T10I4D100K and 1.3 for Retail, close to the measured 1.6 and 1.7
+(Appendix~\ref{app:output-model}). On the dense databases it underestimates $s$, because
+their items are correlated, as described below.
 
 The fit is close ($R^2$ between 0.963 and 0.998), but $s$ is an average over each range:
 between adjacent thresholds, the slope of Chess falls from 25.5 to 10.4. In
@@ -387,27 +275,18 @@ together, so lowering the threshold mostly adds single items and pairs. The mean
 Retail stays between 1.8 and 2.1, and on T10I4D100K 0.00025, 45\,660 of the 96\,959
 itemsets (47\%) are 2-itemsets.
 
-The number of frequent itemsets alone does not determine the runtime. In the same
-campaign, the baseline takes 12.59 s on Retail 0.001 with 7\,589 itemsets, but only
-3.07 s on Chess 0.6 with 254\,944 itemsets. According to~\eqref{eq:cost}, the cost depends
-on the number of intersections times the tidset length, not on the number of results.
-On Retail, most of the two million root intersections fail without producing any itemset
-(Section~\ref{sec:optimized}). The optimized variant avoids them by counting pairs and
-runs Retail 0.001 in 0.38 s. Even so, it takes 0.41 s on Mushroom 0.1 with
-574\,431 itemsets but 0.96 s on T10I4D100K 0.00025 with only 96\,959, because the tidsets
-of T10I4D100K span 100\,000 transactions and most intersections at depth 2 fail. The
-count dominates the runtime only when it is very large: on Mushroom 0.05, before the
-radix sort was added, sorting and writing 3\,755\,511 itemsets took 89\% of the time and
-mining only 11\% (Section~\ref{sec:optimized}). Conversely, when the relative minsup is
-fixed, the count barely changes and the runtime grows with $N$, as
-Section~\ref{sec:scalability} shows.
+The number of frequent itemsets alone does not determine the runtime: the baseline takes
+12.59\,s on Retail 0.001 with 7\,589 itemsets but only 3.07\,s on Chess 0.6 with
+254\,944, because by~\eqref{eq:cost} the cost depends on the number of intersections
+times the tidset length, not on the number of results (Appendix~\ref{app:count-runtime}).
 
 \subsection{Process peak memory}
 \label{sec:memory}
 The runtime campaign of Section~\ref{sec:minsup} also records the peak RSS of every run,
 covering start-up, reading the data, mining, and writing the whole output.
-Table~\ref{tab:peak-rss} gives the medians at the lowest minsup of each database, where
-both the output and the search are largest. No run of any program reports less than
+Table~\ref{tab:peak-rss} gives the medians at two thresholds of each database: a medium
+minsup, the fourth threshold from the top of its grid in Fig.~\ref{fig:exact-grid}, and
+the lowest minsup, where both the output and the search are largest. No run of any program reports less than
 252\,MiB, a floor set by the measurement itself. The runner that reads the peak RSS is a
 Julia process, and it starts each program by copying itself and then replacing the copy
 with the program (\texttt{fork} and \texttt{exec}). On Linux, the peak RSS reported for
@@ -419,14 +298,22 @@ size of the runner's own Julia runtime. A median at that floor (between 253.3 an
 \centering
 \small
 \setlength{\tabcolsep}{3pt}
-\caption{Median peak RSS (MiB) over five repeats at the lowest minsup of each database.
-$M_b$ and $M_o$ are the medians of the baseline and the optimized variant, and ``SPMF'' is
-SPMF's Eclat. An asterisk marks a median at the measurement floor.}
+\caption{Median peak RSS (MiB) over five repeats at a medium and at the lowest minsup of
+each database. $M_b$ and $M_o$ are the medians of the baseline and the optimized variant,
+and ``SPMF'' is SPMF's Eclat. An asterisk marks a median at the measurement floor.}
 \label{tab:peak-rss}
 \begin{tabular}{lrrrrr}
 \hline
 Data / minsup & $M_b$ & $M_o$ & $M_b/M_o$ & SPMF & PrePost+ \\
 \hline
+\multicolumn{6}{l}{\emph{Medium minsup}} \\
+Chess / 0.75 & 272.1 & 253.6* & 1.073 & 467.8 & 253.4* \\
+Mushroom / 0.25 & 270.3 & 253.5* & 1.066 & 253.4* & 253.4* \\
+Retail / 0.0025 & 284.4 & 254.8 & 1.116 & 827.6 & 253.4* \\
+T10I4D100K / 0.001 & 282.6 & 261.1 & 1.082 & 380.6 & 285.6 \\
+Accidents / 0.8 & 559.3 & 397.3 & 1.408 & 2\,759.0 & 336.6 \\
+\hline
+\multicolumn{6}{l}{\emph{Lowest minsup}} \\
 Chess / 0.6 & 285.1 & 261.5 & 1.090 & 526.5 & 253.4* \\
 Mushroom / 0.1 & 366.0 & 299.2 & 1.223 & 514.2 & 253.5* \\
 Retail / 0.001 & 289.6 & 280.9 & 1.031 & 844.4 & 253.6* \\
@@ -436,10 +323,13 @@ Accidents / 0.65 & 608.4 & 398.3 & 1.528 & 4\,248.1 & 340.9 \\
 \end{tabular}
 \end{table}
 
-The optimized variant reduces peak memory by $100(1-M_o/M_b)$ percent, which ranges from
-3.0\% on Retail to 34.5\% on Accidents. SPMF Eclat uses 1.7 to 10.7 times as much memory
-as the optimized variant. PrePost+ uses less on Accidents (340.9 against 398.3\,MiB) and
-stays at the floor on Chess, Mushroom, and Retail. The optimized variant saves memory with
+The optimized variant reduces peak memory by $100(1-M_o/M_b)$ percent. At the medium
+minsup this ranges from 6.2\% on Mushroom to 29.0\% on Accidents, and where $M_o$ sits at
+the floor the true reduction is larger; at the lowest minsup it ranges from 3.0\% on
+Retail to 34.5\% on Accidents. SPMF Eclat uses 1.5 to 6.9 times as much memory as the
+optimized variant at the medium minsup, apart from Mushroom where both sit at the floor,
+and 1.7 to 10.7 times as much at the lowest. PrePost+ uses less on Accidents (336.6 and
+340.9 against 397.3 and 398.3\,MiB) and stays at the floor on Chess, Mushroom, and Retail. The optimized variant saves memory with
 bitsets and reused buffers (Section~\ref{sec:optimized}). For a database of $N$ transactions, a tidset with $\ell$
 tids takes $8\ell$ bytes as a list of 64-bit integers but $8\lceil N/64\rceil$ bytes as a
 bit array, counting elements only. The bit array is smaller for long tidsets, and classes
@@ -541,19 +431,9 @@ ten points, with $R$ between 0.35 and 0.38 on Accidents and falling from 0.29 to
 Retail, because PrePost+ has a marginal cost 2.8 times larger on Accidents and 19 times
 larger on Retail.
 
-Two factors besides $N$ could change the amount of work between subsets, and we measured
-both. The first is the number of distinct items, which grows with $N$ from 343 to 468 on
-Accidents and from 10\,208 to 16\,470 on Retail. The number of frequent items, however,
-barely changes: exactly 18 in all five Accidents subsets and between 2\,100 and 2\,270 on
-Retail. The new items are all rare and drop out in the first counting pass. The second
-factor is the very low absolute threshold on Retail 10\%, where $\sigma_{\min} = 9$. In a
-small sample, the supports of itemsets that sit just below the threshold fluctuate more,
-and since there are very many such itemsets, more of them rise above the threshold than
-fall below it. The 10\% subset therefore has the most frequent items of the five subsets
-(2\,270) and 8\,895 frequent itemsets, 17\% more than the 7\,589 of the full database.
-This extra work is small compared with the growth in $N$: the point farthest from the
-fitted line is off by only 4 ms for the optimized variant on Retail and by 0.12 s for the
-baseline, which is 1\% of its time on the full database.
+The number of distinct items and, on Retail 10\%, a very low absolute threshold also
+change between subsets, but neither bends the lines: the point farthest from the fitted
+line is off by at most 1\% of the full-database time (Appendix~\ref{app:scal-factors}).
 
 SPMF's Eclat is the only program that shows signs of nonlinearity. On Accidents its time
 grows 12.3-fold when $N$ grows tenfold, the quadratic term of the fit is positive, and its
@@ -643,13 +523,10 @@ $w$ & $\sigma_{\min}$ & Sets & Elements (M) & Baseline (s) & Optimized (ms) \\
 \end{tabular}
 \end{table}
 
-The two protocols also shape the search tree differently. With minsup fixed, the tree
-gains a level at $w = 25$ (pairs) and again at $w = 40$ (triples), and it widens as well:
-the number of intersections grows from 4\,950 to 166\,650 and then to 4\,087\,798. With the
-output matched, the tree has the same size at every $w$, and only the cost of each
-intersection changes. These conclusions cover a limited setting: a single $N$ and item
-count, eight values of $w$, independent items, and three repeats on one machine. The
-target of 5\,000 itemsets is also a choice rather than a derived value.
+These conclusions cover a limited setting: a single $N$ and item count, eight values of
+$w$, independent items, and three repeats on one machine. The target of 5\,000 itemsets
+is also a choice rather than a derived value. Appendix~\ref{app:width-tree} compares the
+search trees of the two protocols.
 
 \subsection{Analysis and future directions}
 \label{sec:future}
@@ -713,8 +590,8 @@ than SPMF Eclat's and 2.8 times lower than PrePost+'s, and its start-up constant
 to 0.22\,s is below the 0.48 to 0.52\,s of PrePost+. As transactions grow from 5 to 40
 items, its mining time grows only 1.8-fold, because a bitset intersection costs 157 words
 at every length (Section~\ref{sec:width}), while SPMF Eclat's \emph{process} time grows
-24.3-fold. It also needs 1.7 to 10.7 times less memory than SPMF Eclat
-(Table~\ref{tab:peak-rss}). On the weak side, Mushroom 0.05 is the only point where the
+24.3-fold. At the lowest minsup it also needs 1.7 to 10.7 times less memory than SPMF
+Eclat (Table~\ref{tab:peak-rss}). On the weak side, Mushroom 0.05 is the only point where the
 optimized variant is slower than PrePost+ (1.445 against 1.378\,s). There, output takes
 98\% of the run and sorting alone 43\% of the samples, whereas SPMF writes in mining order
 and does not sort. On Accidents, PrePost+ also needs 14\% less memory than the optimized
@@ -738,16 +615,9 @@ per-transaction slope on Accidents drops by about a third, while points dominate
 intersection stay the same. Memory should fall as well: the Accidents database takes
 105\,MiB as \texttt{Vector\{Vector\{Int\}\}}, 46\,MiB as flat \texttt{Int32}, and
 23\,MiB as \texttt{UInt16} (its largest code is 468), a saving of 59 to 82\,MiB out of a
-398.3\,MiB peak RSS. \emph{Tradeoff.} The CLI would gain a second reader and a second
-layout builder alongside the general ones, and the two would have to stay equivalent. The
-item-code cutoff also needs a fallback path because SPMF files allow large, sparse codes,
-although the codes of all five benchmarks are small enough for an array. \emph{Tests.} The
-new layout must equal \texttt{bitset\_class} on seeded random databases, including
-$N = 63, 64, 65$, code 0, and codes above the cutoff. The CLI output must stay
-byte-identical to the current output at all 33 points and match SPMF's full map. The
-layout share, slope, and peak RSS would then be measured again, and the change kept only
-if it gains at least 10\% at the targeted points without slowing any other point by more
-than 10\%.
+398.3\,MiB peak RSS. The cost is a second reader and layout builder that must stay
+equivalent to the general ones; Appendix~\ref{app:proposals} gives the tradeoff and the
+tests that would decide whether to keep the change.
 
 \paragraph{Proposal 2: output in search order.}
 \emph{Bottleneck.} On Chess 0.6, Mushroom 0.1, and Mushroom 0.05, output takes 83\% to
@@ -764,18 +634,9 @@ from the \emph{process} medians of Table~\ref{tab:runtime-low} and the stress po
 time on Mushroom 0.05 would drop from 1.445\,s to about 0.97\,s by skipping the sort, or
 to 0.75\,s if the result is also read in sequence. The ratio $R$ against PrePost+ would
 then fall from 1.05 to between 0.70 and 0.54. We predict an 8\% to 10\% shorter run on
-Chess 0.6, 14\% to 20\% on Mushroom 0.1, and no change at the sparse points.
-\emph{Tradeoff.} Files written in search order could no longer be compared byte for byte
-across variants or across code revisions, which the package interface currently
-guarantees through its fixed order. The comparator reads both files into maps, so it
-would not be affected, but a benchmark would have to record which order it used, because
-CLI time would then exclude the sort, as it already does for the SPMF programs. Since the
-measured gain is concentrated at the dense points, and above all at Mushroom 0.05, the
-package keeps the fixed order. \emph{Tests.} A search-order file, once sorted
-externally, must be byte-identical to the default output, and the full map must match
-SPMF at every grid and stress point. Two runs of the same code must produce the same
-bytes. A five-repeat campaign of both orders on Chess 0.6, Mushroom 0.1, and Mushroom 0.05
-would test the prediction, which fails if $R$ on Mushroom 0.05 stays at 1.0 or above.
+Chess 0.6, 14\% to 20\% on Mushroom 0.1, and no change at the sparse points. The cost is
+that files in search order could no longer be compared byte for byte across variants, so
+the package keeps the fixed order by default (Appendix~\ref{app:proposals}).
 
 Other directions look less promising on this evidence. More work on adaptive
 representations or early termination would pay off only where intersection dominates the

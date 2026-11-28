@@ -54,6 +54,5 @@ The script writes to `results/raw/market_basket/`, which Git ignores, in about t
 - `rare_groups.tsv`: the top groups at minsup 0.005, recounted per year, for comparing rare high-lift patterns with the base ones.
 - `summary.toml`: input SHA-256, code revision, thresholds, and counts.
 
-[docs/market-basket-rules-2026-10-29.md](../../docs/market-basket-rules-2026-10-29.md) records the results and their checks against SPMF.
 
 Rule tests use `GROCERY_RULES` in `tests/fixtures.jl` and compare every rule on 60 seeded random databases with a direct count. `RECEIPT_CASE` and [data/toy/receipts.csv](../../data/toy/receipts.csv) check the cleaning. Final rules come only from the team's validated miner, never from fixtures.
