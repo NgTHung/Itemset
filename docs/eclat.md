@@ -1,6 +1,6 @@
 # Eclat baseline
 
-`mine(...; variant=:baseline)` finds every frequent itemset with Eclat from Zaki, "Scalable Algorithms for Association Mining" (IEEE TKDE 2000). It counts support by intersecting tid-lists instead of rescanning the database. This document states the invariants the code in `src/algorithm/eclat.jl` keeps, proves that they give each frequent itemset exactly once with its exact support, and gives the cost. The caller contract lives in [interface.md](interface.md).
+`mine(...; variant=:baseline)` finds every frequent itemset with Eclat from Zaki, "Scalable Algorithms for Association Mining" (IEEE TKDE 2000). It counts support by intersecting tid-lists instead of rescanning the database. This document maps the code in `src/algorithm/eclat.jl` to the invariants it keeps and gives the cost. Appendix A of the report (`docs/report/sections/appendix.tex`) proves that the invariants give each frequent itemset exactly once with its exact support. The caller contract lives in [interface.md](interface.md).
 
 ## Terms
 
@@ -25,15 +25,9 @@ Every class that `bottom_up!` receives satisfies these four properties.
 3. Each member is frequent: its tid-list has at least `minsup` tids.
 4. The tid-list of member b is exactly t(P ∪ {b}).
 
-The root class meets all four by construction. A child class takes members b after a from a class that meets them, so properties 1 and 2 carry over. The size check before `push!` gives property 3. A transaction contains P ∪ {a, b} exactly when it contains both P ∪ {a} and P ∪ {b}, so t(P ∪ {a, b}) = t(P ∪ {a}) ∩ t(P ∪ {b}), which gives property 4.
-
 ## Correctness
 
-Exact support. By property 4, the recorded value |t(P ∪ {a})| is the number of transactions that contain P ∪ {a}.
-
-No duplicates. Properties 2 and 4 make every recorded key strictly ascending. A key (x1, ..., xk) is recorded only when the class with prefix (x1, ..., xk-1) reaches member xk. Each class is created once, by the search of its prefix, so each key is recorded once.
-
-Complete output. Take a frequent itemset X = {x1 < ... < xk}. Every subset of X is frequent, because a transaction that contains X contains each subset, so the pruning in steps 2 and 3 never removes a subset of a frequent itemset. By induction on j, the class with prefix (x1, ..., xj-1) holds every item y > xj-1 for which (x1, ..., xj-1, y) is frequent. The root class holds every frequent item. For the step, if (x1, ..., xj, y) is frequent with y > xj, then (x1, ..., xj-1, y) is frequent and holds y after xj in the parent class, so the join keeps it. With j = k, the class of (x1, ..., xk-1) holds xk, and the search records X.
+Appendix A of the report proves the four invariants by induction on the class depth, and from them exact support, no duplicates, and complete output. The proof uses only that the item order is a strict total order, which is why it also covers the optimized variant.
 
 `tests/frequent_itemsets.jl` checks these claims on every toy fixture and on 300 seeded random databases against a brute-force count of all subsets.
 

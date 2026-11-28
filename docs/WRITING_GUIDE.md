@@ -26,7 +26,7 @@ Each type has one job. Status, history, and plans belong in the types built for 
 | Contract (`docs/interface.md`) | What must every caller and variant rely on? | Present-tense rules for input, thresholds, and output, with the reason for each rule | Review status, task progress, "will" statements |
 | Protocol (`experiments/README.md`, `tools/spmf/README.md`) | How is evidence produced so others can repeat it? | Steps, recorded fields, timing boundaries, tools and versions | Results, owner progress |
 | Owner brief (`applications/*/README.md`) | What must this workstream deliver? | Scope, inputs, deliverables, owner, reviewer, linked Linear issues | Results, contract rules copied from `interface.md` |
-| Dated record (`docs/setup-validation.md`, `docs/project-plan.md`) | What did we find or intend on a given date? | Date, environment, commands, measurements, task IDs | Edits that track later state |
+| Dated record (`docs/<topic>-YYYY-MM-DD.md`) | What did we find or intend on a given date? | Date, environment, commands, measurements, task IDs | Edits that track later state |
 | Docstring | How do I call this and what does it guarantee? | Signature, contract, edge cases, what throws | Task IDs, implementation history |
 | Linear issue | What work remains and when is it done? | Scope, criteria, status | Nothing restricted |
 

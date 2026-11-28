@@ -1,6 +1,6 @@
 # Image-pattern mining
 
-Images that share a visual pattern often share a set of local features, such as textures or edges. This workstream encodes each image as the set of visual words it contains, mines those sets with `ItemsetMining.mine`, and shows which word combinations recur across images. The [Semeion pilot record](../../docs/semeion-pilot-2026-10-24.md) gives the dataset checksum, settings, and measured output.
+Images that share a visual pattern often share a set of local features, such as textures or edges. This workstream encodes each image as the set of visual words it contains, mines those sets with `ItemsetMining.mine`, and shows which word combinations recur across images. [data/raw/manifest.toml](../../data/raw/manifest.toml) pins the dataset bytes.
 ## Encoding
 
 Run the frozen encoding without mining from the repository root:
