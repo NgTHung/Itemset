@@ -9,6 +9,7 @@ import argparse
 import csv
 import math
 from pathlib import Path
+from typing import NamedTuple
 
 import matplotlib
 
@@ -24,11 +25,34 @@ COLORS = {"chess": "#2468a2", "mushroom": "#8c4fa1", "accidents": "#b0384b",
 MARKERS = {"chess": "o", "mushroom": "D", "accidents": "v", "retail": "s", "T10I4D100K": "^"}
 
 
-def log_slope(xs, ys):
-    """Least-squares slope of log(count) on log(minsup), negated so faster growth is a larger number."""
-    lx, ly = [math.log(x) for x in xs], [math.log(y) for y in ys]
-    mx, my = sum(lx) / len(lx), sum(ly) / len(ly)
-    return -sum((a - mx) * (b - my) for a, b in zip(lx, ly)) / sum((a - mx) ** 2 for a in lx)
+class GrowthFit(NamedTuple):
+    slope: float
+    r_squared: float
+    adjacent_slopes: list
+    per_hundredth: float
+
+
+def least_squares(xs, ys):
+    """Slope and coefficient of determination of the least-squares line of ys on xs."""
+    mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
+    slope = sum((a - mx) * (b - my) for a, b in zip(xs, ys)) / sum((a - mx) ** 2 for a in xs)
+    residual = sum((b - my - slope * (a - mx)) ** 2 for a, b in zip(xs, ys))
+    total = sum((b - my) ** 2 for b in ys)
+    return slope, 1 - residual / total
+
+
+def growth_fit(xs, counts):
+    """Fit log(count) = c - s log(minsup), with slopes negated so faster growth is a larger number.
+
+    The fit also gives the slope between each pair of adjacent thresholds, which shows where
+    the curve bends, and the slope of log(count) per 0.01 of minsup, which the report contrasts
+    with s because it depends on the scale of each database's minsup range.
+    """
+    lx, ly = [math.log(x) for x in xs], [math.log(y) for y in counts]
+    slope, r_squared = least_squares(lx, ly)
+    adjacent = [-(ly[i + 1] - ly[i]) / (lx[i + 1] - lx[i]) for i in range(len(xs) - 1)]
+    linear_slope, _ = least_squares(xs, ly)
+    return GrowthFit(-slope, r_squared, adjacent, -0.01 * linear_slope)
 
 
 def main():
@@ -57,7 +81,10 @@ def main():
                      linestyle="-" if dataset in DENSE else "--", label=f"{display_name(dataset)} ({kind})")
         counts_ax.plot(xs, counts, **style)
         length_ax.plot(xs, lengths, **style)
-        slopes.append((dataset, kind, xs[0], xs[-1], counts[0], counts[-1], round(log_slope(xs, counts), 2)))
+        fit = growth_fit(xs, counts)
+        slopes.append((dataset, kind, xs[0], xs[-1], counts[0], counts[-1], round(fit.slope, 2),
+                       round(fit.r_squared, 3), " ".join(f"{s:.1f}" for s in fit.adjacent_slopes),
+                       round(fit.per_hundredth, 2)))
     for ax in (counts_ax, length_ax):
         ax.set_xscale("log")
         ax.invert_xaxis()
@@ -78,7 +105,8 @@ def main():
     plt.close(fig)
     with (args.out / "output-growth.csv").open("w", newline="", encoding="utf-8") as stream:
         writer = csv.writer(stream)
-        writer.writerow(("dataset", "kind", "minsup_high", "minsup_low", "count_high", "count_low", "log_log_slope"))
+        writer.writerow(("dataset", "kind", "minsup_high", "minsup_low", "count_high", "count_low", "log_log_slope",
+                         "r_squared", "adjacent_slopes", "log_slope_per_0.01_minsup"))
         writer.writerows(slopes)
     print(f"Wrote {args.out}")
 
