@@ -83,7 +83,7 @@ The [notebook guide](notebooks/README.md) explains how to pin a revision, inspec
 - `tools/spmf/`: the procedure for independent SPMF reference runs.
 - `results/`: raw runs and figures, kept out of Git.
 - `notebooks/`: the demo and each application have two notebooks, and the file name says where it runs. `*_local.ipynb` runs on a Julia kernel in your IDE from a checkout. `*_colab.ipynb` runs on Colab's Python kernel and clones the repository and installs Julia first. The cells and the results are the same. `demo_colab.ipynb` runs the cells of `demo_local.ipynb` through `scripts/run_colab_notebook.py`.
-- `docs/report/`: the Vietnamese IEEE-format report, exported as `docs/Report.pdf`.
+- `docs/report/`: the English IEEE-format report, exported as `docs/Report.pdf`.
 
 ## Reproducibility
 

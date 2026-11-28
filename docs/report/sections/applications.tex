@@ -1,249 +1,254 @@
-\section{Ứng dụng thực tế}
+\section{Applications}
 \label{sec:applications}
-\subsection{Phân tích giỏ hàng}
+\subsection{Market basket analysis}
 \label{sec:basket}
-Phân tích giỏ hàng (market basket analysis) tìm các nhóm sản phẩm thường được mua
-cùng nhau để nhà bán lẻ sắp xếp, đóng gói hoặc khuyến mãi. Nhóm dùng bộ dữ liệu
-Online Retail II~\cite{chen2012}, giấy phép CC BY 4.0, gồm mọi dòng hóa đơn của
-một cửa hàng quà tặng trực tuyến tại Anh từ 01/12/2009 đến 09/12/2011. Tệp CSV
-được tải từ hai bản sao trên Hugging Face, cố định theo revision; hai bản giống
-nhau từng byte và có đúng 1\,067\,371 dòng như UCI công bố. Mã băm SHA-256 của
-tệp được kiểm tra trước khi xử lý.
+Market basket analysis looks for groups of products that customers often buy together, so
+that a retailer can arrange, bundle, or promote them together. We use the Online Retail II
+dataset~\cite{chen2012}, licensed under CC BY 4.0, which contains every invoice line of a
+UK online gift shop from 2009-12-01 to 2011-12-09. We downloaded the CSV file from two
+Hugging Face mirrors, each pinned by revision; the two copies are byte-identical and have
+exactly the 1\,067\,371 rows that UCI reports. The file's SHA-256 hash is checked before
+processing.
 
-Mỗi giao dịch (transaction) là một hóa đơn (invoice), và mỗi item là một mã sản
-phẩm (stock code) viết hoa, vì \texttt{85123a} và \texttt{85123A} chỉ cùng một
-sản phẩm. Mã số nguyên của item được gán theo thứ tự mã sản phẩm bằng hàm
-\texttt{encode\_transactions}, nên ánh xạ không phụ thuộc thứ tự dòng và đảo ngược
-được: tệp \texttt{items.tsv} lưu mã số, mã sản phẩm, mô tả thường gặp nhất và số
-giỏ hàng chứa sản phẩm. Bảng~\ref{tab:basket-cleaning} cho thấy tác động của từng
-bước làm sạch.
+Each invoice becomes a transaction, and each product becomes an item identified by its
+stock code in upper case, because \texttt{85123a} and \texttt{85123A} name the same
+product. The function \texttt{encode\_transactions} assigns integer item codes in
+stock-code order, so the mapping does not depend on the order of the rows and can be
+reversed: the file \texttt{items.tsv} stores, for each product, its integer code, its stock
+code, its most common description, and the number of baskets that contain it.
+Table~\ref{tab:basket-cleaning} shows how each cleaning step changes the data.
 
 \begin{table}[t]
 \centering
-\caption{Số dòng và số hóa đơn sau từng bước làm sạch Online Retail II}
+\caption{Rows and invoices after each cleaning step on Online Retail II}
 \label{tab:basket-cleaning}
 \begin{tabular}{lrrr}
 \hline
-Bước & Bỏ & Còn (dòng) & Hóa đơn \\
+Step & Removed & Rows left & Invoices \\
 \hline
-Dữ liệu gốc & & 1\,067\,371 & 53\,628 \\
-Dòng trùng lặp & 34\,335 & 1\,033\,036 & 53\,628 \\
-Hóa đơn hủy (C) & 19\,104 & 1\,013\,932 & 45\,336 \\
-Điều chỉnh nợ xấu (A) & 6 & 1\,013\,926 & 45\,330 \\
-Số lượng $\le 0$ & 3\,393 & 1\,010\,533 & 41\,937 \\
-Đơn giá $\le 0$ & 2\,621 & 1\,007\,912 & 40\,076 \\
-Mã không phải sản phẩm & 4\,555 & 1\,003\,357 & 39\,516 \\
+Raw data & & 1\,067\,371 & 53\,628 \\
+Duplicate rows & 34\,335 & 1\,033\,036 & 53\,628 \\
+Cancelled invoices (C) & 19\,104 & 1\,013\,932 & 45\,336 \\
+Bad-debt adjustments (A) & 6 & 1\,013\,926 & 45\,330 \\
+Quantity $\le 0$ & 3\,393 & 1\,010\,533 & 41\,937 \\
+Unit price $\le 0$ & 2\,621 & 1\,007\,912 & 40\,076 \\
+Non-product codes & 4\,555 & 1\,003\,357 & 39\,516 \\
 \hline
 \end{tabular}
 \end{table}
 
-UCI công bố dữ liệu thành hai sheet theo năm, và cả hai đều chứa các ngày 1--9
-tháng 12 năm 2010, chiếm 22\,844 trong số 34\,335 dòng trùng. Dòng trùng không làm
-thay đổi giỏ hàng vì item lặp lại trong một giao dịch được gộp. Hóa đơn hủy là
-hóa đơn riêng mang tiền tố C dùng để đảo một giao dịch bán trước đó, nên bỏ nó
-giữ nguyên giỏ hàng khách đã mua. Các dòng có số lượng hoặc đơn giá không dương là
-ghi chú kho như ``check'' hay ``damaged'', không phải giao dịch bán; hai bước này
-bỏ 5\,254 hóa đơn chỉ gồm ghi chú và 380 mã chưa từng được bán. Bước cuối bỏ các
-mã dịch vụ như phí vận chuyển, giảm giá, phí ngân hàng và phiếu quà tặng; riêng
-phí vận chuyển xuất hiện trong 8,8\% số hóa đơn nên sẽ tạo luật giả với mọi sản
-phẩm phổ biến. Dòng không có mã khách hàng vẫn được giữ vì một hóa đơn là một giỏ
-hàng bất kể ai trả tiền.
+UCI publishes the data as two sheets, one per year, and both include 1 to 9 December
+2010, which accounts for 22\,844 of the 34\,335 duplicate rows. Removing duplicate rows
+does not change any basket, since repeated items in a transaction are merged anyway. A
+cancelled invoice is a separate invoice, marked with a C prefix, that reverses an earlier
+sale, so dropping it leaves the basket the customer actually kept. Rows with a
+non-positive quantity or unit price are stock notes such as ``check'' or ``damaged''
+rather than sales; removing them deletes 5\,254 invoices that hold only notes, along with
+380 codes that were never sold. The last step removes service codes such as postage,
+discounts, bank charges, and gift vouchers. Postage alone appears on 8.8\% of invoices,
+so keeping it would create spurious rules with every popular product. We keep rows
+without a customer ID, because an invoice is a basket no matter who pays for it.
 
-Kết quả gồm 39\,516 giỏ hàng trên 4\,725 sản phẩm. Độ dài giỏ hàng có trung vị
-15, phân vị 90 là 51, trung bình 25,1 và lớn nhất 1\,106 ở các đơn bán sỉ; 92\%
-số giỏ hàng đến từ Anh. Với Eclat của nhóm, minsup 0,01 (396 hóa đơn) cho
-1\,355 tập phổ biến, trong đó 648 tập có từ hai sản phẩm trở lên.
+After cleaning, 39\,516 baskets remain, covering 4\,725 products. Baskets have a median
+length of 15, a 90th percentile of 51, a mean of 25.1, and a maximum of 1\,106 items for
+wholesale orders, and 92\% of them come from the UK. At minsup 0.01 (396 invoices), our
+Eclat finds 1\,355 frequent itemsets, 648 of which contain two or more products.
 
-\subsubsection{Luật kết hợp}
-Một luật kết hợp (association rule) $X \Rightarrow Y$ gồm vế trái (antecedent)
-$X$ và vế phải (consequent) $Y$ là hai tập sản phẩm khác rỗng, rời nhau. Gọi
-$N$ là số giỏ hàng và $\sigma(Z)$ là số giỏ hàng chứa mọi sản phẩm của tập $Z$.
-Ba độ đo của luật là
+\subsubsection{Association rules}
+An association rule $X \Rightarrow Y$ has an antecedent $X$ and a consequent $Y$, two
+non-empty, disjoint sets of products. With $N$ the number of baskets and $\sigma(Z)$ the
+number of baskets that contain every product in a set $Z$, the three usual rule measures
+are
 \begin{align}
 \mathrm{supp}(X \Rightarrow Y) &= \frac{\sigma(X \cup Y)}{N}, \label{eq:rule-supp}\\
 \mathrm{conf}(X \Rightarrow Y) &= \frac{\sigma(X \cup Y)}{\sigma(X)}, \label{eq:rule-conf}\\
 \mathrm{lift}(X \Rightarrow Y) &= \frac{\mathrm{conf}(X \Rightarrow Y)}{\sigma(Y)/N}
   = \frac{N\,\sigma(X \cup Y)}{\sigma(X)\,\sigma(Y)}. \label{eq:rule-lift}
 \end{align}
-Độ hỗ trợ (support)~\eqref{eq:rule-supp} là tỉ lệ giỏ hàng chứa cả hai vế; độ
-tin cậy (confidence)~\eqref{eq:rule-conf} là tỉ lệ giỏ hàng có $X$ cũng có $Y$;
-độ nâng (lift)~\eqref{eq:rule-lift} cho biết $Y$ đi cùng $X$ nhiều gấp bao nhiêu
-lần so với khi hai vế độc lập, nên lift lớn hơn 1 nghĩa là hai vế hay được mua
-cùng nhau. Lift đối xứng theo $X$ và $Y$, còn độ tin cậy thì không.
+Support~\eqref{eq:rule-supp} is the share of baskets that contain both sides, and
+confidence~\eqref{eq:rule-conf} is the share of baskets with $X$ that also contain $Y$.
+Lift~\eqref{eq:rule-lift} tells how many times more often $Y$ occurs together with $X$
+than it would if the two sides were independent, so a lift above 1 means the two sides
+tend to be bought together. Unlike confidence, lift is symmetric in $X$ and $Y$.
 
-Nhóm khai thác 39\,516 giỏ hàng bằng Eclat của nhóm với minsup 0,01, tức mỗi
-mẫu dựa trên ít nhất 396 hóa đơn, và nhận 1\,355 tập phổ biến. Mỗi tập phổ biến
-$Z$ có $m \ge 2$ sản phẩm được tách thành mọi cặp $X$, $Y = Z \setminus X$, tức
-$2^m - 2$ luật; ngưỡng minsup đã áp lên $X \cup Y$ khi khai thác, và mọi tập con
-của $Z$ đều có trong kết quả nên $\sigma(X)$, $\sigma(Y)$ luôn tra được. Các độ
-đo được tính bằng phân số chính xác. Ngưỡng minconf được đổi một lần từ dạng
-thập phân thành phân số $p/q$, và luật được giữ khi
-$\sigma(X \cup Y)\, q \ge p\, \sigma(X)$, tính bằng số nguyên cỡ lớn, nên sai số
-làm tròn không quyết định luật nào. Cách so sánh với số thực 0,1 trong máy, lớn
-hơn $1/10$ một chút, sẽ loại nhầm luật có độ tin cậy đúng bằng $1/10$. Với
-minconf 0,5, 455 trong 1\,804 luật được giữ lại, và mọi luật có lift trên 1,4.
+Mining the 39\,516 baskets at minsup 0.01 gives 1\,355 frequent itemsets, each supported
+by at least 396 invoices. Every frequent itemset $Z$ with $m \ge 2$ products is split in
+all possible ways into $X$ and $Y = Z \setminus X$, giving $2^m - 2$ rules. Mining has
+already applied the minsup threshold to $X \cup Y$, and every subset of $Z$ is in the
+result, so $\sigma(X)$ and $\sigma(Y)$ can always be looked up. All measures are computed
+as exact fractions. The minconf threshold is converted once from its decimal form to a
+fraction $p/q$, and a rule is kept when $\sigma(X \cup Y)\, q \ge p\, \sigma(X)$, computed
+with big integers, so rounding error never decides whether a rule is kept. Comparing
+against the machine float 0.1, for example, which is slightly larger than $1/10$, would
+wrongly reject a rule whose confidence is exactly $1/10$. At minconf 0.5, 455 of the
+1\,804 rules survive, and all of them have a lift above 1.4.
 
-Để kiểm tra, nhóm chạy Eclat của SPMF trên cùng tệp giỏ hàng: hai kết quả khớp
-100\% trên 1\,355 tập phổ biến. Một chương trình riêng sinh luật từ kết quả của
-SPMF cũng cho đúng 455 luật, và độ hỗ trợ, độ tin cậy, lift của 10 luật đứng đầu
-khớp với phép đếm trực tiếp trên giỏ hàng.
+As a check, we ran SPMF's Eclat on the same basket file, and the two results agree on all
+1\,355 frequent itemsets. A separate program that generates rules from SPMF's result also
+finds exactly 455 rules, and the support, confidence, and lift of the top 10 rules agree
+with a direct count on the baskets.
 
-Luật được xếp theo lift giảm dần, rồi độ tin cậy, rồi số giỏ hàng, cuối cùng
-theo mã sản phẩm, để thứ tự luôn xác định. Hai luật $X \Rightarrow Y$ và
-$Y \Rightarrow X$ luôn bằng lift nên hướng có độ tin cậy cao hơn đứng trước.
-Bảng~\ref{tab:top-rules} liệt kê 10 luật đứng đầu; không luật nào ngoài bảng có
-lift bằng luật thứ 10.
+Rules are sorted by decreasing lift, then by confidence and basket count, and finally by
+stock code, so the order is fully deterministic. Since $X \Rightarrow Y$ and
+$Y \Rightarrow X$ always have the same lift, the direction with the higher confidence
+comes first. Table~\ref{tab:top-rules} lists the top 10 rules; no rule outside the table
+ties with the 10th on lift.
 
 \begin{table}[t]
 \centering
-\caption{10 luật có lift cao nhất (minsup 0,01, minconf 0,5). B, K, L là bộ
-Poppy's Playhouse Bedroom, Kitchen, Livingroom; $\sigma$ là số giỏ hàng chứa cả
-hai vế}
+\caption{Top 10 rules by lift (minsup 0.01, minconf 0.5). B, K, and L are the Poppy's
+Playhouse Bedroom, Kitchen, and Livingroom sets; $\sigma$ is the number of baskets that
+contain both sides}
 \label{tab:top-rules}
 \begin{tabular}{rlrrrr}
 \hline
-Hạng & Luật & $\sigma$ & supp & conf & lift \\
+Rank & Rule & $\sigma$ & supp & conf & lift \\
 \hline
-1 & B + K $\Rightarrow$ L & 409 & 0,0104 & 0,734 & 51,45 \\
-2 & L $\Rightarrow$ B + K & 409 & 0,0104 & 0,725 & 51,45 \\
-3 & L + K $\Rightarrow$ B & 409 & 0,0104 & 0,863 & 48,50 \\
-4 & B $\Rightarrow$ L + K & 409 & 0,0104 & 0,582 & 48,50 \\
-5 & B + L $\Rightarrow$ K & 409 & 0,0104 & 0,887 & 47,25 \\
-6 & K $\Rightarrow$ B + L & 409 & 0,0104 & 0,551 & 47,25 \\
-7 & L $\Rightarrow$ B & 461 & 0,0117 & 0,817 & 45,95 \\
-8 & B $\Rightarrow$ L & 461 & 0,0117 & 0,656 & 45,95 \\
-9 & L $\Rightarrow$ K & 474 & 0,0120 & 0,840 & 44,76 \\
-10 & K $\Rightarrow$ L & 474 & 0,0120 & 0,639 & 44,76 \\
+1 & B + K $\Rightarrow$ L & 409 & 0.0104 & 0.734 & 51.45 \\
+2 & L $\Rightarrow$ B + K & 409 & 0.0104 & 0.725 & 51.45 \\
+3 & L + K $\Rightarrow$ B & 409 & 0.0104 & 0.863 & 48.50 \\
+4 & B $\Rightarrow$ L + K & 409 & 0.0104 & 0.582 & 48.50 \\
+5 & B + L $\Rightarrow$ K & 409 & 0.0104 & 0.887 & 47.25 \\
+6 & K $\Rightarrow$ B + L & 409 & 0.0104 & 0.551 & 47.25 \\
+7 & L $\Rightarrow$ B & 461 & 0.0117 & 0.817 & 45.95 \\
+8 & B $\Rightarrow$ L & 461 & 0.0117 & 0.656 & 45.95 \\
+9 & L $\Rightarrow$ K & 474 & 0.0120 & 0.840 & 44.76 \\
+10 & K $\Rightarrow$ L & 474 & 0.0120 & 0.639 & 44.76 \\
 \hline
 \end{tabular}
 \end{table}
 
-Cả 10 luật đều thuộc một dòng sản phẩm: sáu cách tách của tập ba phòng đồ chơi
-Poppy's Playhouse và hai cặp luật đối xứng. Một tập phổ biến sinh nhiều luật gần
-giống nhau, nên Bảng~\ref{tab:top-groups} chỉ giữ luật tốt nhất của mỗi nhóm sản
-phẩm $X \cup Y$ khác nhau.
+All 10 rules come from a single product line: they are the six ways of splitting the
+three-room Poppy's Playhouse toy set, plus two symmetric pairs. Because one frequent
+itemset yields many near-identical rules, Table~\ref{tab:top-groups} keeps only the best
+rule for each distinct product group $X \cup Y$.
 
 \begin{table*}[t]
 \centering
-\caption{Luật tốt nhất của 10 nhóm sản phẩm có lift cao nhất, cùng lift khi đếm
-lại trong từng năm và khi bỏ 1\% giỏ hàng lớn nhất}
+\caption{Best rule of the 10 product groups with the highest lift, with lift recounted in
+each year and after dropping the largest 1\% of baskets}
 \label{tab:top-groups}
 \begin{tabular}{rlrrrrrr}
 \hline
- & Luật & $\sigma$ & conf & lift & lift năm 1 & lift năm 2 & lift bỏ giỏ lớn \\
+ & Rule & $\sigma$ & conf & lift & lift year 1 & lift year 2 & lift without large baskets \\
 \hline
-1 & Poppy's Playhouse Bedroom + Kitchen $\Rightarrow$ Livingroom & 409 & 0,734 & 51,4 & 63,4 & 43,1 & 57,4 \\
-2 & Poppy's Playhouse Livingroom $\Rightarrow$ Bedroom & 461 & 0,817 & 45,9 & 60,1 & 37,1 & 52,3 \\
-3 & Poppy's Playhouse Livingroom $\Rightarrow$ Kitchen & 474 & 0,840 & 44,8 & 58,0 & 36,2 & 50,3 \\
-4 & Poppy's Playhouse Bedroom $\Rightarrow$ Kitchen & 557 & 0,792 & 42,2 & 56,2 & 33,6 & 48,4 \\
-5 & Wooden Tree $\Rightarrow$ Wooden Star Christmas Scandinavian & 437 & 0,790 & 40,7 & 56,0 & 32,1 & 46,6 \\
-6 & Small Marshmallows Pink Bowl $\Rightarrow$ Small Dolly Mix Orange Bowl & 457 & 0,744 & 40,1 & 62,0 & 29,3 & 48,4 \\
-7 & Set/10 Blue Spotty $\Rightarrow$ Pink Polkadot Party Candles & 488 & 0,776 & 38,0 & 33,2 & 44,3 & 40,3 \\
-8 & Key Fob Garage Design $\Rightarrow$ Key Fob Back Door & 402 & 0,646 & 37,1 & 33,8 & 41,1 & 42,4 \\
-9 & Feltcraft Princess Lola $\Rightarrow$ Princess Charlotte Doll & 401 & 0,620 & 35,8 & 52,2 & 27,2 & 39,1 \\
-10 & Pink Polkadot Cup $\Rightarrow$ Blue Polkadot Cup & 521 & 0,694 & 35,6 & 31,3 & 41,2 & 39,3 \\
+1 & Poppy's Playhouse Bedroom + Kitchen $\Rightarrow$ Livingroom & 409 & 0.734 & 51.4 & 63.4 & 43.1 & 57.4 \\
+2 & Poppy's Playhouse Livingroom $\Rightarrow$ Bedroom & 461 & 0.817 & 45.9 & 60.1 & 37.1 & 52.3 \\
+3 & Poppy's Playhouse Livingroom $\Rightarrow$ Kitchen & 474 & 0.840 & 44.8 & 58.0 & 36.2 & 50.3 \\
+4 & Poppy's Playhouse Bedroom $\Rightarrow$ Kitchen & 557 & 0.792 & 42.2 & 56.2 & 33.6 & 48.4 \\
+5 & Wooden Tree $\Rightarrow$ Wooden Star Christmas Scandinavian & 437 & 0.790 & 40.7 & 56.0 & 32.1 & 46.6 \\
+6 & Small Marshmallows Pink Bowl $\Rightarrow$ Small Dolly Mix Orange Bowl & 457 & 0.744 & 40.1 & 62.0 & 29.3 & 48.4 \\
+7 & Set/10 Blue Spotty $\Rightarrow$ Pink Polkadot Party Candles & 488 & 0.776 & 38.0 & 33.2 & 44.3 & 40.3 \\
+8 & Key Fob Garage Design $\Rightarrow$ Key Fob Back Door & 402 & 0.646 & 37.1 & 33.8 & 41.1 & 42.4 \\
+9 & Feltcraft Princess Lola $\Rightarrow$ Princess Charlotte Doll & 401 & 0.620 & 35.8 & 52.2 & 27.2 & 39.1 \\
+10 & Pink Polkadot Cup $\Rightarrow$ Blue Polkadot Cup & 521 & 0.694 & 35.6 & 31.3 & 41.2 & 39.3 \\
 \hline
 \end{tabular}
 \end{table*}
 
-\subsubsection{Ý nghĩa kinh doanh}
-Các nhóm trong Bảng~\ref{tab:top-groups} gợi ý hai giả thuyết có thể hành động.
-Thứ nhất, khách mua trọn bộ sưu tập: ba phòng Poppy's Playhouse, hai mẫu búp bê
-Feltcraft và hai món trang trí Giáng sinh kiểu Scandinavia. Trong 82\% giỏ hàng
-có phòng Livingroom cũng có phòng Bedroom, nên cửa hàng có thể bán theo bộ, đặt
-các món cạnh nhau trên trang sản phẩm, hoặc gợi ý món còn thiếu khi giỏ hàng mới
-có một phòng. Thứ hai, khách mua nhiều biến thể màu của cùng một sản phẩm: nến
-tiệc xanh và hồng, cốc chấm bi hồng và xanh, móc khóa hai kiểu. Cửa hàng có thể
-bán gói nhiều màu và nhập hàng các biến thể cùng lúc. Bằng chứng cho cả hai là
-lift trên 35, độ tin cậy từ 0,62 đến 0,84 và hơn 400 hóa đơn cho mỗi nhóm.
+\subsubsection{Business interpretation}
+The groups in Table~\ref{tab:top-groups} suggest two hypotheses a retailer could act on.
+The first is that customers buy whole collections, such as the three Poppy's Playhouse
+rooms, two Feltcraft doll designs, or two Scandinavian-style Christmas decorations. For
+instance, 82\% of the baskets that contain the Livingroom also contain the Bedroom, so the
+shop could sell the rooms as a set, show them next to each other on product pages, or
+suggest the missing rooms when a basket contains only one. The second is that customers
+buy several color variants of the same product, such as blue and pink party candles, pink
+and blue polka-dot cups, or two key-fob designs, which suggests selling multi-color packs
+and restocking the variants together. Both hypotheses rest on a lift above 35, a
+confidence between 0.62 and 0.84, and more than 400 invoices for each group.
 
-Luật kết hợp chỉ cho biết hai sản phẩm xuất hiện cùng hóa đơn, không cho biết
-mua $X$ là nguyên nhân mua $Y$. Nhiều khách hàng là nhà bán sỉ, nên một nguyên
-nhân chung, như việc nhập cả dòng sản phẩm cho cửa hàng của họ hay mùa Giáng
-sinh, có thể tạo ra cả hai vế. Vì vậy các gợi ý trên là giả thuyết cần kiểm
-chứng, chẳng hạn bằng thử nghiệm A/B cho gói sản phẩm, trước khi thay đổi cách
-bán hàng.
+An association rule only says that two products appear on the same invoice, not that
+buying $X$ causes the purchase of $Y$. Many customers are wholesalers, so a shared cause,
+such as stocking a whole product line for their own shop or preparing for the Christmas
+season, can explain both sides. The suggestions above are therefore hypotheses to test,
+for example with an A/B test of a product bundle, before the shop changes how it sells.
 
-\subsubsection{Độ vững của kết quả}
-Lift và độ tin cậy là tính chất của dữ liệu, nên thay đổi ngưỡng chỉ quyết định
-luật nào được giữ và luật đó được xếp hạng cùng những luật nào. Khi tăng minconf
-lên 0,6, hai luật có độ tin cậy 0,58 và 0,55 bị loại khỏi Bảng~\ref{tab:top-rules}
-nhưng cả 10 nhóm vẫn còn. Khi giảm minsup xuống 0,0075, mọi luật vẫn còn nhưng
-các luật hiếm hơn có lift cao hơn đẩy 10 nhóm xuống hạng 32 đến 108. Khi tăng
-minsup lên 0,015 (593 hóa đơn), cả 10 nhóm biến mất vì chúng chỉ có 401 đến 557
-hóa đơn: các mẫu có lift cao nhất nằm sát ngưỡng hỗ trợ.
+\subsubsection{Robustness of the results}
+Lift and confidence are properties of the data, so the thresholds only decide which rules
+are kept and which other rules they compete with in the ranking. Raising minconf to 0.6
+removes the two rules with confidence 0.58 and 0.55 from Table~\ref{tab:top-rules}, but
+all 10 groups remain. Lowering minsup to 0.0075 keeps every rule, although rarer rules
+with higher lift push the 10 groups down to ranks 32 to 108. Raising minsup to 0.015 (593
+invoices) removes all 10 groups, because they rest on only 401 to 557 invoices; the
+highest-lift patterns sit just above the support threshold.
 
-Để phân biệt mẫu vững với mẫu ngẫu nhiên, nhóm đếm lại mỗi luật trong năm thứ
-nhất (trước 01/12/2010, 19\,743 giỏ hàng), năm thứ hai (19\,773 giỏ hàng) và
-khi bỏ 393 giỏ hàng có hơn 197 sản phẩm, tức 1\% giỏ hàng lớn nhất. Nhóm đếm
-trực tiếp thay vì khai thác lại, vì khai thác một nửa dữ liệu với cùng minsup
-tương đối sẽ loại những mẫu chỉ hơi dưới ngưỡng mới và trông như mẫu đã biến
-mất. Bảng~\ref{tab:top-groups} cho thấy mọi nhóm giữ lift trên 27 và độ tin cậy
-từ 0,62 đến 0,90 trong mọi tập con, với ít nhất 108 hóa đơn mỗi năm, nên chúng
-không phải sản phẩm của một mùa hay của vài đơn bán sỉ lớn.
+To tell stable patterns from chance, we recounted each rule in the first year (before
+2010-12-01, 19\,743 baskets), in the second year (19\,773 baskets), and after dropping the
+largest 1\% of baskets, the 393 baskets with more than 197 products. We counted directly
+instead of mining again, because mining half the data at the same relative minsup would
+drop patterns that fall only slightly below the new threshold and make them look as if
+they had vanished. As Table~\ref{tab:top-groups} shows, every group keeps a lift above 27
+and a confidence between 0.62 and 0.90 in every subset, with at least 108 invoices per
+year, so none of them is an artifact of one season or of a few large wholesale orders.
 
-Ngược lại, ở minsup 0,005 (198 hóa đơn), chín trong mười nhóm đứng đầu là bộ
-nhãn cắm cây gia vị (Herb Marker) với lift khoảng 150. Năm thứ nhất chỉ có 7 đến
-11 hóa đơn của mỗi nhóm, khiến lift của năm đó lên tới 1\,480--1\,795 và không
-còn ý nghĩa, còn năm thứ hai có 193 đến 221 hóa đơn. Những luật này dựa trên
-khoảng một nửa số hóa đơn của các nhóm chính và chủ yếu trên một mùa bán hàng,
-nên nhóm xem chúng là hướng cần theo dõi, không phải kết luận.
+At minsup 0.005 (198 invoices), the picture is different: nine of the top ten groups are
+sets of Herb Marker plant labels with a lift of about 150. In the first year, however,
+each of these groups has only 7 to 11 invoices, which pushes that year's lift to between
+1\,480 and 1\,795, a value with no real meaning, while the second year has 193 to 221
+invoices per group. These rules rest on about half as many invoices as the main groups,
+and mostly on one selling season, so we treat them as a lead to watch rather than a
+conclusion.
 
-\subsubsection{Giới hạn}
-Dữ liệu đến từ một cửa hàng quà tặng trực tuyến trong hai năm, 92\% hóa đơn ở
-Anh và nhiều khách là nhà bán sỉ, nên các luật không đại diện cho bán lẻ nói
-chung. Giỏ hàng chỉ ghi sản phẩm có mặt, bỏ qua số lượng và giá, nên một hóa
-đơn mua một chiếc và một hóa đơn mua trăm chiếc có trọng số như nhau. Lift ưu
-tiên các sản phẩm ít gặp, vì vậy bảng xếp hạng theo lift cần đọc cùng số hóa
-đơn hỗ trợ. Cuối cùng, mô tả sản phẩm là nhãn do cửa hàng nhập, có thể khác nhau
-giữa các mã gần giống nhau.
-\subsection{Khai thác mẫu hình ảnh}
+\subsubsection{Limitations}
+The data covers one online gift shop over two years, with 92\% of invoices from the UK
+and many wholesale customers, so the rules do not represent retail in general. A basket
+records only which products are present, not their quantity or price, so an invoice for
+one unit counts the same as an invoice for a hundred. Lift also favors rare products, so a
+ranking by lift should be read together with the number of supporting invoices. Finally,
+the product descriptions are labels typed in by the shop and may differ between nearly
+identical codes.
+
+\subsection{Image-pattern mining}
 \label{sec:visual-patterns}
-\subsubsection{Từ ảnh đến giao dịch}
-Bộ dữ liệu Semeion từ UCI gồm 1\,593 ảnh chữ số viết tay nhị phân kích thước
-$16\times16$ pixel, có nhãn từ 0 đến 9~\cite{semeionUCI}. Câu hỏi khảo sát là
-những tổ hợp nét cục bộ nào lặp lại giữa các ảnh. Biểu diễn \emph{bag of
-visual words} (túi từ thị giác) đưa mỗi ảnh về một tập mục để Eclat đếm số ảnh
-chứa từng tổ hợp nét. Nhóm chia ảnh thành 16 mảnh $4\times4$ không chồng lấp.
-Mỗi mảnh ảnh (patch) có ít nhất hai pixel nét được trải theo hàng thành
-vector nhị phân 16 chiều. Nhóm dùng k-means với seed (hạt giống ngẫu nhiên)
-42 và tối đa 25 vòng lặp để học codebook (từ điển mã) mặc định gồm 24 tâm cụm.
-Mỗi tâm là một từ thị giác. Một patch được gán vào tâm gần nhất nếu khoảng
-cách Euclid bình phương không vượt quá 1,0. Giao dịch ảnh lưu mỗi từ được
-gán đúng một lần, nên vị trí và số lần lặp của patch không tham gia vào support.
-Lưới $4\times4$ giữ được các đoạn nét cục bộ trong khi giới hạn mỗi ảnh ở
-16 patch trước lọc. Ngưỡng khoảng cách loại các patch ở xa mọi tâm cụm để
-hạn chế gán các hình nét khác biệt vào cùng một từ.
+\subsubsection{From images to transactions}
+The Semeion dataset from UCI contains 1\,593 binary images of handwritten digits, each
+$16\times16$ pixels and labeled 0 to 9~\cite{semeionUCI}. We ask which local stroke
+combinations recur across images. A \emph{bag of visual words} representation turns each
+image into an itemset, so that Eclat can count how many images contain each combination of
+strokes. To build it, we split each image into 16 non-overlapping $4\times4$ patches and
+flatten every patch with at least two stroke pixels, row by row, into a 16-dimensional
+binary vector. Running k-means with seed 42 and at most 25 iterations on these vectors
+gives a default codebook of 24 cluster centers, each of which is a visual word. A patch is
+assigned to its nearest center if their squared Euclidean distance is at most 1.0. The
+image's transaction then stores each assigned word once, so neither the position of a
+patch nor how often a word repeats affects support. The $4\times4$ grid keeps local stroke
+segments intact while limiting each image to 16 patches, and the distance threshold drops
+patches that are far from every center, which makes it less likely that clearly different
+stroke shapes end up as the same word.
 
-Trong số 18\,386 patch qua bước lọc pixel nét, các patch đạt ngưỡng khoảng cách
-tạo 5\,767 lượt hiện diện từ, trung bình 3,62 từ mỗi ảnh. Giao dịch chứa từ 0
-đến 8 từ, trung vị là 4. Nhóm giữ 11 giao dịch rỗng trong mẫu số khi đổi minsup
-sang ngưỡng nguyên theo Mục~\ref{sec:vertical}. Tệp \texttt{visual\_words.svg}
-lưu patch quan sát đại diện cho từng tâm. Tệp \texttt{manifest.toml} lưu seed,
-tham số và mã băm đầu vào để tái lập bộ mã hóa. Nhóm học từ điển trên toàn bộ
-Semeion để phân tích mô tả.
+Of the 18\,386 patches that pass the stroke-pixel filter, those within the distance
+threshold produce 5\,767 word occurrences, or 3.62 words per image on average.
+Transactions hold between 0 and 8 words, with a median of 4. As explained in
+Section~\ref{sec:vertical}, the 11 empty transactions still count in the denominator when
+minsup is converted to an integer threshold. The file \texttt{visual\_words.svg} shows an
+observed patch for each center, and \texttt{manifest.toml} stores the seed, the
+parameters, and the input hashes needed to reproduce the encoder. Because the analysis is
+descriptive, we learn the codebook on all of Semeion.
 
-\subsubsection{Mẫu phổ biến và ảnh hỗ trợ}
-Nhóm khai thác các giao dịch bằng Eclat cơ bản của nhóm. Với 24 từ và minsup
-20\%, 10\% và 5\%, toàn bộ 6, 18 và 46 tập mục tương ứng khớp support với
-SPMF. Đầu vào SPMF có 1\,582 giao dịch sau khi bỏ 11 dòng rỗng. Nhóm điều chỉnh
-ngưỡng tương đối của SPMF để giữ nguyên số ảnh tối thiểu lần lượt là 319, 160
-và 80. Giao dịch rỗng không đóng góp support cho tập mục khác rỗng.
+\subsubsection{Frequent patterns and supporting images}
+We mine the transactions with our baseline Eclat. With 24 words, it finds 6, 18, and 46
+itemsets at minsup 20\%, 10\%, and 5\%, and all of their supports match SPMF. Because the
+SPMF input drops the 11 empty lines and has only 1\,582 transactions, we adjusted SPMF's
+relative threshold so that it uses the same minimum image counts of 319, 160, and 80; the
+empty transactions contribute no support to a non-empty itemset, so the results remain
+comparable.
 
-Bảng~\ref{tab:image-evidence} trình bày ba mẫu ở minsup 5\%. Từ 13 có patch
-đại diện là nét ngang ngắn. Mẫu $\{8,13\}$ mô tả các ảnh đồng thời chứa patch
-của hai cụm. Tệp \texttt{supporting\_images.tsv} liệt kê ID và nhãn của từng
-ảnh hỗ trợ. Nhóm đối chiếu ảnh có cùng nhãn để diễn giải sự khác biệt ở mức
-patch. Trong Hình~\ref{fig:semeion-contrast}, hai ảnh đều mang nhãn chữ số 2.
-Ảnh 44 có cả ba từ. Ảnh 41 có từ 8 và 13 nhưng thiếu từ 4.
+Table~\ref{tab:image-evidence} shows three patterns at minsup 5\%. The representative
+patch of word 13 is a short horizontal stroke, and the pattern $\{8,13\}$ describes images
+that contain patches from both clusters. The file \texttt{supporting\_images.tsv} lists
+the ID and label of every supporting image. To interpret differences at the patch level,
+we compare images that share a label. In Fig.~\ref{fig:semeion-contrast}, both images
+show the digit 2, but only image 44 has all three words; image 41 has words 8 and 13 but
+not word 4.
 
 \begin{table}[ht]
 \centering
-\caption{Support và ID ảnh minh họa cho ba mẫu thị giác ở minsup 5\%}
+\caption{Support and example image IDs for three visual patterns at minsup 5\%}
 \label{tab:image-evidence}
 \begin{tabular}{l r l l}
 \hline
-Tập từ & Support & Khớp & Không khớp \\
+Word set & Support & Match & No match \\
 \hline
 \{13\} & 863 & 2, 3, 4 & 1, 5, 7 \\
 \{8,13\} & 330 & 3, 11, 41 & 2, 4, 6 \\
@@ -255,25 +260,27 @@ Tập từ & Support & Khớp & Không khớp \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/semeion-source-contrast.png}
-\caption{Hai ảnh nguồn cùng nhãn chữ số 2. Các ô đánh dấu patch được gán
-vào từ tương ứng. Ảnh 44 chứa đủ bộ ba $\{4,8,13\}$. Ảnh 41 thiếu từ 4.}
+\caption{Two source images, both labeled as the digit 2. The boxes mark patches assigned to
+the corresponding words. Image 44 contains the full triple $\{4,8,13\}$. Image 41 lacks
+word 4.}
 \label{fig:semeion-contrast}
 \end{figure}
 
-\subsubsection{Độ nhạy theo từ điển và minsup}
-Bảng~\ref{tab:semeion-sensitivity} so sánh số tập mục theo kích thước từ điển
-$K$ và minsup, với cùng seed, lưới patch, số vòng lặp tối đa và ngưỡng khoảng
-cách. Số ảnh rỗng là số ảnh không có patch được gán từ. Với $K=24$, từ 13 và
-cặp $\{8,13\}$ đạt cả năm ngưỡng. Bộ ba $\{4,8,13\}$ có support 90, đạt
-ngưỡng 5,5\% (88 ảnh) và nằm dưới ngưỡng 6\% (96 ảnh).
+\subsubsection{Sensitivity to codebook size and minsup}
+Table~\ref{tab:semeion-sensitivity} compares itemset counts across codebook sizes $K$ and
+minsup values, keeping the seed, patch grid, maximum iterations, and distance threshold
+fixed. An empty image is one in which no patch was assigned to a word. With $K=24$, word
+13 and the pair $\{8,13\}$ are frequent at all five thresholds, while the triple
+$\{4,8,13\}$, with support 90, reaches the 5.5\% threshold (88 images) but not the 6\%
+threshold (96 images).
 
 \begin{table}[t]
 \centering
-\caption{Số tập mục theo kích thước từ điển $K$ và minsup trên Semeion}
+\caption{Itemset counts by codebook size $K$ and minsup on Semeion}
 \label{tab:semeion-sensitivity}
 \begin{tabular}{rrrrrrr}
 \hline
-$K$ & Ảnh rỗng & 20\% & 10\% & 6\% & 5,5\% & 5\% \\
+$K$ & Empty images & 20\% & 10\% & 6\% & 5.5\% & 5\% \\
 \hline
 16 & 99 & 4 & 12 & 19 & 21 & 25 \\
 24 & 11 & 6 & 18 & 35 & 43 & 46 \\
@@ -282,29 +289,30 @@ $K$ & Ảnh rỗng & 20\% & 10\% & 6\% & 5,5\% & 5\% \\
 \end{tabular}
 \end{table}
 
-Khi $K$ tăng từ 16 lên 32, độ rộng trung bình tăng từ 2,27 lên 4,31 từ mỗi
-ảnh. Ở ngưỡng 20\%, từ điển 24 từ cho nhiều mẫu nhất trong ba cấu hình.
-Tâm cụm được học lại ở mỗi $K$, nên cần so patch đại diện khi diễn giải từ
-giữa các cấu hình. Mức phổ biến của một nét còn phụ thuộc vào cách đặt lưới
-và độ phân giải của ảnh nhị phân.
+As $K$ grows from 16 to 32, the mean number of words per image rises from 2.27 to 4.31.
+At the 20\% threshold, the 24-word codebook yields the most patterns of the three. Since
+the centers are learned anew for each $K$, a word's representative patches must be
+compared before the word can be interpreted across configurations. How often a stroke
+appears also depends on where the grid boundaries fall and on the resolution of the
+binary image.
 
-\subsubsection{Ứng dụng và giới hạn}
-Mẫu thị giác có thể làm truy vấn theo tổ hợp nét. Chẳng hạn, truy vấn
-$\{8,13\}$ trả về 330 ảnh. Khi chuẩn hóa theo số ảnh mỗi nhãn, mẫu này có mặt
-ở 69/159 ảnh chữ số 3 (43,4\%) và 9/161 ảnh chữ số 4 (5,6\%). Chênh lệch
-mô tả tần suất theo nhãn trong chính bộ dữ liệu dùng để học từ điển. Hai từ
-có thể hiện diện ở các vị trí bất kỳ trong ảnh.
+\subsubsection{Uses and limitations}
+Visual patterns can be used to search images by stroke combination. The query
+$\{8,13\}$, for example, returns 330 images. Normalized by the number of images per label,
+the pattern appears in 69 of the 159 images of the digit 3 (43.4\%) but in only 9 of the
+161 images of the digit 4 (5.6\%). This gap describes label frequencies in the same dataset
+that the codebook was learned on, and the two words may appear anywhere in the image.
 
-Mỗi tập mục cũng có thể tạo một đặc trưng nhị phân. Với danh sách mẫu
-$(\{13\},\{8,13\},\{4,8,13\})$, ảnh có giao dịch $\{8,13\}$ nhận vector
-$(1,1,0)$. Notebook tạo ma trận gồm 1\,593 hàng ảnh và 46 cột tập mục ở minsup
-5\%. Tổng mỗi cột bằng support của tập mục tương ứng. Để đánh giá hiệu quả
-phân loại của đặc trưng này, cần học từ điển và khai thác mẫu trên tập huấn
-luyện, rồi giữ cố định cả hai khi mã hóa tập kiểm tra. Phân tích ở đây mô tả
-tần suất trên Semeion.
+Each itemset can also serve as a binary feature. With the pattern list
+$(\{13\},\{8,13\},\{4,8,13\})$, an image whose transaction is $\{8,13\}$ gets the vector
+$(1,1,0)$. At minsup 5\%, the notebook builds a matrix with 1\,593 image rows and 46
+itemset columns, in which each column sums to the support of its itemset. Evaluating these
+features for classification would require learning the codebook and the patterns on a
+training set and keeping them fixed while encoding the test set; the analysis here only
+describes frequencies on Semeion.
 
-\href{https://github.com/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb}
-{Notebook khai thác mẫu hình ảnh} dùng Julia 1.13.2 và seed 42 để tái lập pipeline
-mặc định. Manifest của lượt chạy ghi revision, seed và mã băm của từ điển
-cùng đầu ra tại minsup 20\%, 10\% và 5\%. Lưới trong
-Bảng~\ref{tab:semeion-sensitivity} dùng cùng bộ mã hóa ở 15 cấu hình.
+The \href{https://github.com/NgTHung/Itemset/blob/main/notebooks/image_patterns_colab.ipynb}
+{image-pattern notebook} reproduces the default pipeline with Julia 1.13.2 and seed 42.
+Its run manifest records the revision, the seed, and the hashes of the codebook and of the
+outputs at minsup 20\%, 10\%, and 5\%. The grid in Table~\ref{tab:semeion-sensitivity}
+runs the same encoder in 15 configurations.

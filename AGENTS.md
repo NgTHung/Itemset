@@ -108,7 +108,7 @@ Read `docs/WRITING_GUIDE.md` before you write or edit any Markdown document. It 
 - Explain why before what, and back performance claims with numbers.
 - Use short, active sentences. No em dashes, no filler adjectives, no bold in prose.
 
-The report under `docs/report/` follows the brief's rules instead: Vietnamese prose, English technical terms kept on first use with a gloss, captioned and referenced figures and tables, and every formula variable explained.
+The report under `docs/report/` is written in English and also follows the brief's rules: captioned and referenced figures and tables, and every formula variable explained. The team chose English over the brief's Vietnamese; do not add a Vietnamese copy back.
 
 ## Task Tracking
 

@@ -1,6 +1,6 @@
 # Writing Guide
 
-This guide covers Itemset documentation, docstrings, and code comments. It does not cover the Vietnamese report in `docs/report/`, which follows the course brief in `docs/assignment.md`. Each document answers one reader question. You decide which question before you write, and the answer decides what belongs on the page and what goes somewhere else.
+This guide covers Itemset documentation, docstrings, and code comments. It does not cover the IEEE report in `docs/report/`, which follows the course brief in `docs/assignment.md`. Each document answers one reader question. You decide which question before you write, and the answer decides what belongs on the page and what goes somewhere else.
 
 ## Start with the problem
 
