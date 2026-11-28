@@ -20,7 +20,7 @@ Increasing support with ID tie-breaks is a strict total order, so the four [base
 
 ## Perfect extensions
 
-On dense data many joins return their left input unchanged. On Mushroom at minsup 0.05, the pruned search below reaches 33,819 nodes for 3,755,511 frequent itemsets ([plan](eclat-optimization-plan-2026-10-30.md#future-directions-for-the-report)), so most itemsets need no intersection of their own. Perfect-extension pruning stops joining an item once it adds nothing to a tidset, and emits the itemsets it would have produced directly.
+On dense data many joins return their left input unchanged. On Mushroom at minsup 0.05, the pruned search below reaches 33,819 nodes for 3,755,511 frequent itemsets, so most itemsets need no intersection of their own. Perfect-extension pruning stops joining an item once it adds nothing to a tidset, and emits the itemsets it would have produced directly.
 
 ### Definition
 
@@ -38,7 +38,7 @@ Appendix B of the report proves that every emitted support is exact, that every 
 
 ### Emission order
 
-The search records each node once in `SearchNodes`, as its depth, the item it adds to its parent's core, the perfect extensions its own joins found, and its support. A child inherits its parent's perfect extensions, and the search records nodes in preorder, so expansion rebuilds every C and E from a path stack, and a record costs the same at every depth. A node stands for 2^|E| itemsets, so `expand_nodes` sums the itemset and item counts of all nodes, allocates the packed result once at that size, and then writes the itemsets. Growing the result one itemset at a time instead copies it on every doubling: on Mushroom 0.05 it allocated 1,068 MiB for a 306 MiB result, and warm mining took 0.40 s instead of 0.17 s ([BBQ record](bbq-exact-emission-2026-11-09.md)).
+The search records each node once in `SearchNodes`, as its depth, the item it adds to its parent's core, the perfect extensions its own joins found, and its support. A child inherits its parent's perfect extensions, and the search records nodes in preorder, so expansion rebuilds every C and E from a path stack, and a record costs the same at every depth. A node stands for 2^|E| itemsets, so `expand_nodes` sums the itemset and item counts of all nodes, allocates the packed result once at that size, and then writes the itemsets. Growing the result one itemset at a time instead copies it on every doubling: on Mushroom 0.05 it allocated 1,068 MiB for a 306 MiB result, and warm mining took 0.40 s instead of 0.17 s.
 
 `write_subsets!` writes the 2^|E| itemsets of a node in binary reflected Gray-code order. Step i toggles the perfect item at position trailing_zeros(i) + 1, so each itemset differs from the one before by one item, which `insert!` or `deleteat!` puts in place in the ascending itemset. A node's itemsets therefore cost O(2^|E| k) for itemsets of length at most k, the same as copying them into the packed result. A perfect set of more than 62 items would need more than 2^62 itemsets, which no result vector can hold, so `push_node!` throws `OverflowError` instead of looping, and `expand_nodes` throws it when the totals pass `typemax(Int)`.
 

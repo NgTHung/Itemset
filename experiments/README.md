@@ -97,6 +97,6 @@ julia --startup-file=no --project=. scripts/width_experiment.jl pilot --out resu
 julia --startup-file=no --project=. scripts/width_experiment.jl run experiments/configs/width-matched.toml
 ```
 
-`scripts/join_work.jl --manifest experiments/configs/width-manifest.toml` counts the baseline's tid-list joins and merged elements at the same points, which explains a runtime change by work instead of by wall time. The [grading-machine width record](../docs/bbq-width-profile-2026-11-27.md) and its [command-line rerun](../docs/bbq-width-cli-2026-11-28.md) hold the results.
+`scripts/join_work.jl --manifest experiments/configs/width-manifest.toml` counts the baseline's tid-list joins and merged elements at the same points, which explains a runtime change by work instead of by wall time.
 
 Store figures in [results/figures](../results/figures/README.md), and copy the ones the report uses into the report with their provenance.
