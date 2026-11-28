@@ -21,7 +21,7 @@ Các cell Julia chạy theo đúng thứ tự nguồn trong một tiến trình 
 | Smoke Chess 90% | Baseline và optimized khớp đầy đủ map SPMF |
 | Peak RSS của smoke | Baseline 305.385.472 byte; optimized 285.691.904 byte |
 
-RSS của smoke gồm cả tiến trình con theo [giao thức đo](../experiments/README.md). Hai giá trị này kiểm tra khả năng đo trên Colab, không thay thế chuỗi benchmark đầy đủ trong [hồ sơ Week 3](phat-week-3-results-2026-11-08.md).
+RSS của smoke gồm cả tiến trình con theo [giao thức đo](../experiments/README.md). Hai giá trị này kiểm tra khả năng đo trên Colab, không thay thế lần đo peak RSS đầy đủ trên máy chấm trong [hồ sơ runtime](runtime-curves-2026-11-17.md).
 
 ## Tái lập kết quả ảnh
 
