@@ -34,12 +34,4 @@ RUN=results/raw/bbq-all-variants-cli-5repeat-20261117T041922Z
 uv run --no-project --python 3.12 --with matplotlib==3.10.7 python scripts/plot_report_validation.py $RUN --out docs/report/figures
 ```
 
-## Regenerate the runtime and width figures
-
-The [runtime record](../runtime-curves-2026-11-17.md#reproduce) writes `results/figures/runtime/curves.csv`. From that file:
-
-```sh
-uv run --no-project --python 3.12 --with matplotlib==3.11.2 python scripts/plot_runtime_curves.py results/figures/runtime/curves.csv --out docs/report/figures
-```
-
-The [width record](../bbq-width-cli-2026-11-28.md#reproduce) has the command that draws `width-curves.png`, and the [image-pattern guide](../../applications/image_patterns/README.md#reproduce-the-sensitivity-study) has the commands for the sensitivity table and the Semeion contrast figure. [figures/README.md](figures/README.md) lists the raw run behind every figure.
+[figures/README.md](figures/README.md) lists the raw run behind every figure and the record that regenerates it.

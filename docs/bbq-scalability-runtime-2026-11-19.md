@@ -1,6 +1,6 @@
 # BBQ scalability runtime, 2026-11-19
 
-The brief asks whether runtime grows linearly or nonlinearly with database size. This record times the four contenders on seeded nested subsets of Accidents and Retail at one fixed relative minsup each, under the [measurement protocol](../experiments/README.md#scalability-and-width). The report discusses the results in Chapter 2, section "Khả năng mở rộng".
+The brief asks whether runtime grows linearly or nonlinearly with database size. This record times the four contenders on seeded nested subsets of Accidents and Retail at one fixed relative minsup each, under the [measurement protocol](../experiments/README.md#scalability-and-width). The report discusses the results in its "Scalability" subsection.
 
 ## Method
 

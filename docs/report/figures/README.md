@@ -1,6 +1,6 @@
 # Report figures
 
-Each figure here is a copy of a plot in `results/figures/`, which Git ignores. This file names the raw run behind each one and the command that regenerates it.
+Each figure here is drawn from a raw run under `results/raw/`, which Git ignores. This file names that run and the record whose commands regenerate the figure.
 
 | Figure | Raw run | Regenerate |
 |---|---|---|
@@ -8,4 +8,5 @@ Each figure here is a copy of a plot in `results/figures/`, which Git ignores. T
 | `output-size.pdf` | `results/raw/bbq-all-variants-cli-5repeat-20261117T041922Z` | See [the output-size record](../../output-size-2026-11-19.md#reproduce) |
 | `correctness-grid.pdf` | `results/raw/bbq-all-variants-cli-5repeat-20261117T041922Z` | See [the report README](../README.md#regenerate-the-correctness-grid-and-memory-table) |
 | `runtime-curves.png` | `results/raw/bbq-all-variants-cli-5repeat-20261117T041922Z` | See [the runtime record](../../runtime-curves-2026-11-17.md#reproduce) |
-| `width-curves.png` | `results/raw/bbq-width-profile-20261127T044121Z` | See [the width and profile record](../../bbq-width-profile-2026-11-27.md#reproduce) |
+| `width-curves.png` | Cold panels from `results/raw/bbq-width-cli-20261127T223751Z`, warm panel from `results/raw/bbq-width-profile-20261127T044121Z` | See [the command-line width record](../../bbq-width-cli-2026-11-28.md#reproduce) |
+| `semeion-source-contrast.png` | `results/raw/semeion-k24` | See [the image-pattern guide](../../../applications/image_patterns/README.md#reproduce-the-sensitivity-study) |
