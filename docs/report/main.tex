@@ -19,13 +19,17 @@
 % Rows of the optimization-step table get labels so prose cites them with \ref.
 \newcounter{optstep}
 \newcommand{\optstep}[1]{\refstepcounter{optstep}\theoptstep\label{#1}}
+\newcommand{\labauthor}[3]{%
+  \shortstack{\strut#1\\{\normalsize\strut#2}\\{\normalsize\strut#3}}%
+}
 \newtheorem{lemma}{Lemma}
 \newtheorem{theorem}[lemma]{Theorem}
 \title{Frequent Itemset Mining with Eclat and Two Applications}
 \author{%
   \IEEEauthorblockN{%
     \labauthor{Trương Nhật Phát}{24127008}{tnphat2418@clc.fitus.edu.vn}\quad
-    \labauthor{Cao Tiến Thiên}{24127112}{ctthien24@clc.fitus.edu.vn}\quad
+    
+    \labauthor{Cao Tiến Thiên}{24127112}{ctthien2416@clc.fitus.edu.vn}\quad
     \labauthor{Nguyễn Tuấn Hùng}{24127173}{nthung2432@clc.fitus.edu.vn}\\[8pt]
   }
   \IEEEauthorblockA{%
