@@ -71,9 +71,7 @@ Lift~\eqref{eq:rule-lift} tells how many times more often $Y$ occurs together wi
 than it would if the two sides were independent, so a lift above 1 means the two sides
 tend to be bought together. Unlike confidence, lift is symmetric in $X$ and $Y$.
 
-Mining the 39\,516 baskets at minsup 0.01 gives 1\,355 frequent itemsets, each supported
-by at least 396 invoices. Every frequent itemset $Z$ with $m \ge 2$ products is split in
-all possible ways into $X$ and $Y = Z \setminus X$, giving $2^m - 2$ rules. Mining has
+Each of the 648 frequent itemsets $Z$ with $m \ge 2$ products is split in all possible ways into $X$ and $Y = Z \setminus X$, giving $2^m - 2$ rules. Mining has
 already applied the minsup threshold to $X \cup Y$, and every subset of $Z$ is in the
 result, so $\sigma(X)$ and $\sigma(Y)$ can always be looked up. All measures are computed
 as exact fractions. The minconf threshold is converted once from its decimal form to a
@@ -300,8 +298,8 @@ binary image.
 Visual patterns can be used to search images by stroke combination. The query
 $\{8,13\}$, for example, returns 330 images. Normalized by the number of images per label,
 the pattern appears in 69 of the 159 images of the digit 3 (43.4\%) but in only 9 of the
-161 images of the digit 4 (5.6\%). This gap describes label frequencies in the same dataset
-that the codebook was learned on, and the two words may appear anywhere in the image.
+161 images of the digit 4 (5.6\%). The two words may appear anywhere in the image, so the
+query matches stroke content, not stroke position.
 
 Each itemset can also serve as a binary feature. With the pattern list
 $(\{13\},\{8,13\},\{4,8,13\})$, an image whose transaction is $\{8,13\}$ gets the vector

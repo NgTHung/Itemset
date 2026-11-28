@@ -1,11 +1,10 @@
 \section{Implementation}
 \label{sec:implementation}
-We reimplemented Eclat from Zaki's original paper~\cite{zaki2000} in Julia, using only
-the standard library and no frequent itemset mining (FIM) library. The package offers two
-variants that return the same result: a baseline that stays close to the paper, and an
-optimized variant. This section first explains how the algorithm works and why its output
-is correct, then describes the interface, the optimizations we added, how we test both
-variants, and how much each optimization gains over the baseline.
+The package offers two variants of Eclat that return the same result: a baseline that
+stays close to the paper~\cite{zaki2000}, and an optimized variant. Neither uses an
+existing FIM library. This section first explains how the algorithm works and why its
+output is correct, then describes the interface, the optimizations we added, how we test
+both variants, and how much each optimization gains over the baseline.
 
 \subsection{Vertical layout and tidsets}
 \label{sec:vertical}
@@ -117,23 +116,16 @@ $\emptyset$ & -- & $t(3) = \{1,3,4\}$ & record $\{3\}$, $\sigma = 3$ \\
 Every class that \texttt{bottom\_up!} receives satisfies four invariants: (i) each
 tid-list is increasing and has no duplicates; (ii) the members are sorted by item and
 every member item is greater than every item of the prefix; (iii) every member is
-frequent; (iv) the tid-list of member $b$ equals $t(P \cup \{b\})$. The root class
-satisfies all four by construction. A child class inherits (i) and (ii) because it is
-built from the members that follow $a$; the support check made before each member is
-added guarantees (iii), and identity~\eqref{eq:intersect} guarantees (iv).
+frequent; (iv) the tid-list of member $b$ equals $t(P \cup \{b\})$. Identity~\eqref{eq:intersect}
+keeps (iv) true in every child class.
 
-These invariants make the output correct in three ways. First, every recorded support is
-exact, which follows from (iv) and~\eqref{eq:support}. Second, no itemset is recorded
-twice. By (ii), every key $(x_1, \dots, x_k)$ is strictly increasing, it is recorded only
-when the class with prefix $(x_1, \dots, x_{k-1})$ reaches $x_k$, and each class is built
-only once. Third, the result is complete because support is
-anti-monotone~\cite{agrawal1994}: if $X \subseteq Y$, every transaction that contains $Y$
-also contains $X$, so by~\eqref{eq:support} $t(Y) \subseteq t(X)$ and
-$\sigma(X) \ge \sigma(Y)$. Pruning an infrequent itemset therefore never loses a frequent
-superset. An induction on length shows that the class with prefix
-$(x_1, \dots, x_{j-1})$ contains every item $y > x_{j-1}$ for which
-$(x_1, \dots, x_{j-1}, y)$ is frequent, and therefore every frequent itemset is recorded.
-Appendix~\ref{app:baseline} gives the full proofs.
+From these invariants, every recorded support is exact, and no itemset is recorded twice,
+because each itemset has one prefix class and one last member. The result is also
+complete, because support is anti-monotone~\cite{agrawal1994}: if $X \subseteq Y$, every
+transaction that contains $Y$ also contains $X$, so by~\eqref{eq:support}
+$t(Y) \subseteq t(X)$ and $\sigma(X) \ge \sigma(Y)$. Pruning an infrequent itemset
+therefore never loses a frequent superset. Appendix~\ref{app:baseline} proves all three
+properties.
 
 \subsection{Complexity}
 Let $L$ be the total number of items over all transactions, $m$ the number of distinct
@@ -196,8 +188,8 @@ $W = 50$ on Chess and $5\,316$ on Accidents.
 The optimized variant also visits items in increasing order of support. The rare item
 that comes first is intersected with the most items, but most of those intersections
 fail; the frequent item that comes last has few members after it, so its child classes
-stay small. The proof in Section~\ref{sec:correctness} only needs some total order on the
-items, so it holds for this order as well.
+stay small. The proofs in Appendix~\ref{app:baseline} only need some total order on the
+items, so they hold for this order as well.
 
 \subsubsection{Perfect-extension pruning and single allocation of the result}
 An item $b$ is a perfect extension~\cite{borgelt2012} of an itemset $X$ when
@@ -273,8 +265,7 @@ tid. Bound~\eqref{eq:bound} never rejects a frequent intersection, so the output
 same. We chose $K = 256$ after sweeping 64 to 512 blocks.
 
 \subsubsection{Start-up, reading, and writing}
-The changes in this subsection are in the code that both variants share. At high
-thresholds, little of the runtime is spent in the algorithm itself. One \texttt{demo.jl}
+At high thresholds, little of the runtime is spent in the algorithm itself. One \texttt{demo.jl}
 process of the baseline on Chess 0.9 takes 2.36 s, of which Julia start-up accounts for
 only 0.17 s; the rest is just-in-time (JIT) compilation. To avoid it, we run the public
 functions and the command-line handling on a small database while Julia builds the
@@ -350,9 +341,7 @@ errors and process exit codes.
 
 The brute-force counter is too slow for anything but tests. For the benchmarks, every
 measurement campaign instead compares each output file with an independent run of SPMF's
-Eclat once timing has finished. In the runtime campaign of Section~\ref{sec:minsup}, all
-660 output files on the five benchmark databases, 165 from each of the four programs,
-match 100\%.
+Eclat once timing has finished (Section~\ref{sec:exact}).
 
 \subsection{Measuring the improvement}
 \label{sec:measure}
@@ -415,18 +404,18 @@ baseline benefits from them too. The speedups this paper reports come from
 Section~\ref{sec:minsup}, which compares the two submitted variants at one revision in a
 single session.
 
-We also tried three techniques that did not survive measurement. Diffsets~\cite{zaki2003}
+We also tried two techniques that did not survive measurement, besides the
+\texttt{@inbounds @simd} annotation above. Diffsets~\cite{zaki2003}
 store the tids a member lacks relative to its prefix. In a sweep of the switching ratio,
 no setting beat bitsets: Accidents 0.2 slowed by up to 10\% and T10I4D100K 0.00025 by up
 to 71\%. The reason is that perfect-extension pruning already removes every member with
 an empty diffset, which is exactly where diffsets help most; even choosing the best
 representation for each class would have cut the words read by at most 0.3\%. Printing
-itemsets directly from the sort key was 5\% to 7\% slower, and \texttt{@inbounds @simd} on
-the bitset intersection brought no gain beyond noise.
+itemsets directly from the sort key was 5\% to 7\% slower.
 
 The optimized variant still has three measured limits. At the stress threshold
-Mushroom 0.05 it has to write 3\,755\,511 lines and remains slower than PrePost+ (1.45 s
-against 1.38 s). Every process spends about 0.19 s on Julia start-up and package loading,
+Mushroom 0.05 it has to write 3\,755\,511 lines and remains slower than PrePost+
+(Section~\ref{sec:future}). Every process spends about 0.19 s on Julia start-up and package loading,
 which only ahead-of-time compilation into an executable could remove. Finally, pair
 counting raises peak memory by 20\% at the stress threshold Retail 0.00025, where the
 triangular array for 5\,918 frequent items takes 67 MiB.
